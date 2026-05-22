@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.4...v1.2.0) (2026-05-22)
+
+
+### Features
+
+* run migrations during startup ([430937f](https://github.com/MoJo2600/repair-cafe-page/commit/430937fd04b3d88c310efef50dbea07cc1bb65a4))
+
 ## [1.1.4](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.3...v1.1.4) (2026-05-22)
 
 
