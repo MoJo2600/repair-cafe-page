@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.3](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.2...v1.1.3) (2026-05-22)
+
+
+### Bug Fixes
+
+* production nginx setup ([f5c142d](https://github.com/MoJo2600/repair-cafe-page/commit/f5c142d872d6337dcc1eb76c24ab0262ef0b2fc9))
+* production nginx setup ([2214fd8](https://github.com/MoJo2600/repair-cafe-page/commit/2214fd82fc91d7fa03b79903a3bb893451099200))
+* production server setup ([82f9e5c](https://github.com/MoJo2600/repair-cafe-page/commit/82f9e5c763bbf56697fe5a63cb202c5f2aec2172))
+* production server setup ([3b149c4](https://github.com/MoJo2600/repair-cafe-page/commit/3b149c4a151943199cd2247546627f2b63be516f))
+
 ## [1.1.2](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.1...v1.1.2) (2026-05-22)
 
 
