@@ -5,7 +5,7 @@
 	// Use custom Dockerfile with all features
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"features": {
-		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:": {}
 	},
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "devcontainer",
