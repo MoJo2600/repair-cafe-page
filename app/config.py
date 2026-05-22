@@ -26,7 +26,6 @@ class BaseConfig:
     DEBUG = False
     TESTING = False
     APP_HEADERS = {"Content-type": "application/json"}
-    SECRET_KEY = os.environ.get("APP_SECRET", "superMassiveBlackHole")
 
     # Database
     HOST = os.environ.get("MYSQL_HOST", "db")

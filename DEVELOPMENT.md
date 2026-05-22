@@ -53,7 +53,7 @@ variables (defaults match the Dev Container's `docker-compose.yml`):
 | `MYSQL_DATABASE` | `repaircafepage` | Database name |
 | `MYSQL_USER` | `root` | Username |
 | `MYSQL_PASSWORD` | `mariadb` | Password |
-| `APP_SECRET` | `superMassiveBlackHole` | Flask session secret |
+| `FLASK_SECRET_KEY` | `superMassiveBlackHole` | Flask session secret |
 
 ### Migrations
 

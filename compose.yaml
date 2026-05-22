@@ -11,7 +11,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      APP_SECRET: ${APP_SECRET}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
       # Optional – email export
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       MAIL_TOKEN: ${MAIL_TOKEN:-}
