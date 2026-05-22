@@ -1,0 +1,36 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Python 3",
+	// Use custom Dockerfile with all features
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"features": {
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+	},
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "devcontainer",
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "pip install --user -r app/requirements.txt || true; cd frontend && pnpm install || true",
+	// Configure tool-specific properties.
+	"customizations": {
+		"extensions": [
+			// Python Essentials
+			"ms-python.python",
+			"ms-python.vscode-pylance",
+			"njpwerner.autodocstring",
+			// TypeScript/Node Essentials
+			"dbaeumer.vscode-eslint",
+			"esbenp.prettier-vscode",
+			"ms-vscode.vscode-typescript-next"
+		],
+		"vscode": {
+			"extensions": [
+				"Vue.volar"
+			]
+		}
+	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}

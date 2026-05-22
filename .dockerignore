@@ -1,0 +1,40 @@
+# Version control
+.git
+.gitignore
+
+# Dev tooling
+.devcontainer
+.vscode
+*.code-workspace
+
+# Frontend: node_modules and build cache (built inside Docker)
+frontend/node_modules
+frontend/.vite
+# Keep frontend/src and config — needed for the build stage
+
+# Python cache and virtual envs
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.venv
+venv
+env
+
+# Built frontend assets (rebuilt inside Docker)
+app/static/dist
+
+# Persistent data (should be a volume in production)
+data/
+
+# CI / docs
+.gitlab-ci.yml
+*.md
+ARCHITECTURE.md
+DEPLOYMENT.md
+FRONTEND.md
+QUICK_REFERENCE.md
+QUICKSTART.md
+
+# Misc
+*.log
+.DS_Store

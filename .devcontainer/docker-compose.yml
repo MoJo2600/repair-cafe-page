@@ -1,0 +1,56 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+      # Mount Docker socket for Docker-in-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount USB devices for label printer access
+      - /dev/bus/usb:/dev/bus/usb
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    # Enable privileged mode for USB device access
+    privileged: true
+
+    # Environment variables for CUPS host communication
+    environment:
+      - CUPS_SERVER=host.docker.internal:631
+
+    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    network_mode: service:db
+
+    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)
+
+  db:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: mariadb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: repaircafepage
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./bootstrap.sql:/docker-entrypoint-initdb.d/1.sql"
+      - my-db:/var/lib/mysql
+
+    # Add "forwardPorts": [3306] to **devcontainer.json** to forward MariaDB locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)
+
+  adminer:
+    image: adminer
+    # command: php -S 0.0.0.0:8080 -t /var/www/html
+    # depends_on:
+    #   db: 
+    #     condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - 8089:8080
+
+volumes:
+  my-db:

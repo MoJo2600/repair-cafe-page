@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Eintrag bearbeiten</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/fuseTheme.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/jquery.mobile.icons-1.4.5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/jquery.mobile.structure-1.4.5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/sweetalert2.min.css') }}">
+    <link rel='shortcut icon' href="{{ url_for('static',filename='favicon.ico') }}" type='image/x-icon' />
+    <script src="{{ url_for('static',filename='js/jquery-2.1.3.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery.mobile-1.4.5.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/sweetalert2.all.min.js') }}"></script>
+</head>
+
+<style>
+    form {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			min-width: 300px;
+		}
+
+    .flex-container {
+        display: -ms-flexbox;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-flex-direction: row;
+        -ms-flex-direction: row;
+        flex-direction: row;
+        -webkit-flex-wrap: wrap;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -webkit-justify-content: space-around;
+        -ms-flex-pack: distribute;
+        justify-content: space-around;
+        -webkit-align-content: center;
+        -ms-flex-line-pack: center;
+        align-content: center;
+        -webkit-align-items: center;
+        -ms-flex-align: center;
+        align-items: center;
+        overflow-x: hidden;
+    }
+
+    .flex-item:nth-child(1) {
+        -webkit-order: 1;
+        -ms-flex-order: 1;
+        order: 1;
+        -webkit-flex: 0 1 auto;
+        -ms-flex: 0 1 auto;
+        flex: 0 1 auto;
+        -webkit-align-self: center;
+        -ms-flex-item-align: center;
+        align-self: center;
+        max-width: 400px;
+    }
+
+    .flex-item:nth-child(2) {
+        -webkit-order: 2;
+        -ms-flex-order: 2;
+        order: 2;
+        -webkit-flex: 0 1 auto;
+        -ms-flex: 0 1 auto;
+        flex: 0 1 auto;
+        -webkit-align-self: center;
+        -ms-flex-item-align: center;
+        align-self: center;
+    }
+
+    .ui-mobile fieldset {
+        min-width: 500px;
+    }
+
+    .ui-input-text input, .ui-input-search input, textarea.ui-input-text, .ui-controlgroup-horizontal label, div.ui-select div, #reparateur-button {
+        font-size: xx-large;
+    }
+
+    div.ui-slider {
+        height: 3em;
+    }
+
+    input.ui-slider-input {
+        font-size: xx-large;
+        width: 2em;
+        height: 1.25em;
+    }
+
+    .ui-slider-track {
+        height: 2em;
+        margin: 0 15px 0 85px;
+        top: 9px;
+    }
+    .ui-slider-track .ui-btn.ui-slider-handle {
+        width: 2em;
+        height: 3em;
+        margin-top: -1.5em;
+    }
+
+    label.yesno-yes.ui-radio-on {
+        background-color: #006837 !important;
+        border-color: #54914d !important;
+        color: white;
+    }
+    label.yesno-no.ui-radio-on {
+        background-color: #6a0c13 !important;
+        border-color: #94101a !important;
+        color: white;
+    }
+
+    .ui-btn:has(.big) {
+        font-size: xx-large;
+    }
+
+    .no-margin-top {
+        margin-top: 0 !important;
+    }
+
+
+</style>
+<body>
+    <div data-role="page" data-theme="c" id="edit">
+        <div data-role="header" data-position="fixed" data-id="headerBlock" data-tap-toggle="false">
+            <a href="javascript:window.close();" data-ajax="false"
+                class="ui-btn ui-btn-right ui-shadow ui-corner-all ui-btn-icon-left ui-icon-delete ui-btn-icon-notext"></a>
+            <h2 id="headTitel" onClick="document.location.reload(true)">Bearbeiten</h2>
+        </div>
+        <div data-role="main" id="main" class="ui-content centered">
+            <div class="ui-content flex-container">
+                <form id="editRepair" method="POST" enctype="application/json" width="80%">
+                    <fieldset>
+                        <label for="id">ID</label>
+                        <input type="text" name="id" value="{{ row['id'] }}" readonly>
+                    </fieldset>
+                    <fieldset>
+                        <label for="datum">Datum</label>
+                        <input type="date" name="datum" id="datum" value="{{ row['datum'] }}">
+                    </fieldset>
+                    <fieldset>
+                        <label for="vorname">Vorname</label>
+                        <input type="text" name="vorname" value="{{ row['vorname'] }}">
+                    </fieldset>
+                    <fieldset>
+                        <label for="nachname">Nachname</label>
+                        <input type="text" name="nachname" value="{{ row['nachname'] }}" required>
+                    </fieldset>
+                    <fieldset>
+                        <label for="telefon">Telefon</label>
+                        <input type="tel" name="telefon" value="{{ row['telefon'] }}">
+                    </fieldset>
+                    <fieldset>
+                        <label for="email">Email</label>
+                        <input type="email" name="email" value="{{ row['email'] }}">
+                    </fieldset>
+                    <fieldset>
+                        <label for="reparatur_art">Reparatur Art</label>
+                        <div class="ui-field-contain">
+                            <select name="reparatur_art" id="reparatur_art" required>
+                                {% if row['reparatur_art'] is none or row['reparatur_art'] == '' or row['reparatur_art'] == null or row['reparatur_art'] == 'None' %}
+                                    <option value="" selected disabled>Bitte auswählen</option>
+                                {% endif %}
+                                {% for item in dropdown_art %}
+                                    <option value="{{ item }}" {{ 'selected' if row['reparatur_art'] == item else ''}}>{{ item }}</option>
+                                {% endfor %}
+                                    <option value="Sonstiges" {{ 'selected' if row['reparatur_art'] == "Sonstiges" else ''}}>Sonstiges...</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    <fieldset id="sonstigeReparatur">
+                        <label for="reparatur_sonstiges">Sonstige Reparatur</label>
+                        <input type="text" id="reparatur_sonstiges" name="reparatur_sonstiges" value="{{ row['reparatur_sonstiges'] if row['reparatur_sonstiges'] else '' }}">
+                    </fieldset>
+                    <fieldset>
+                        <label for="geraet_art">Gerät Art</label>
+                        <input type="text" name="geraet_art" value="{{ row['geraet_art'] }}" required>
+                    </fieldset>
+                    <fieldset>
+                        <label for="defekt_besch">Defekt Beschreibung</label>
+                        <div data-role="fieldcontain">
+                            <textarea class="no-margin-top" name="defekt_besch" id="defekt_besch" required>{{ row['defekt_besch'] if row['defekt_besch'] else '' }}</textarea>
+                        </div>
+                    </fieldset>
+                    <fieldset data-role="controlgroup" data-type="horizontal">
+                        <legend>DIN geprüft?</legend>
+                        <label for="din_pruef" style="display:none">DIN geprüft?</label>
+                        <input type="radio" class="yesno-yes" name="din_pruef" id="din_pruef-ja" value="1" {% if row['din_pruef'] == 1 %}checked{% endif %}>
+                        <label for="din_pruef-ja" class="yesno-yes">Ja</label>
+                        <input type="radio" class="yesno-no" name="din_pruef" id="din_pruef-nein" value="0" {% if row['din_pruef'] == 0 %}checked{% endif %}>
+                        <label for="din_pruef-nein" class="yesno-no">Nein</label>
+                    </fieldset>
+                    <fieldset>
+                        <label for="status_detail">Status Detail</label>
+                        <div class="ui-field-contain">
+                            <select name="status_detail" id="status_detail" required>
+                                {% if row['status_detail'] is none or row['status_detail'] == '' or row['status_detail'] == null or row['status_detail'] == 'None' %}
+                                    <option value="" selected disabled>Bitte auswählen</option>
+                                {% endif %}
+                                {% for item in dropdown_erg %}
+                                <option value="{{ item }}" {{ 'selected' if row['status_detail'] == item else ''}}>{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <label for="reparatur_besch">Reparatur Beschreibung</label>
+                        <div data-role="fieldcontain">
+                            <textarea class="no-margin-top" name="reparatur_besch" id="reparatur_besch" required>{{ row['reparatur_besch'] if row['reparatur_besch'] else '' }}</textarea>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <label for="reparateur">Reparateur</label>
+                        <div class="ui-field-contain">
+                            <select name="reparateur" id="reparateur" required multiple="multiple" data-native-menu="false">
+                                {% if row['reparateur'] is none or row['reparateur'] == '' or row['reparateur'] == null or row['reparateur'] == 'None' %}
+                                    <option selected disabled>Bitte auswählen</option>
+                                {% endif %}
+                                {% for item in dropdown_who %}
+                                    {% if row['reparateur'] is iterable and item in row['reparateur'].split(',') %}
+                                        <option value="{{ item }}" selected>{{ item }}</option>
+                                    {% else %}
+                                        <option value="{{ item }}">{{ item }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            </select>
+                            </select>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <label for="reparatur_dauer">Reparatur Dauer</label>
+                        <input data-role="slider" type="range" name="reparatur_dauer" min="5" max="200" step="5" value="{{ row['reparatur_dauer'] if row['reparatur_dauer'] else '0' }}" required>
+                    </fieldset>
+                    <input data-role="submit" class="big" data-theme="a" type="submit" value="Abschicken">
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = "{{ token }}";
+    const test_erg = "{{ row['status_detail'] }}";
+    console.log(test_erg);
+    console.log(typeof test_erg);
+    // Show the "Sonstige Reparatur" field if the dropdown value is "sonstige"
+    $('#reparatur_art').on('change', function() {
+        if (this.value === 'Sonstiges') {
+            $('#sonstigeReparatur').show();
+            $('#reparatur_sonstiges').textinput('enable');
+        } else {
+            $('#sonstigeReparatur').hide();
+            $('#reparatur_sonstiges').textinput('disable');
+        }
+    });
+    $( document ).ready(function() {
+        console.log( "ready!" );
+        // trigger the change event to show the field if the value is already "sonstige"
+        $('#reparatur_art').trigger('change');
+    });
+    
+    $('#editRepair').on('submit', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // get the form data as json
+        var form = $(this);
+        var formdata = form.serializeArray();
+        var data = {};
+        var url;
+        if (token == "") {
+            url = "/api/repairs/{{ row['id'] }}/update";
+        } else {
+            url = "/api/repairs/{{ row['id'] }}/{{ token }}/update";
+        }
+        console.log(...formdata)
+        $(formdata ).each(function(index, obj){
+            if (obj.name in data){
+                data[obj.name] = data[obj.name] + ',' + obj.value;
+            }
+            else {
+                data[obj.name] = obj.value;
+            }
+        });
+
+        function getHtmlLabelFromInputName(name){
+            // Search for the label text of that input field in the dom, if it exists (it uses the strict for defintion of the input name)
+            // returns the text
+            var label = $('label[for="' + name + '"]').text()+":";
+            return label;
+        }
+        function mapSpecificValues(key, value){
+            if (value == 1){
+                return 'JA';
+            }
+            else if (value == 0){
+                return 'NEIN';
+            }
+            // if key is datum, transform to german format date
+            else if (key == 'datum'){
+                var date = new Date(value);
+                return date.toLocaleDateString('de-DE');
+            }
+            else{
+                return value;
+            }
+        }
+        // Show the entered content in a SweetAlert popup
+        Swal.fire({
+            icon: "info",
+            padding: "0 0 0",
+            width: "80%",
+            showCloseButton: true,
+            showConfirmButton: true,
+            confirmButtonText: 'OK',
+            title: 'Eingaben korrekt?',
+            html: '<table style="width: 95%">' +
+                '<colgroup><col style="width: 150px;"></colgroup>' +
+                '<tr><th style="text-align: right; border-bottom: 2px solid darkgrey;">Name</th><th style="padding-left:15px; text-align: left; border-bottom: 2px solid darkgrey;">Value</th></tr>' +
+                Object.entries(data).map(([key, value]) => `<tr><td style="text-align: right; border-bottom: 2px solid darkgrey;">${getHtmlLabelFromInputName(key)}</td><td style="padding-left:15px; text-align: left; border-bottom: 2px solid darkgrey;">${mapSpecificValues(key, value)}</td></tr>`).join('') +
+                '</table>',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: url,
+                    async: 'true',
+                    type: 'POST',
+                    data: JSON.stringify(data),
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        // This callback function will trigger before data is sent
+                        $.mobile.loading('show'); // This will show Ajax spinner
+                    },
+                    complete: function () {
+                        // This callback function will trigger on data sent/received complete  
+                        $.mobile.loading('hide'); // This will hide Ajax spinner
+                    },
+                    success: function (result) {
+                        //$("#result").empty().append(result);
+                        var jres = result;
+                        if (jres.reply === 'done') {
+                            Swal.fire({
+                                icon: "success",
+                                showCloseButton: true,
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                text: 'Reparatur erfolgreich bearbeitet!',
+                            }).then((result) => {
+                                // Reload
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                showCloseButton: true,
+                                showConfirmButton: false,
+                                width: "50%",
+                                timer: 10000,
+                                timerProgressBar: true,
+                                text: 'Fehler beim Bearbeiten der Reparatur!',
+                            })
+                        }
+                    },
+                    error: function (request) {
+                        // This callback function will trigger on unsuccessful action         
+                        Swal.fire({
+                            icon: "error",
+                            showCloseButton: true,
+                            showConfirmButton: false,
+                            width: "50%",
+                            timer: 10000,
+                            timerProgressBar: true,
+                            text: 'Network error has occurred please try again!: ' + JSON.stringify(request),
+                        })        
+                        console.log('Network error has occurred please try again!: ' + JSON.stringify(request));
+                    }
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

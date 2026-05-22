@@ -1,0 +1,179 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "RepairCafe"
+    }
+  ],
+  "settings": {
+    // Python settings
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+      }
+    },
+
+    // Vue/TypeScript settings
+    "[vue]": {
+      "editor.defaultFormatter": "Vue.volar",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+
+    // File associations
+    "files.associations": {
+      "*.vue": "vue"
+    },
+
+    // Search exclusions for cleaner results
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/dist": true,
+      "**/.git": true,
+      "**/app/_trash": true,
+      "**/*.min.js": true,
+      "**/*.min.css": true
+    },
+
+    // File explorer exclusions
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/node_modules": false
+    },
+
+    // Emmet for Vue files
+    "emmet.includeLanguages": {
+      "vue": "html"
+    },
+
+    // TypeScript settings
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.suggest.autoImports": true,
+
+    // Terminal settings
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "chat.tools.terminal.autoApprove": {
+      "pnpm": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      // Python
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "ms-python.isort",
+      "ms-python.debugpy",
+
+      // Vue & TypeScript
+      "Vue.volar",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+
+      // General
+      "EditorConfig.EditorConfig",
+      "eamodio.gitlens",
+      "streetsidesoftware.code-spell-checker",
+
+      // API & Testing
+      "humao.rest-client",
+      "mtxr.sqltools",
+
+      // Docker
+      "ms-azuretools.vscode-docker"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Frontend: Dev Server",
+        "type": "shell",
+        "command": "cd frontend && pnpm dev",
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Build",
+        "type": "shell",
+        "command": "cd frontend && pnpm build",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Type Check",
+        "type": "shell",
+        "command": "cd frontend && pnpm type-check",
+        "group": "test",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "Backend: Flask Dev Server",
+        "type": "shell",
+        "command": "cd app && flask run --host 0.0.0.0 --port 5000",
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "options": {
+          "env": {
+            "FLASK_APP": "run.py",
+            "FLASK_ENV": "development",
+            "FLASK_DEBUG": "1"
+          }
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Backend: Run Migrations",
+        "type": "shell",
+        "command": "cd app && python run_migrations.py",
+        "group": "none",
+        "problemMatcher": []
+      },
+      {
+        "label": "Install: Python Dependencies",
+        "type": "shell",
+        "command": "pip install -r app/requirements.txt",
+        "group": "none",
+        "problemMatcher": []
+      },
+      {
+        "label": "Install: Node Dependencies",
+        "type": "shell",
+        "command": "cd frontend && pnpm install",
+        "group": "none",
+        "problemMatcher": []
+      },
+      {
+        "label": "Full Stack: Start All",
+        "dependsOn": ["Backend: Flask Dev Server", "Frontend: Dev Server"],
+        "dependsOrder": "parallel",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": []
+      }
+    ]
+  }
+}

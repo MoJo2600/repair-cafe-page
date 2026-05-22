@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html lang="de-DE">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<script src="js/JsBarcode.code128.min.js"></script>
+	<script>
+		Number.prototype.zeroPadding = function(){
+			var ret = "" + this.valueOf();
+			return ret.length == 1 ? "0" + ret : ret;
+		};
+	</script>
+</head>
+<body>
+	<div>
+		<img id="barcode1"/>
+		JsBarcode("#barcode", "Example1234"); //CODE128 (auto) is the default mode
+	</div>
+</body>
+</html>

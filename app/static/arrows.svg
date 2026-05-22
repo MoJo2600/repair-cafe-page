@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with Vectornator (http://vectornator.io/) -->
+<svg height="100%" stroke-miterlimit="10" style="fill-rule:nonzero;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;" version="1.1" viewBox="0 0 984.85 984.85" width="100%" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:vectornator="http://vectornator.io" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="994.963" id="Filter" width="588.951" x="409.399" y="5.09002">
+<feDropShadow dx="-3.67321e-05" dy="10" flood-color="#000000" flood-opacity="0.333" in="SourceGraphic" result="Shadow" stdDeviation="5"/>
+</filter>
+<filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="995.332" id="Filter_2" width="588.748" x="-13.499" y="4.75944">
+<feDropShadow dx="-3.67321e-05" dy="10" flood-color="#000000" flood-opacity="0.333" in="SourceGraphic" result="Shadow" stdDeviation="5"/>
+</filter>
+</defs>
+<clipPath id="ArtboardFrame">
+<rect height="984.85" width="984.85" x="0" y="0"/>
+</clipPath>
+<g clip-path="url(#ArtboardFrame)" id="Untitled" vectornator:layerName="Untitled">
+<g opacity="1">
+<path d="M652.075 954.791C664.176 966.791 680.775 974.891 697.775 976.291C714.975 977.69 732.675 973.491 746.975 963.791C750.875 961.19 754.575 958.091 757.875 954.791L757.975 954.69L962.875 749.791C992.175 720.491 992.175 672.991 962.875 643.69C933.574 614.39 886.074 614.39 856.774 643.69L779.875 720.59L779.875 83.59C779.875 42.19 746.274 8.59002 704.875 8.59002C663.475 8.59002 629.875 42.19 629.875 83.59L629.875 720.59L550.975 641.69C521.675 612.39 474.175 612.39 444.875 641.69C415.574 670.991 415.574 718.491 444.875 747.791L651.875 954.791C651.975 954.69 651.975 954.791 652.075 954.791Z" fill="#ffffff" fill-rule="nonzero" filter="url(#Filter)" stroke="#000000" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="2" vectornator:shadowAngle="1.5708" vectornator:shadowColor="#000000" vectornator:shadowOffset="10" vectornator:shadowOpacity="0.333" vectornator:shadowRadius="10"/>
+<path d="M74.975 365.491C94.175 365.491 113.375 358.191 127.975 343.491L206.875 264.591L206.875 901.591C206.875 942.991 240.475 976.591 281.875 976.591C323.275 976.591 356.875 942.991 356.875 901.591L356.875 264.591L433.774 341.491C448.375 356.091 467.574 363.491 486.774 363.491C505.974 363.491 525.174 356.191 539.774 341.491C569.074 312.191 569.074 264.691 539.774 235.391C534.375 229.991 528.875 224.491 523.474 219.091C510.174 205.791 496.974 192.391 483.574 179.191C466.375 162.091 449.274 144.991 432.175 127.791C415.375 110.791 397.975 94.291 381.275 77.091C365.075 60.491 348.675 44.191 331.376 28.591C313.376 12.391 289.876 4.391 265.676 10.091C259.476 11.491 252.876 13.891 247.276 16.991C230.576 26.391 217.276 41.891 203.776 55.291C187.276 71.591 171.076 88.191 154.676 104.691C135.176 124.291 115.476 143.791 95.876 163.291C79.476 179.891 62.876 196.491 46.376 213.091C38.376 221.091 30.376 228.991 22.376 236.991C22.276 237.091 22.076 237.291 21.976 237.391C-7.32399 266.691-7.32399 314.191 21.976 343.491C36.575 358.191 55.775 365.491 74.975 365.491Z" fill="#ffffff" fill-rule="nonzero" filter="url(#Filter_2)" stroke="#000000" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="2" vectornator:shadowAngle="1.5708" vectornator:shadowColor="#000000" vectornator:shadowOffset="10" vectornator:shadowOpacity="0.333" vectornator:shadowRadius="10"/>
+</g>
+</g>
+</svg>
