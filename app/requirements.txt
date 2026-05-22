@@ -21,3 +21,4 @@ qrcode
 python-escpos
 pydantic[email]
 pytz
+gunicorn

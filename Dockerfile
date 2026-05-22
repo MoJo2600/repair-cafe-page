@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Application code
 COPY app/ /app/
-COPY wsgi.py /wsgi.py
+COPY wsgi.py ./
 COPY config/ /config/
 
 # Built frontend assets
@@ -40,4 +40,11 @@ RUN mkdir -p /data
 
 EXPOSE 5000
 
-ENTRYPOINT ["python3", "/wsgi.py"]
+# 1 worker + 4 threads: keeps APScheduler to a single process while still
+# handling concurrent requests. Increase --threads on beefier hardware.
+ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:5000", \
+            "--workers", "1", \
+            "--worker-class", "gthread", \
+            "--threads", "4", \
+            "--timeout", "120", \
+            "wsgi:application"]
