@@ -97,7 +97,15 @@ def create_app(config_name=None):
     login_manager.session_protection = "strong"
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["SESSION_COOKIE_SECURE"] = not config.DEBUG
+    # Allow the operator to override via env var so plain-HTTP deployments
+    # (e.g. Raspberry Pi on a local network behind nginx without TLS) still work.
+    _secure_env = os.environ.get("SESSION_COOKIE_SECURE", "").lower()
+    if _secure_env in ("true", "1", "yes"):
+        app.config["SESSION_COOKIE_SECURE"] = True
+    elif _secure_env in ("false", "0", "no"):
+        app.config["SESSION_COOKIE_SECURE"] = False
+    else:
+        app.config["SESSION_COOKIE_SECURE"] = not config.DEBUG
     app.config["REMEMBER_COOKIE_HTTPONLY"] = True
     init_cors(app)
 

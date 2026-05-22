@@ -1,10 +1,22 @@
 services:
 
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
   app:
     image: ghcr.io/mojo2600/repaircafepage:latest
     restart: unless-stopped
-    ports:
-      - "5000:5000"
+    # Port is NOT exposed publicly — nginx is the only entry point.
+    # Uncomment the lines below if you need direct access for debugging:
+    # ports:
+    #   - "5000:5000"
     environment:
       FLASK_ENV: production
       MYSQL_HOST: db
@@ -19,6 +31,10 @@ services:
       MAIL_SENDER_NAME: ${MAIL_SENDER_NAME:-RepairCafe}
       EXPORT_MAIL_RECEIVER: ${EXPORT_MAIL_RECEIVER:-}
       PAGE_PASSWORD: ${PAGE_PASSWORD:-}
+      # Set to "true" only when nginx terminates TLS (HTTPS).
+      # Over plain HTTP (local network / Pi) keep this "false" so session
+      # cookies are sent and login works.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     volumes:
       - app_data:/data
       - ./config:/config:ro
