@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.1...v1.1.2) (2026-05-22)
+
+
+### Bug Fixes
+
+* switch to native github runners ([99c93cb](https://github.com/MoJo2600/repair-cafe-page/commit/99c93cb1f01775630f33d5afd9836b49b1481832))
+
 ## [1.1.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.0...v1.1.1) (2026-05-22)
 
 
