@@ -3,11 +3,13 @@ Configuration API endpoint.
 Reads dropdown data from the settings DB table (replaces dropdown_data.yaml).
 """
 
+import io
 import json
 from pathlib import Path
 
 import fitz
 from flask import Blueprint, Response, current_app, request, send_file
+from PIL import Image, UnidentifiedImageError
 
 from app.auth.decorators import admin_required
 from app.imports.pdfsigner import FIELD_DATE, FIELD_SIGNATURE
@@ -18,6 +20,10 @@ config_bp = Blueprint("config", __name__)
 
 # Where admin-uploaded disclaimer templates are persisted.
 _DISCLAIMER_STORE = Path(__file__).parent.parent.parent / "data" / "disclaimer.pdf"
+
+# Logo paths: active file lives in data/, default ships with the app in static/.
+_LOGO_STORE = Path(__file__).parent.parent.parent / "data" / "logo.png"
+_LOGO_DEFAULT = Path(__file__).parent.parent / "static" / "logo.jpg"
 
 
 @config_bp.route("/config/dropdowns", methods=["GET"])
@@ -184,6 +190,121 @@ def upload_disclaimer_template():
     pdf_service = current_app.pdf_service  # type: ignore
     pdf_service.reload(str(_DISCLAIMER_STORE))
     current_app.logger.info("Disclaimer template replaced via admin upload")
+
+    return Response(
+        json.dumps({"reply": "done"}),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@config_bp.route("/config/logo", methods=["GET"])
+def get_logo():
+    """
+    Serve the active logo image.
+    Falls back to the bundled default when no custom logo has been uploaded.
+    ---
+    operationId: getLogo
+    tags:
+      - Configuration
+    produces:
+      - image/png
+      - image/jpeg
+    responses:
+      200:
+        description: Logo image
+      404:
+        description: No logo available
+    """
+    if _LOGO_STORE.exists():
+        return send_file(str(_LOGO_STORE), mimetype="image/png")
+    if _LOGO_DEFAULT.exists():
+        return send_file(str(_LOGO_DEFAULT), mimetype="image/jpeg")
+    return Response(
+        json.dumps({"reply": "error", "error": "No logo configured"}),
+        status=404,
+        mimetype="application/json",
+    )
+
+
+@config_bp.route("/config/logo", methods=["POST"])
+@admin_required
+def upload_logo():
+    """
+    Upload and activate a new logo image (admin only).
+    Accepts PNG or JPEG. The image is validated and stored as PNG.
+    Takes effect immediately without a server restart.
+    ---
+    operationId: uploadLogo
+    tags:
+      - Configuration
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: PNG or JPEG image file
+    responses:
+      200:
+        description: Logo replaced successfully
+      400:
+        description: Invalid or missing file
+    """
+    if "file" not in request.files:
+        return Response(
+            json.dumps({"reply": "error", "error": "No file provided"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    uploaded_file = request.files["file"]
+    if not uploaded_file.filename:
+        return Response(
+            json.dumps({"reply": "error", "error": "No filename provided"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    allowed_extensions = {".png", ".jpg", ".jpeg"}
+    suffix = Path(uploaded_file.filename).suffix.lower()
+    if suffix not in allowed_extensions:
+        return Response(
+            json.dumps(
+                {
+                    "reply": "error",
+                    "error": "Only PNG and JPEG images are accepted",
+                }
+            ),
+            status=400,
+            mimetype="application/json",
+        )
+
+    image_bytes = uploaded_file.read()
+
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img.verify()  # Raises on invalid/truncated image data
+    except (UnidentifiedImageError, Exception):
+        return Response(
+            json.dumps(
+                {"reply": "error", "error": "Uploaded file is not a valid image"}
+            ),
+            status=400,
+            mimetype="application/json",
+        )
+
+    # Re-open after verify() (verify() exhausts the stream/resets internal state)
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    # Convert to RGB before saving as PNG (RGBA is fine for PNG, but avoids
+    # issues if someone later tries to use it in a JPEG context)
+    out = io.BytesIO()
+    img.save(out, format="PNG")
+
+    _LOGO_STORE.parent.mkdir(parents=True, exist_ok=True)
+    _LOGO_STORE.write_bytes(out.getvalue())
+    current_app.logger.info("Logo replaced via admin upload")
 
     return Response(
         json.dumps({"reply": "done"}),

@@ -42,6 +42,36 @@
             </v-card-text>
         </v-card>
 
+        <!-- Logo / Icon -->
+        <v-card class="mb-6">
+            <v-card-title>Logo / Icon</v-card-title>
+            <v-card-text>
+                <p class="text-body-2 text-medium-emphasis mb-4">
+                    Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon aktiv.
+                </p>
+                <v-row align="center" class="ga-4">
+                    <v-col cols="auto">
+                        <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg"
+                            class="border" />
+                    </v-col>
+                    <v-col cols="12" sm>
+                        <v-file-input v-model="logoFile" label="Neues Logo hochladen"
+                            accept="image/png,image/jpeg,.png,.jpg,.jpeg" prepend-icon="mdi-image"
+                            :error-messages="logoError" hide-details="auto" density="comfortable"
+                            @update:model-value="onLogoFileChange" />
+                    </v-col>
+                    <v-col cols="12" sm="auto">
+                        <v-btn color="primary" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
+                            Hochladen
+                        </v-btn>
+                    </v-col>
+                </v-row>
+                <v-alert v-if="logoSuccess" type="success" variant="tonal" density="compact" class="mt-4">
+                    Logo erfolgreich aktualisiert.
+                </v-alert>
+            </v-card-text>
+        </v-card>
+
         <!-- Reparaturarten -->
         <v-card class="mb-6">
             <v-card-title class="d-flex align-center justify-space-between">
@@ -291,6 +321,53 @@ async function doDelete() {
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 onMounted(loadSettings)
+
+// ── Logo upload ──────────────────────────────────────────────────────────────
+
+const logoFile = ref<File | null>(null)
+const logoUploading = ref(false)
+const logoError = ref('')
+const logoSuccess = ref(false)
+const logoPreview = ref<string | null>(null)
+
+function onLogoFileChange(file: File | File[] | null) {
+    logoError.value = ''
+    logoSuccess.value = false
+    const f = Array.isArray(file) ? file[0] : file
+    if (f) {
+        logoPreview.value = URL.createObjectURL(f)
+    } else {
+        logoPreview.value = null
+    }
+}
+
+async function uploadLogo() {
+    if (!logoFile.value) return
+    logoUploading.value = true
+    logoError.value = ''
+    logoSuccess.value = false
+    try {
+        const fd = new FormData()
+        fd.append('file', logoFile.value)
+        const res = await fetch('/api/config/logo', { method: 'POST', body: fd })
+        const json = await res.json()
+        if (!res.ok || json.reply !== 'done') {
+            logoError.value = json.error ?? 'Fehler beim Hochladen'
+        } else {
+            logoSuccess.value = true
+            logoFile.value = null
+            // Update all favicon links in the document head
+            const bust = `?t=${Date.now()}`
+            document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(el => {
+                el.href = `/api/config/logo${bust}`
+            })
+        }
+    } catch {
+        logoError.value = 'Netzwerkfehler beim Hochladen'
+    } finally {
+        logoUploading.value = false
+    }
+}
 
 // ── Disclaimer upload ─────────────────────────────────────────────────────────
 

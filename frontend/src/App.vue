@@ -2,7 +2,7 @@
   <v-app>
     <v-app-bar color="primary" prominent>
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
-      <v-img src="/logo.png" max-height="40" max-width="40" class="mr-3" contain></v-img>
+      <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
       <v-toolbar-title>Repair Cafe</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="openQrScanner">
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide, onUnmounted } from 'vue'
+import { ref, provide, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import jsQR from 'jsqr'
@@ -96,6 +96,14 @@ import jsQR from 'jsqr'
 const router = useRouter()
 const authStore = useAuthStore()
 const drawer = ref(false)
+
+// Set all favicon / touch-icon links to the dynamic logo endpoint
+onMounted(() => {
+  const logoUrl = '/api/config/logo'
+  document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(el => {
+    el.href = logoUrl
+  })
+})
 
 // Global toast state
 const toastVisible = ref(false)
