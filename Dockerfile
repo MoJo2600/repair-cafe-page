@@ -13,14 +13,16 @@ RUN pnpm build
 # outDir in vite.config.ts is "../app/static/dist" relative to frontend/,
 # so the build lands at /app/static/dist inside this stage.
 
-# ── Stage 2: Python app ───────────────────────────────────────────────────────
+# ── Stage 2: Python app + Nginx ──────────────────────────────────────────────
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# System packages needed by some Python deps (e.g. PyMuPDF, Pillow)
+# nginx for static-file serving; supervisor to manage both processes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 libgl1 \
+    nginx \
+    supervisor \
   && rm -rf /var/lib/apt/lists/*
 
 # Python dependencies first (better layer caching)
@@ -35,16 +37,16 @@ COPY config/ /config/
 # Built frontend assets
 COPY --from=frontend-builder /app/static/dist /app/static/dist
 
+# Nginx + supervisor config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY supervisord.conf /etc/supervisord.conf
+# Remove the default nginx site so only our config is active
+RUN rm -f /etc/nginx/sites-enabled/default
+
 # Persistent data directory (mount a volume here in production)
 RUN mkdir -p /data
 
-EXPOSE 5000
+# nginx runs on 80; Gunicorn is internal-only (127.0.0.1:5000)
+EXPOSE 80
 
-# 1 worker + 4 threads: keeps APScheduler to a single process while still
-# handling concurrent requests. Increase --threads on beefier hardware.
-ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:5000", \
-            "--workers", "1", \
-            "--worker-class", "gthread", \
-            "--threads", "4", \
-            "--timeout", "120", \
-            "wsgi:application"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

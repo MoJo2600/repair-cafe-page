@@ -1,22 +1,10 @@
 services:
 
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - app
-
   app:
     image: ghcr.io/mojo2600/repaircafepage:latest
     restart: unless-stopped
-    # Port is NOT exposed publicly — nginx is the only entry point.
-    # Uncomment the lines below if you need direct access for debugging:
-    # ports:
-    #   - "5000:5000"
+    ports:
+      - "80:80"
     environment:
       FLASK_ENV: production
       MYSQL_HOST: db
