@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.0...v1.1.1) (2026-05-22)
+
+
+### Bug Fixes
+
+* rename flask secret variable ([e7cad26](https://github.com/MoJo2600/repair-cafe-page/commit/e7cad26267d5367aed83f6835ce6384d8d3000c2))
+
 ## [1.1.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.0.0...v1.1.0) (2026-05-22)
 
 
