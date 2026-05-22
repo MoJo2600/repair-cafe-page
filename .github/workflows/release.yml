@@ -36,26 +36,32 @@ jobs:
 
   # ── Docker build (multi-arch) ────────────────────────────────────────────────
   # Runs only when release-please has just created a release (i.e. a new tag).
-  # Produces a single OCI manifest covering linux/amd64 and linux/arm64
-  # (x86 servers and Raspberry Pi 4/5).
+  # Each platform is built on its own native runner (no QEMU emulation) to avoid
+  # PyMuPDF and other C-extension packages timing out during cross-compilation.
+  # The two resulting digests are merged into a single OCI manifest at the end.
   build:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Set lowercase image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
-      # QEMU lets the amd64 runner build arm64 layers via emulation
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Push to GitHub Container Registry — credentials are built-in
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -63,15 +69,67 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push multi-arch image
+      - name: Build and push platform image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ needs.release-please.outputs.tag_name || inputs.tag_name }}
-            ${{ env.IMAGE }}:latest
-          # Layer cache stored in the GitHub Actions cache
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Push to a temporary digest-only ref; the manifest is assembled below
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/
+          retention-days: 1
+
+  # ── Merge manifests ───────────────────────────────────────────────────────────
+  # Combines the two per-platform digests into a single multi-arch manifest.
+  merge:
+    needs: [release-please, build]
+    if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name || inputs.tag_name }}"
+          AMD64=$(cat /tmp/digests/amd64)
+          ARM64=$(cat /tmp/digests/arm64)
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE }}:${TAG} \
+            -t ${{ env.IMAGE }}:latest \
+            ${{ env.IMAGE }}@${AMD64} \
+            ${{ env.IMAGE }}@${ARM64}
