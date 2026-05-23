@@ -25,6 +25,17 @@ export interface APIResponse {
   reply: string;
 }
 
+export interface AuthResponse {
+  data?: UserResponse;
+  /**
+   * Error message if reply is error
+   * @default null
+   */
+  error?: string;
+  /** Response status (done, error) */
+  reply: string;
+}
+
 export interface CustomerResponse {
   /** @format date-time */
   created_at: string;
@@ -52,6 +63,16 @@ export interface CustomerWithRepairCountResponse {
   /** @default null */
   telefon?: string;
   vorname: string;
+}
+
+export interface LoginRequest {
+  /** @minLength 1 */
+  password: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  username: string;
 }
 
 export interface PruefgeraetResponse {
@@ -150,13 +171,14 @@ export interface RepairCreateResponse {
 }
 
 export interface RepairLogCreate {
-  /** Repair ID this log belongs to */
-  repair_id: number;
   /**
    * Entry type: 'work' for work sessions, 'status_change' for status transitions
+   * @maxLength 20
    * @default "work"
    */
   log_type?: string;
+  /** Repair ID this log belongs to */
+  repair_id: number;
   /**
    * Repair description
    * @maxLength 400
@@ -169,9 +191,15 @@ export interface RepairLogCreate {
    * @default 0
    */
   reparatur_dauer?: number;
-  /** Status before the transition */
+  /**
+   * Status before the transition
+   * @default null
+   */
   status_from?: string;
-  /** Status after the transition */
+  /**
+   * Status after the transition
+   * @default null
+   */
   status_to?: string;
   /**
    * Assigned reparateur (user FK)
@@ -196,9 +224,10 @@ export interface RepairLogResponse {
   id: number;
   /**
    * Entry type: 'work' for work sessions, 'status_change' for status transitions
+   * @maxLength 20
    * @default "work"
    */
-  log_type: string;
+  log_type?: string;
   /** Repair ID this log belongs to */
   repair_id: number;
   /**
@@ -206,17 +235,23 @@ export interface RepairLogResponse {
    * @maxLength 400
    * @default ""
    */
-  reparatur_besch: string;
+  reparatur_besch?: string;
   /**
    * Repair duration in minutes
    * @min 0
    * @default 0
    */
-  reparatur_dauer: number;
-  /** Status before the transition */
-  status_from?: string | null;
-  /** Status after the transition */
-  status_to?: string | null;
+  reparatur_dauer?: number;
+  /**
+   * Status before the transition
+   * @default null
+   */
+  status_from?: string;
+  /**
+   * Status after the transition
+   * @default null
+   */
+  status_to?: string;
   user?: UserResponse;
   /**
    * Assigned reparateur (user FK)
@@ -307,7 +342,7 @@ export interface RepairResponse {
    * Assigned reparateur (user FK)
    * @default null
    */
-  user_id?: number | null;
+  user_id?: number;
 }
 
 export interface RepairUpdate {
@@ -375,7 +410,21 @@ export interface RepairUpdate {
    * Assigned reparateur (user FK)
    * @default null
    */
-  user_id?: number | null;
+  user_id?: number;
+}
+
+export interface SettingResponse {
+  category: string;
+  /** @format date-time */
+  created_at: string;
+  id: number;
+  is_active: boolean;
+  name: string;
+  /** @default null */
+  serial_number?: string;
+  sort_order: number;
+  /** @format date-time */
+  updated_at: string;
 }
 
 export interface UserResponse {
@@ -397,7 +446,7 @@ export interface VdeTestCreate {
    * Leakage current test: True=passed, False=failed
    * @default null
    */
-  ableitstrom_pruefung?: boolean | null;
+  ableitstrom_pruefung?: boolean;
   /**
    * Comments/Defects
    * @default null
@@ -419,7 +468,7 @@ export interface VdeTestCreate {
    * Insulation test: True=passed, False=failed
    * @default null
    */
-  isolationspruefung?: boolean | null;
+  isolationspruefung?: boolean;
   /**
    * Testing device name
    * @default null
@@ -451,32 +500,32 @@ export interface VdeTestCreate {
    * Protective conductor test: True=passed, False=failed
    * @default null
    */
-  schutzleiter_pruefung?: boolean | null;
+  schutzleiter_pruefung?: boolean;
   /**
    * Housing inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_gehaeuse?: boolean | null;
+  sichtpruefung_gehaeuse?: boolean;
   /**
    * Cable inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_kabel?: boolean | null;
+  sichtpruefung_kabel?: boolean;
   /**
    * Safety devices inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_sicherheit?: boolean | null;
+  sichtpruefung_sicherheit?: boolean;
   /**
    * Plug inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_stecker?: boolean | null;
+  sichtpruefung_stecker?: boolean;
   /**
    * Strain relief inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_zugentlastung?: boolean | null;
+  sichtpruefung_zugentlastung?: boolean;
 }
 
 export interface VdeTestCreateResponse {
@@ -511,7 +560,7 @@ export interface VdeTestResponse {
    * Leakage current test: True=passed, False=failed
    * @default null
    */
-  ableitstrom_pruefung?: boolean | null;
+  ableitstrom_pruefung?: boolean;
   /**
    * Comments/Defects
    * @default null
@@ -535,7 +584,7 @@ export interface VdeTestResponse {
    * Insulation test: True=passed, False=failed
    * @default null
    */
-  isolationspruefung?: boolean | null;
+  isolationspruefung?: boolean;
   /**
    * Testing device name
    * @default null
@@ -567,32 +616,48 @@ export interface VdeTestResponse {
    * Protective conductor test: True=passed, False=failed
    * @default null
    */
-  schutzleiter_pruefung?: boolean | null;
+  schutzleiter_pruefung?: boolean;
   /**
    * Housing inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_gehaeuse?: boolean | null;
+  sichtpruefung_gehaeuse?: boolean;
   /**
    * Cable inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_kabel?: boolean | null;
+  sichtpruefung_kabel?: boolean;
   /**
    * Safety devices inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_sicherheit?: boolean | null;
+  sichtpruefung_sicherheit?: boolean;
   /**
    * Plug inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_stecker?: boolean | null;
+  sichtpruefung_stecker?: boolean;
   /**
    * Strain relief inspection: True=passed, False=failed
    * @default null
    */
-  sichtpruefung_zugentlastung?: boolean | null;
+  sichtpruefung_zugentlastung?: boolean;
+}
+
+export interface UploadDisclaimerTemplatePayload {
+  /**
+   * PDF file with required AcroForm fields
+   * @format binary
+   */
+  file: File;
+}
+
+export interface UploadLogoPayload {
+  /**
+   * PNG or JPEG image file
+   * @format binary
+   */
+  file: File;
 }
 
 export interface GetRepairByQrTokenParams {
@@ -657,26 +722,6 @@ export interface UpdateSettingParams {
   settingId: number;
 }
 
-export interface EditRepairParams {
-  id: number;
-}
-
-export interface EditRepairWithTokenParams {
-  id: number;
-  token: string;
-}
-
 export interface GetStatDataParams {
   type: "repairs" | "devices" | "time";
-}
-
-export interface SettingResponse {
-  id: number;
-  category: string;
-  name: string;
-  serial_number: string | null;
-  sort_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }

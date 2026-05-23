@@ -43,6 +43,16 @@ def create_app(config_name=None):
     config = get_config()
     app.config.from_object(config)
 
+    # Ensure SECRET_KEY is always set; in development a random key is acceptable.
+    if not app.config.get("SECRET_KEY"):
+        if config.DEBUG:
+            app.config["SECRET_KEY"] = secrets.token_hex(32)
+        else:
+            raise RuntimeError(
+                "SECRET_KEY environment variable must be set in production. "
+                "Set FLASK_SECRET_KEY in your .env file."
+            )
+
     # Configure logging
     log_level = logging.DEBUG if config.DEBUG else logging.INFO
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -186,8 +196,8 @@ def register_blueprints(app):
     from app.auth.routes import auth_bp
     from app.web.routes import web_bp
 
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(web_bp)
+    app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(web_bp, url_prefix="/api")
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(repairs_bp, url_prefix="/api")
     app.register_blueprint(repair_logs_bp, url_prefix="/api")

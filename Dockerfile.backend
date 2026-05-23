@@ -1,0 +1,32 @@
+# ── Backend: Python + Gunicorn ────────────────────────────────────────────────
+FROM python:3.12-slim
+
+# /srv mirrors the repo root: wsgi.py here, app/ is the Flask package.
+WORKDIR /srv
+
+# System packages required by Python deps (PyMuPDF, Pillow)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 libgl1 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies (separate layer for caching)
+COPY app/requirements.txt app/requirements.txt
+RUN pip install --no-cache-dir -r app/requirements.txt
+
+# Application code — app/ becomes /srv/app/ (importable as the 'app' package)
+COPY app/ /srv/app/
+COPY wsgi.py /srv/wsgi.py
+COPY VERSION /srv/VERSION
+COPY config/ /config/
+
+COPY entrypoint.backend.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Persistent data directory (mount a volume here in production)
+RUN mkdir -p /data
+
+# Gunicorn listens on 5000; only exposed to the internal Docker network.
+EXPOSE 5000
+
+# Runs migrations then starts Gunicorn
+ENTRYPOINT ["/entrypoint.sh"]

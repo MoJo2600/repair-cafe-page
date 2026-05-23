@@ -13,12 +13,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../app/static/dist",
+    outDir: "dist",
     emptyOutDir: true,
-    manifest: true,
-    rollupOptions: {
-      input: "./src/main.ts",
-    },
   },
   server: {
     host: "0.0.0.0",

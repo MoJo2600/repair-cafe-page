@@ -27,9 +27,30 @@ def user_loader(user_id: str):
         return None
 
 
-@auth_bp.route("/api/auth/login", methods=["POST"])
+@auth_bp.route("/auth/login", methods=["POST"])
 def api_login():
-    """Authenticate with username + password; sets an HTTP-only session cookie."""
+    """
+    Authenticate with username and password.
+    ---
+    tags:
+      - Auth
+    operationId: login
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/LoginRequest'
+    responses:
+      200:
+        description: Login successful, session cookie set
+        schema:
+          $ref: '#/definitions/AuthResponse'
+      401:
+        description: Invalid credentials
+      403:
+        description: Account disabled
+    """
     body, err = parse_request(LoginRequest)
     if err:
         return err
@@ -64,10 +85,23 @@ def api_login():
     )
 
 
-@auth_bp.route("/api/auth/me", methods=["GET"])
+@auth_bp.route("/auth/me", methods=["GET"])
 @login_required_api
 def api_me():
-    """Return the currently authenticated user's profile."""
+    """
+    Return the currently authenticated user's profile.
+    ---
+    tags:
+      - Auth
+    operationId: me
+    responses:
+      200:
+        description: Current user profile
+        schema:
+          $ref: '#/definitions/AuthResponse'
+      401:
+        description: Not authenticated
+    """
     user = flask_login.current_user
     return Response(
         json.dumps(
@@ -81,10 +115,23 @@ def api_me():
     )
 
 
-@auth_bp.route("/api/auth/logout", methods=["POST"])
+@auth_bp.route("/auth/logout", methods=["POST"])
 @login_required_api
 def api_logout():
-    """Invalidate the session cookie."""
+    """
+    Invalidate the current session cookie.
+    ---
+    tags:
+      - Auth
+    operationId: logout
+    responses:
+      200:
+        description: Logged out successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
+      401:
+        description: Not authenticated
+    """
     current_app.logger.info(f"User '{flask_login.current_user.username}' logged out")
     flask_login.logout_user()
     return Response(

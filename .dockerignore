@@ -21,7 +21,7 @@ venv
 env
 
 # Built frontend assets (rebuilt inside Docker)
-app/static/dist
+frontend/dist
 
 # Persistent data (should be a volume in production)
 data/

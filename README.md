@@ -29,33 +29,32 @@ cd repaircafepage
 cp .env.example .env
 $EDITOR .env
 
-# Pull and start
+# Build and start — database migrations run automatically on first boot
 docker compose up -d
-
-# Run database migrations (first start and after every update)
-docker compose exec app python run_migrations.py
 ```
 
-The app is available at `http://<host>:5000`.
+The app is available at `http://<host>`.
 
 ### Update
 
 ```bash
 docker compose pull
 docker compose up -d
-docker compose exec app python run_migrations.py
+# Migrations run automatically on backend startup — no manual step needed.
 ```
 
 ### Stack overview
 
-| Container | Image | Exposed port |
-|---|---|---|
-| `app` | `ghcr.io/mojo2600/repaircafepage:latest` | 5000 |
-| `db` | `mariadb:11` | internal only |
+The stack runs as three containers:
 
-The image ships a multi-arch manifest (`linux/amd64` + `linux/arm64`) so the
-same `docker compose up -d` command works on a Raspberry Pi 4 or 5 without
-changes.
+| Container | Role | Exposed port |
+|---|---|---|
+| `frontend` | nginx — serves the Vue SPA, proxies `/api/` to the backend | 80 |
+| `backend` | Gunicorn/Flask — API + PDF/email services | internal only |
+| `db` | MariaDB 11 | internal only |
+
+Multi-arch images (`linux/amd64` + `linux/arm64`) are published to GHCR so the
+same `docker compose up -d` works on a Raspberry Pi 4/5 without changes.
 
 ### Persistent data
 
@@ -72,6 +71,23 @@ docker compose exec db mariadb-dump -u root -p"$MYSQL_ROOT_PASSWORD" repaircafep
 docker run --rm -v repaircafepage_app_data:/data -v $(pwd):/backup alpine \
   tar czf /backup/app_data_backup.tar.gz /data
 ```
+
+### Seed with demo data
+
+A `seed` service is included for quickly loading realistic test data (users,
+customers, repairs). It is gated behind a Compose profile so it never runs
+unless explicitly requested.
+
+```bash
+# Load demo data (skips silently if data already exists)
+docker compose run --rm seed
+
+# Wipe all seeded rows and re-seed from scratch
+docker compose run --rm seed --reset
+```
+
+Demo credentials created by the seed: `admin` / `admin123` and
+`hans.mueller` / `test123`.
 
 ## Development
 

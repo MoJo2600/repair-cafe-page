@@ -36,8 +36,10 @@ def init_swagger(app):
     """Initialize Swagger documentation with Pydantic models."""
     from app.schemas import (
         APIResponse,
+        AuthResponse,
         CustomerResponse,
         CustomerWithRepairCountResponse,
+        LoginRequest,
         PruefgeraetResponse,
         RepairCreate,
         RepairCreateResponse,
@@ -46,6 +48,7 @@ def init_swagger(app):
         RepairLogResponse,
         RepairResponse,
         RepairUpdate,
+        SettingResponse,
         UserResponse,
         VdeTestCreate,
         VdeTestCreateResponse,
@@ -57,39 +60,35 @@ def init_swagger(app):
     swagger = Swagger(
         app,
         template={
-            "openapi": "3.0.0",
             "info": {
                 "title": "RepairCafe API",
                 "description": "API for managing repair records",
                 "version": app.config["VERSION"],
             },
-            "servers": [
-                {
-                    "url": "http://localhost:" + str(app.config.get("PORT", "5000")),
-                    "description": "Development server",
-                }
-            ],
-            "components": {
-                "schemas": {
-                    "APIResponse": pydantic_to_swagger(APIResponse),
-                    "CustomerResponse": pydantic_to_swagger(CustomerResponse),
-                    "CustomerWithRepairCountResponse": pydantic_to_swagger(
-                        CustomerWithRepairCountResponse
-                    ),
-                    "PruefgeraetResponse": pydantic_to_swagger(PruefgeraetResponse),
-                    "RepairCreate": pydantic_to_swagger(RepairCreate),
-                    "RepairUpdate": pydantic_to_swagger(RepairUpdate),
-                    "RepairResponse": pydantic_to_swagger(RepairResponse),
-                    "RepairCreateResponse": pydantic_to_swagger(RepairCreateResponse),
-                    "RepairLogCreate": pydantic_to_swagger(RepairLogCreate),
-                    "RepairLogResponse": pydantic_to_swagger(RepairLogResponse),
-                    "RepairLogListResponse": pydantic_to_swagger(RepairLogListResponse),
-                    "UserResponse": pydantic_to_swagger(UserResponse),
-                    "VdeTestCreate": pydantic_to_swagger(VdeTestCreate),
-                    "VdeTestResponse": pydantic_to_swagger(VdeTestResponse),
-                    "VdeTestListResponse": pydantic_to_swagger(VdeTestListResponse),
-                    "VdeTestCreateResponse": pydantic_to_swagger(VdeTestCreateResponse),
-                }
+            "host": "localhost:" + str(app.config.get("PORT", "5000")),
+            "basePath": "/",
+            "definitions": {
+                "APIResponse": pydantic_to_swagger(APIResponse),
+                "AuthResponse": pydantic_to_swagger(AuthResponse),
+                "LoginRequest": pydantic_to_swagger(LoginRequest),
+                "CustomerResponse": pydantic_to_swagger(CustomerResponse),
+                "CustomerWithRepairCountResponse": pydantic_to_swagger(
+                    CustomerWithRepairCountResponse
+                ),
+                "PruefgeraetResponse": pydantic_to_swagger(PruefgeraetResponse),
+                "RepairCreate": pydantic_to_swagger(RepairCreate),
+                "RepairUpdate": pydantic_to_swagger(RepairUpdate),
+                "RepairResponse": pydantic_to_swagger(RepairResponse),
+                "RepairCreateResponse": pydantic_to_swagger(RepairCreateResponse),
+                "SettingResponse": pydantic_to_swagger(SettingResponse),
+                "RepairLogCreate": pydantic_to_swagger(RepairLogCreate),
+                "RepairLogResponse": pydantic_to_swagger(RepairLogResponse),
+                "RepairLogListResponse": pydantic_to_swagger(RepairLogListResponse),
+                "UserResponse": pydantic_to_swagger(UserResponse),
+                "VdeTestCreate": pydantic_to_swagger(VdeTestCreate),
+                "VdeTestResponse": pydantic_to_swagger(VdeTestResponse),
+                "VdeTestListResponse": pydantic_to_swagger(VdeTestListResponse),
+                "VdeTestCreateResponse": pydantic_to_swagger(VdeTestCreateResponse),
             },
         },
     )

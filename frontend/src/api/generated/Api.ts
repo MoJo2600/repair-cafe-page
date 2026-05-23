@@ -11,26 +11,119 @@
  */
 
 import {
+  APIResponse,
+  AuthResponse,
   CreateRepairLogParams,
   CreateVdeTestParams,
+  CustomerWithRepairCountResponse,
   DeleteRepairLogParams,
   DeleteSettingParams,
   GetRepairByQrTokenParams,
   GetRepairDisclaimerParams,
   GetRepairLogParams,
+  GetStatDataParams,
   GetVdeTestParams,
   ListRepairLogsParams,
   ListVdeTestsParams,
+  LoginRequest,
+  PruefgeraetResponse,
+  RepairCreate,
+  RepairCreateResponse,
   RepairLogCreate,
+  RepairLogListResponse,
+  RepairResponse,
+  RepairUpdate,
+  SettingResponse,
   UpdateRepairParams,
   UpdateSettingParams,
+  UploadDisclaimerTemplatePayload,
+  UploadLogoPayload,
   VdeTestCreate,
+  VdeTestCreateResponse,
+  VdeTestListResponse,
 } from "./data-contracts";
 import { ContentType, HttpClient, RequestParams } from "./http-client";
 
 export class Api<
   SecurityDataType = unknown,
 > extends HttpClient<SecurityDataType> {
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name Login
+   * @summary Authenticate with username and password.
+   * @request POST:/api/auth/login
+   */
+  login = (body: LoginRequest, params: RequestParams = {}) =>
+    this.request<AuthResponse, void>({
+      path: `/api/auth/login`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name Logout
+   * @summary Invalidate the current session cookie.
+   * @request POST:/api/auth/logout
+   */
+  logout = (params: RequestParams = {}) =>
+    this.request<APIResponse, void>({
+      path: `/api/auth/logout`,
+      method: "POST",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name Me
+   * @summary Return the currently authenticated user's profile.
+   * @request GET:/api/auth/me
+   */
+  me = (params: RequestParams = {}) =>
+    this.request<AuthResponse, void>({
+      path: `/api/auth/me`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
+   * @name GetDisclaimerTemplate
+   * @summary Serve the active disclaimer PDF template for inline display.
+   * @request GET:/api/config/disclaimer
+   */
+  getDisclaimerTemplate = (params: RequestParams = {}) =>
+    this.request<void, void>({
+      path: `/api/config/disclaimer`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * @description The PDF must contain AcroForm fields named 'date' and 'signature'.<br/>Takes effect immediately without a server restart.<br/>
+   *
+   * @tags Configuration
+   * @name UploadDisclaimerTemplate
+   * @summary Upload and activate a new disclaimer PDF template (admin only).
+   * @request POST:/api/config/disclaimer
+   */
+  uploadDisclaimerTemplate = (
+    data: UploadDisclaimerTemplatePayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/config/disclaimer`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      ...params,
+    });
   /**
    * No description
    *
@@ -46,6 +139,36 @@ export class Api<
       ...params,
     });
   /**
+   * @description Falls back to the bundled default when no custom logo has been uploaded.<br/>
+   *
+   * @tags Configuration
+   * @name GetLogo
+   * @summary Serve the active logo image.
+   * @request GET:/api/config/logo
+   */
+  getLogo = (params: RequestParams = {}) =>
+    this.request<Blob, void>({
+      path: `/api/config/logo`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * @description Accepts PNG or JPEG. The image is validated and stored as PNG.<br/>Takes effect immediately without a server restart.<br/>
+   *
+   * @tags Configuration
+   * @name UploadLogo
+   * @summary Upload and activate a new logo image (admin only).
+   * @request POST:/api/config/logo
+   */
+  uploadLogo = (data: UploadLogoPayload, params: RequestParams = {}) =>
+    this.request<void, void>({
+      path: `/api/config/logo`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      ...params,
+    });
+  /**
    * No description
    *
    * @tags Configuration
@@ -54,7 +177,7 @@ export class Api<
    * @request GET:/api/config/pruefgeraete
    */
   getPruefgeraete = (params: RequestParams = {}) =>
-    this.request<void, any>({
+    this.request<PruefgeraetResponse[], any>({
       path: `/api/config/pruefgeraete`,
       method: "GET",
       ...params,
@@ -68,7 +191,14 @@ export class Api<
    * @request GET:/api/customers
    */
   listCustomers = (params: RequestParams = {}) =>
-    this.request<void, void>({
+    this.request<
+      {
+        count?: number;
+        data?: CustomerWithRepairCountResponse[];
+        reply?: string;
+      },
+      void
+    >({
       path: `/api/customers`,
       method: "GET",
       ...params,
@@ -109,10 +239,12 @@ export class Api<
    * @summary Create a new repair record
    * @request POST:/api/repairs
    */
-  createRepair = (params: RequestParams = {}) =>
-    this.request<void, void>({
+  createRepair = (body: RepairCreate, params: RequestParams = {}) =>
+    this.request<RepairCreateResponse, void>({
       path: `/api/repairs`,
       method: "POST",
+      body: body,
+      type: ContentType.Json,
       ...params,
     });
   /**
@@ -140,10 +272,23 @@ export class Api<
    * @summary Update an existing repair record
    * @request PUT:/api/repairs/{id}
    */
-  updateRepair = ({ id }: UpdateRepairParams, params: RequestParams = {}) =>
-    this.request<void, void>({
+  updateRepair = (
+    { id }: UpdateRepairParams,
+    body: RepairUpdate,
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      {
+        data?: RepairResponse;
+        /** @example "done" */
+        reply?: string;
+      },
+      void
+    >({
       path: `/api/repairs/${id}`,
       method: "PUT",
+      body: body,
+      type: ContentType.Json,
       ...params,
     });
   /**
@@ -175,7 +320,7 @@ export class Api<
     { repairId }: ListRepairLogsParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<RepairLogListResponse, void>({
       path: `/api/repairs/${repairId}/logs`,
       method: "GET",
       ...params,
@@ -246,7 +391,7 @@ export class Api<
     { repairId }: ListVdeTestsParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<VdeTestListResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
       method: "GET",
       ...params,
@@ -264,7 +409,7 @@ export class Api<
     data: VdeTestCreate,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<VdeTestCreateResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
       method: "POST",
       body: data,
@@ -311,7 +456,7 @@ export class Api<
    * @request POST:/api/settings
    */
   createSetting = (params: RequestParams = {}) =>
-    this.request<void, void>({
+    this.request<SettingResponse, void>({
       path: `/api/settings`,
       method: "POST",
       ...params,
@@ -325,7 +470,13 @@ export class Api<
    * @request GET:/api/settings/all
    */
   listAllSettings = (params: RequestParams = {}) =>
-    this.request<void, any>({
+    this.request<
+      {
+        data?: SettingResponse[];
+        reply?: string;
+      },
+      any
+    >({
       path: `/api/settings/all`,
       method: "GET",
       ...params,
@@ -359,9 +510,23 @@ export class Api<
     { settingId }: UpdateSettingParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<SettingResponse, void>({
       path: `/api/settings/${settingId}`,
       method: "PUT",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Data
+   * @name GetStatData
+   * @summary Get statistics data for charts
+   * @request GET:/api/stat-data/{type}
+   */
+  getStatData = ({ type }: GetStatDataParams, params: RequestParams = {}) =>
+    this.request<void, any>({
+      path: `/api/stat-data/${type}`,
+      method: "GET",
       ...params,
     });
 }

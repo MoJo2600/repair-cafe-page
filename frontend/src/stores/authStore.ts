@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import { AuthService } from "@/api/services/AuthService";
 import type { UserResponse } from "@/api/types";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -12,14 +13,9 @@ export const useAuthStore = defineStore("auth", () => {
   /** Called on app startup to restore session from cookie. */
   async function fetchMe(): Promise<boolean> {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        currentUser.value = data.data;
-        return true;
-      }
-      currentUser.value = null;
-      return false;
+      const data = await AuthService.me();
+      currentUser.value = data.data ?? null;
+      return currentUser.value !== null;
     } catch {
       currentUser.value = null;
       return false;
@@ -32,20 +28,13 @@ export const useAuthStore = defineStore("auth", () => {
   ): Promise<{ success: boolean; error?: string }> {
     loading.value = true;
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        currentUser.value = data.data;
-        return { success: true };
-      }
-      return { success: false, error: data.error ?? "Login failed" };
-    } catch {
-      return { success: false, error: "Network error" };
+      const data = await AuthService.login({ username, password });
+      currentUser.value = data.data ?? null;
+      return { success: true };
+    } catch (err: any) {
+      const message: string =
+        err?.body?.error ?? err?.message ?? "Login failed";
+      return { success: false, error: message };
     } finally {
       loading.value = false;
     }
@@ -53,10 +42,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function logout() {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await AuthService.logout();
     } finally {
       currentUser.value = null;
     }

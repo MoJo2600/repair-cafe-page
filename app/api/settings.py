@@ -61,6 +61,15 @@ def api_list_all_settings():
     responses:
       200:
         description: All settings
+        schema:
+          type: object
+          properties:
+            reply:
+              type: string
+            data:
+              type: array
+              items:
+                $ref: '#/definitions/SettingResponse'
     """
     rows = Setting.query.order_by(
         Setting.category, Setting.sort_order, Setting.name
@@ -85,6 +94,8 @@ def api_create_setting():
     responses:
       201:
         description: Created
+        schema:
+          $ref: '#/definitions/SettingResponse'
       409:
         description: Duplicate name in category
     """
@@ -143,6 +154,8 @@ def api_update_setting(setting_id):
     responses:
       200:
         description: Updated
+        schema:
+          $ref: '#/definitions/SettingResponse'
       404:
         description: Not found
       409:

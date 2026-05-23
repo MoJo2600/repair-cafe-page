@@ -129,6 +129,16 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AuthResponse(BaseModel):
+    """Response for login and /me endpoints — wraps UserResponse."""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: Optional[UserResponse] = Field(None, description="Authenticated user data")
+    error: Optional[str] = Field(None, description="Error message if reply is error")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # ---------------------------------------------------------------------------
 # Customer schemas
 # ---------------------------------------------------------------------------

@@ -38,7 +38,8 @@ jobs:
   # Runs only when release-please has just created a release (i.e. a new tag).
   # Each platform is built on its own native runner (no QEMU emulation) to avoid
   # PyMuPDF and other C-extension packages timing out during cross-compilation.
-  # The two resulting digests are merged into a single OCI manifest at the end.
+  # Both the backend and frontend images are built; their per-platform digests are
+  # merged into separate multi-arch manifests at the end.
   build:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
@@ -48,16 +49,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - platform: linux/amd64
+          - image: backend
+            dockerfile: Dockerfile.backend
+            platform: linux/amd64
             runner: ubuntu-latest
-          - platform: linux/arm64
+          - image: backend
+            dockerfile: Dockerfile.backend
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - image: frontend
+            dockerfile: Dockerfile.frontend
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - image: frontend
+            dockerfile: Dockerfile.frontend
+            platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set lowercase image name
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.image }}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,42 +87,47 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           push: true
           # Push to a temporary digest-only ref; the manifest is assembled below
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.image }}-${{ matrix.platform }},mode=max
 
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          ARCH=${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${ARCH}
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
         with:
-          name: digest-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          name: digest-${{ matrix.image }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
           path: /tmp/digests/
           retention-days: 1
 
   # ── Merge manifests ───────────────────────────────────────────────────────────
-  # Combines the two per-platform digests into a single multi-arch manifest.
+  # Combines the two per-platform digests for each image into a single multi-arch manifest.
   merge:
     needs: [release-please, build]
     if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        image: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Set lowercase image name
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.image }}" >> $GITHUB_ENV
 
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          pattern: digest-*
+          pattern: digest-${{ matrix.image }}-*
           path: /tmp/digests
           merge-multiple: true
 
@@ -131,5 +149,116 @@ jobs:
           docker buildx imagetools create \
             -t ${{ env.IMAGE }}:${TAG} \
             -t ${{ env.IMAGE }}:latest \
+            ${{ env.IMAGE }}@${AMD64} \
+            ${{ env.IMAGE }}@${ARM64}
+
+  # ── Dev build (multi-arch, :dev tag) ─────────────────────────────────────────
+  # Runs on every push to main (not on workflow_dispatch, which is for releases).
+  # Publishes ghcr.io/{repo}-backend:dev and ghcr.io/{repo}-frontend:dev.
+  build-dev:
+    needs: release-please
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: backend
+            dockerfile: Dockerfile.backend
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - image: backend
+            dockerfile: Dockerfile.backend
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - image: frontend
+            dockerfile: Dockerfile.frontend
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - image: frontend
+            dockerfile: Dockerfile.frontend
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.image }}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push platform image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.image }}-${{ matrix.platform }},mode=max
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          ARCH=${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${ARCH}
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-dev-${{ matrix.image }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/
+          retention-days: 1
+
+  # ── Merge dev manifests ───────────────────────────────────────────────────────
+  merge-dev:
+    needs: build-dev
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.image }}" >> $GITHUB_ENV
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-dev-${{ matrix.image }}-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push :dev multi-arch manifest
+        run: |
+          AMD64=$(cat /tmp/digests/amd64)
+          ARM64=$(cat /tmp/digests/arm64)
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE }}:dev \
             ${{ env.IMAGE }}@${AMD64} \
             ${{ env.IMAGE }}@${ARM64}

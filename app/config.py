@@ -3,6 +3,7 @@ Centralized configuration for the Flask application.
 """
 
 import os
+import secrets
 from pathlib import Path
 
 
@@ -21,6 +22,9 @@ class LokiConfig:
 
 class BaseConfig:
     """Base configuration with common settings."""
+
+    # Flask session secret — must be set via SECRET_KEY env var in production.
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # Flask
     DEBUG = False

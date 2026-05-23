@@ -85,7 +85,7 @@ pnpm-debug.log*
 .pnpm-debug.log*
 
 # Build output
-app/static/dist/
+frontend/dist/
 .vite/
 
 # Editor directories and files

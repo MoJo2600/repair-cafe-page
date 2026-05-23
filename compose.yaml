@@ -1,17 +1,31 @@
 services:
 
-  app:
-    image: ghcr.io/mojo2600/repaircafepage:latest
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+   # image: ghcr.io/mojo2600/repaircafepage-frontend:latest
     restart: unless-stopped
     ports:
       - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    #image: ghcr.io/mojo2600/repaircafepage-backend:latest
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
     environment:
       FLASK_ENV: production
       MYSQL_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+      SECRET_KEY: ${FLASK_SECRET_KEY}
       # Optional – email export
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       MAIL_TOKEN: ${MAIL_TOKEN:-}
@@ -19,9 +33,8 @@ services:
       MAIL_SENDER_NAME: ${MAIL_SENDER_NAME:-RepairCafe}
       EXPORT_MAIL_RECEIVER: ${EXPORT_MAIL_RECEIVER:-}
       PAGE_PASSWORD: ${PAGE_PASSWORD:-}
-      # Set to "true" only when nginx terminates TLS (HTTPS).
-      # Over plain HTTP (local network / Pi) keep this "false" so session
-      # cookies are sent and login works.
+      # Set to "true" only when TLS terminates upstream (HTTPS deployment).
+      # Over plain HTTP (local network / Pi) keep this "false".
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     volumes:
       - app_data:/data
@@ -46,6 +59,23 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # ── Optional one-off services ──────────────────────────────────────────────
+
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    profiles: ["seed"]
+    entrypoint: ["python", "/srv/app/seed_dev.py"]
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
+      MYSQL_USER: ${MYSQL_USER:-repaircafe}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:

@@ -7,8 +7,10 @@
 
 export type {
   APIResponse,
+  AuthResponse,
   CustomerResponse,
   CustomerWithRepairCountResponse,
+  LoginRequest,
   PruefgeraetResponse,
   RepairCreate,
   RepairUpdate,
@@ -17,6 +19,7 @@ export type {
   RepairLogCreate,
   RepairLogResponse,
   RepairLogListResponse,
+  SettingResponse,
   VdeTestCreate,
   VdeTestResponse,
   VdeTestListResponse,
