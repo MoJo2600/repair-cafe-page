@@ -6,6 +6,38 @@
             </v-col>
         </v-row>
 
+        <!-- Organisation -->
+        <v-card class="mb-6">
+            <v-card-title>Organisation</v-card-title>
+            <v-card-text>
+                <p class="text-body-2 text-medium-emphasis mb-4">
+                    Name und Website der Organisation werden auf gedruckten Etiketten angezeigt.
+                </p>
+                <v-row class="ga-4">
+                    <v-col cols="12" sm="6">
+                        <v-text-field v-model="orgForm.org_name" label="Name der Organisation"
+                            variant="outlined" density="comfortable" hide-details="auto"
+                            placeholder="Repair Café" />
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-text-field v-model="orgForm.org_website" label="Website"
+                            variant="outlined" density="comfortable" hide-details="auto"
+                            placeholder="https://example.org" />
+                    </v-col>
+                </v-row>
+                <v-alert v-if="orgError" type="error" variant="tonal" density="compact" class="mt-4">
+                    {{ orgError }}
+                </v-alert>
+                <v-alert v-if="orgSuccess" type="success" variant="tonal" density="compact" class="mt-4">
+                    Organisation gespeichert.
+                </v-alert>
+            </v-card-text>
+            <v-card-actions class="px-4 pb-4">
+                <v-spacer />
+                <v-btn color="primary" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
+            </v-card-actions>
+        </v-card>
+
         <!-- Haftungserklärung / Disclaimer Template -->
         <v-card class="mb-6">
             <v-card-title class="d-flex align-center justify-space-between">
@@ -165,6 +197,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import type { SettingResponse } from '../api/generated/data-contracts'
+import { ConfigService } from '../api/services/ConfigService'
 import { SettingsService } from '../api/services/SettingsService'
 
 // ── Table column definitions ─────────────────────────────────────────────────
@@ -215,6 +248,40 @@ function showMsg(text: string, color: 'success' | 'error' = 'success') {
 
 function byCategory(category: string): SettingResponse[] {
     return settings.value.filter(s => s.category === category)
+}
+
+// ── Organisation config ───────────────────────────────────────────────────
+
+const orgForm = ref({ org_name: '', org_website: '' })
+const orgSaving = ref(false)
+const orgError = ref('')
+const orgSuccess = ref(false)
+
+async function loadOrgConfig() {
+    try {
+        const cfg = await ConfigService.getAppConfig()
+        orgForm.value = { org_name: cfg.org_name, org_website: cfg.org_website }
+    } catch {
+        // non-fatal — form keeps its defaults
+    }
+}
+
+async function saveOrg() {
+    orgSaving.value = true
+    orgError.value = ''
+    orgSuccess.value = false
+    try {
+        const cfg = await ConfigService.updateAppConfig({
+            org_name: orgForm.value.org_name,
+            org_website: orgForm.value.org_website,
+        })
+        orgForm.value = { org_name: cfg.org_name, org_website: cfg.org_website }
+        orgSuccess.value = true
+    } catch {
+        orgError.value = 'Fehler beim Speichern der Organisation'
+    } finally {
+        orgSaving.value = false
+    }
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
@@ -321,6 +388,7 @@ async function doDelete() {
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 onMounted(loadSettings)
+onMounted(loadOrgConfig)
 
 // ── Logo upload ──────────────────────────────────────────────────────────────
 

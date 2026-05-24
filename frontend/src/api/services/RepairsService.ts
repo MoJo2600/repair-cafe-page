@@ -150,24 +150,17 @@ export class RepairsService {
   /**
    * Print a QR code label for a repair on the configured label printer.
    * @param id Repair ID
-   * @param options Optional overrides for print method, device, printer name, IP and port.
+   * @param baseUrl Optional base URL for the QR code link (defaults to request host).
    */
   public static printLabel(
     id: number,
-    options?: {
-      method?: "usb" | "file" | "cups" | "network";
-      printer_device?: string;
-      printer_name?: string;
-      printer_ip?: string;
-      printer_port?: number;
-      base_url?: string;
-    },
+    baseUrl?: string,
   ): CancelablePromise<{ reply: string; message?: string; error?: string }> {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/repairs/{id}/print-label",
       path: { id },
-      body: options ?? {},
+      body: baseUrl ? { base_url: baseUrl } : {},
       errors: {
         404: `Repair not found`,
         500: `Print error`,

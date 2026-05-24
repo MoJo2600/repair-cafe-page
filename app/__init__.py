@@ -130,11 +130,7 @@ def create_app(config_name=None):
     from app.services.label_service import LabelService
 
     app.label_service = LabelService(  # type: ignore
-        default_device=app.config.get("LABEL_PRINTER_DEVICE", "/dev/usb/lp0"),
-        default_method=app.config.get("LABEL_PRINT_METHOD", "file"),
-        default_cups_name=app.config.get("LABEL_PRINTER_NAME", "SLP650"),
-        default_network_ip=app.config.get("LABEL_PRINTER_IP"),
-        default_network_port=app.config.get("LABEL_PRINTER_PORT", 9100),
+        printer_name=app.config.get("LABEL_PRINTER_NAME", "SLP650"),
     )
 
     # Initialize Swagger

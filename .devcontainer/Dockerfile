@@ -46,10 +46,9 @@ RUN npm install -g pnpm
 # Create workspace directory
 RUN mkdir -p /workspaces
 
-# Configure CUPS client to use host CUPS server
-# This will be overridden by environment variable from docker-compose
+# Configure CUPS client to use the host CUPS socket (mounted at /run/cups/cups.sock)
 RUN mkdir -p /etc/cups \
-    && echo "ServerName host.docker.internal:631" > /etc/cups/client.conf
+    && echo "ServerName /run/cups/cups.sock" > /etc/cups/client.conf
 
 # Set up USB device permissions for label printer
 # # Create udev rules for USB printers (will need to be activated in privileged mode)

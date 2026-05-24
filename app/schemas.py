@@ -573,3 +573,35 @@ class SettingResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# App configuration schemas
+# ---------------------------------------------------------------------------
+
+
+class AppConfigResponse(BaseModel):
+    """Schema for application-level configuration (org name, website)."""
+
+    org_name: str = Field("Repair Café", description="Organisation display name")
+    org_website: str = Field("", description="Organisation website URL")
+
+
+class AppConfigUpdate(BaseModel):
+    """Schema for updating application-level configuration."""
+
+    org_name: Optional[str] = Field(None, max_length=200)
+    org_website: Optional[str] = Field(None, max_length=200)
+
+
+# ---------------------------------------------------------------------------
+# Feature-flag schema (read-only, derived from env vars)
+# ---------------------------------------------------------------------------
+
+
+class FeaturesResponse(BaseModel):
+    """Schema for feature flags derived from server-side environment variables."""
+
+    label_printer: bool = Field(
+        False, description="Whether the label printer is enabled"
+    )

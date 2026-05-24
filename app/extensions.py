@@ -36,9 +36,11 @@ def init_swagger(app):
     """Initialize Swagger documentation with Pydantic models."""
     from app.schemas import (
         APIResponse,
+        AppConfigResponse,
         AuthResponse,
         CustomerResponse,
         CustomerWithRepairCountResponse,
+        FeaturesResponse,
         LoginRequest,
         PruefgeraetResponse,
         RepairCreate,
@@ -69,7 +71,9 @@ def init_swagger(app):
             "basePath": "/",
             "definitions": {
                 "APIResponse": pydantic_to_swagger(APIResponse),
+                "AppConfigResponse": pydantic_to_swagger(AppConfigResponse),
                 "AuthResponse": pydantic_to_swagger(AuthResponse),
+                "FeaturesResponse": pydantic_to_swagger(FeaturesResponse),
                 "LoginRequest": pydantic_to_swagger(LoginRequest),
                 "CustomerResponse": pydantic_to_swagger(CustomerResponse),
                 "CustomerWithRepairCountResponse": pydantic_to_swagger(

@@ -59,6 +59,8 @@
 
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="editRepair(item)" />
+          <v-btn v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
+            :loading="printingLabelId === item.id" @click="printLabel(item.id)" />
           <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
             @click="deleteRepair(item.id)" />
         </template>
@@ -206,6 +208,9 @@ const userStore = useUserStore()
 const repairs = ref<Repair[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
+
+const labelPrinterEnabled = ref(false)
+const printingLabelId = ref<number | null>(null)
 
 const snackbar = ref(false)
 const snackbarText = ref('')
@@ -396,9 +401,23 @@ watch(
   }
 )
 
+const printLabel = async (id: number) => {
+  printingLabelId.value = id
+  try {
+    const result = await RepairsService.printLabel(id)
+    showMsg(result.message || 'Label gedruckt')
+  } catch (err: any) {
+    const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
+    showMsg(msg, 'error')
+  } finally {
+    printingLabelId.value = null
+  }
+}
+
 onMounted(() => {
   loadDropdownOptions()
   userStore.fetchUsers()
   loadRepairs()
+  ConfigService.getFeatures().then(f => { labelPrinterEnabled.value = f.label_printer }).catch(() => {})
 })
 </script>

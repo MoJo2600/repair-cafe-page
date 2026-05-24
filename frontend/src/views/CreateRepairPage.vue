@@ -221,15 +221,9 @@
                     Haftungsausschluss herunterladen &amp; drucken
                   </v-btn>
 
-                  <div class="mt-4">
-                    <v-btn
-                      color="secondary"
-                      variant="tonal"
-                      prepend-icon="mdi-printer"
-                      :loading="printingLabel"
-                      :disabled="createdRepairId === null"
-                      @click="printLabel"
-                    >
+                  <div v-if="labelPrinterEnabled" class="mt-4">
+                    <v-btn color="secondary" variant="tonal" prepend-icon="mdi-printer" :loading="printingLabel"
+                      :disabled="createdRepairId === null" @click="printLabel">
                       Etikett drucken
                     </v-btn>
                     <div v-if="printLabelError" class="text-error text-caption mt-1">
@@ -257,8 +251,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed } from 'vue'
+import { ref, inject, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ConfigService } from '@/api/services/ConfigService'
 import { RepairsService } from '@/api/services/RepairsService'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
@@ -274,6 +269,16 @@ const submitting = ref(false)
 const createdRepairId = ref<number | null>(null)
 const printingLabel = ref(false)
 const printLabelError = ref('')
+const labelPrinterEnabled = ref(false)
+
+onMounted(async () => {
+  try {
+    const features = await ConfigService.getFeatures()
+    labelPrinterEnabled.value = features.label_printer
+  } catch {
+    labelPrinterEnabled.value = false
+  }
+})
 const disclaimerUrl = computed(() =>
   createdRepairId.value !== null
     ? `/api/repairs/${createdRepairId.value}/disclaimer`

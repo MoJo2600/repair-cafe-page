@@ -65,34 +65,11 @@ class BaseConfig:
         ),
     )
 
-    # Label printer
-    LABEL_PRINT_METHOD = os.environ.get("LABEL_PRINT_METHOD", "file")
-    LABEL_PRINTER_DEVICE = os.environ.get("LABEL_PRINTER_DEVICE", "/dev/usb/lp0")
+    # Label printer (CUPS via mounted socket /run/cups/cups.sock)
+    LABEL_PRINTER_ENABLED = os.environ.get(
+        "LABEL_PRINTER_ENABLED", "false"
+    ).lower() in ("true", "1", "yes")
     LABEL_PRINTER_NAME = os.environ.get("LABEL_PRINTER_NAME", "SLP650")
-    LABEL_PRINTER_IP = os.environ.get("LABEL_PRINTER_IP") or None
-    LABEL_PRINTER_PORT = int(os.environ.get("LABEL_PRINTER_PORT", "9100"))
-
-    # Test data
-    TEST_ROW = {
-        "id": "123",
-        "datum": "2022-04-01",
-        "vorname": "John",
-        "nachname": "Doe",
-        "telefon": "123456789",
-        "email": "john.doe@example.com",
-        "geraet_art": "Laptop",
-        "defekt_besch": "stumpfes Display",
-        "reparatur_art": "Schleifarbeiten",
-        "reparatur_sonstiges": "Bärchen",
-        "din_pruef": 0,
-        "status": "Repariert",
-        "status_detail": None,
-        "reparatur_besch": "gerubbelt",
-        "reparateur": "",
-        "reparatur_dauer": 15,
-        "qr_token": "123456789",
-    }
-    TEST_TOKEN = "123456789"
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):

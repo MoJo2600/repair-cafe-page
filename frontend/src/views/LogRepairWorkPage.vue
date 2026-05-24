@@ -151,6 +151,12 @@
                 VDE Test protokollieren
               </v-btn>
             </v-col>
+
+            <v-col v-if="labelPrinterEnabled" cols="12" sm="auto">
+              <v-btn color="secondary" prepend-icon="mdi-printer" @click="printLabel" :loading="printingLabel" class="mb-4" block>
+                Label drucken
+              </v-btn>
+            </v-col>
           </v-row>
 
         </div>
@@ -541,6 +547,9 @@ const notRepairableData = ref({
 const abbruchSignatureDialog = ref(false)
 const pendingAbbruchPayload = ref<{ description: string; statusDetail: string } | null>(null)
 
+const labelPrinterEnabled = ref(false)
+const printingLabel = ref(false)
+
 const snackbar = ref({
   show: false,
   message: '',
@@ -601,6 +610,20 @@ async function loadPruefgeraete() {
   }
 }
 
+async function printLabel() {
+  if (!repairRecord.value?.id) return
+  printingLabel.value = true
+  try {
+    const result = await RepairsService.printLabel(repairRecord.value.id)
+    showSnackbar(result.message || 'Label gedruckt')
+  } catch (err: any) {
+    const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
+    showSnackbar(msg, 'error')
+  } finally {
+    printingLabel.value = false
+  }
+}
+
 onMounted(async () => {
   const qrToken = route.params.qrToken as string
 
@@ -612,7 +635,11 @@ onMounted(async () => {
 
   try {
     // Load testing devices and users first
-    await Promise.all([loadPruefgeraete(), userStore.loaded ? Promise.resolve() : userStore.fetchUsers()])
+    await Promise.all([
+      loadPruefgeraete(),
+      userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
+      ConfigService.getFeatures().then(f => { labelPrinterEnabled.value = f.label_printer }).catch(() => {}),
+    ])
 
     // Fetch repair data by QR token
     const response = await RepairsService.getRepairByQrToken(qrToken)

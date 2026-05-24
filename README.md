@@ -67,8 +67,13 @@ services:
       MAIL_SENDER_NAME: RepairCafe
       EXPORT_MAIL_RECEIVER: ""
       ZIP_PASSWORD: ${ZIP_PASSWORD:-}
+
+    extra_hosts:
+      - "host-gateway:host-gateway"
     volumes:
       - app_data:/data
+      # Uncomment to enable label printing (see § Setup Label printer):
+      # - /run/cups/cups.sock:/run/cups/cups.sock
     depends_on:
       db:
         condition: service_healthy
@@ -107,7 +112,6 @@ MYSQL_ROOT_PASSWORD=change_me_root
 FLASK_SECRET_KEY=change_me_secret
 ```
 
-
 Database migrations run automatically on first backend startup — no manual
 step is needed.
 
@@ -118,6 +122,62 @@ docker compose pull
 docker compose up -d
 # Migrations run automatically on backend startup — no manual step needed.
 ```
+
+### Hardware
+
+#### Setup Label printer
+
+The backend can print QR-code labels on a **SII SLP 650** label printer.
+Printing is routed through the host machine's CUPS daemon via a mounted Unix
+socket — no network port configuration needed.
+
+**1. Install the SLP 650 driver on the host**
+
+```bash
+git clone https://github.com/fawkesley/smart-label-printer-slp-linux-driver.git
+cd smart-label-printer-slp-linux-driver/src
+make && sudo make install
+```
+
+Add the printer in your system's printer settings (CUPS queue name: `SLP650`).
+
+**2. Allow the Docker container to access CUPS**
+
+Edit `/etc/cups/cupsd.conf` on the host and add the Docker bridge network to
+the allowed list:
+
+```
+<Location />
+  Order allow,deny
+  Allow localhost
+  Allow from 172.17.0.0/16
+</Location>
+```
+
+Then restart CUPS: `sudo systemctl restart cups`
+
+**3. Mount the CUPS socket and enable printing in `compose.yaml`**
+
+Uncomment the socket volume and set the two env vars:
+
+```yaml
+services:
+  backend:
+    environment:
+      LABEL_PRINTER_ENABLED: "true"
+      LABEL_PRINTER_NAME: "SLP650"   # must match the CUPS queue name
+    volumes:
+      - /run/cups/cups.sock:/run/cups/cups.sock
+```
+
+Or add to your `.env`:
+
+```bash
+LABEL_PRINTER_ENABLED=true
+LABEL_PRINTER_NAME=SLP650
+```
+
+Restart the stack: `docker compose up -d backend`
 
 ### Stack overview
 

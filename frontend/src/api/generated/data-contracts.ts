@@ -25,6 +25,27 @@ export interface APIResponse {
   reply: string;
 }
 
+export interface AppConfigResponse {
+  /**
+   * Organisation display name
+   * @default "Repair Café"
+   */
+  org_name: string;
+  /**
+   * Organisation website URL
+   * @default ""
+   */
+  org_website: string;
+}
+
+export interface FeaturesResponse {
+  /**
+   * Whether the label printer is enabled
+   * @default false
+   */
+  label_printer: boolean;
+}
+
 export interface AuthResponse {
   data?: UserResponse;
   /**

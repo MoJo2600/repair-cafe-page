@@ -7,9 +7,11 @@
 
 export type {
   APIResponse,
+  AppConfigResponse,
   AuthResponse,
   CustomerResponse,
   CustomerWithRepairCountResponse,
+  FeaturesResponse,
   LoginRequest,
   PruefgeraetResponse,
   RepairCreate,

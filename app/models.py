@@ -32,6 +32,24 @@ class User(flask_login.UserMixin, db.Model):
         return f"<User {self.id}: {self.vorname} {self.nachname}>"
 
 
+class AppConfig(db.Model):
+    """Key-value store for application configuration (org name, website, etc.)."""
+
+    __tablename__ = "app_config"
+
+    key: Mapped[str] = mapped_column(db.String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(db.Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now(),
+        onupdate=db.func.now(),
+    )
+
+    def __repr__(self):
+        return f"<AppConfig {self.key}={self.value!r}>"
+
+
 class Setting(db.Model):
     """Configuration setting stored in DB (replaces dropdown_data.yaml)."""
 

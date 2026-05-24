@@ -36,9 +36,17 @@ services:
       # Set to "true" only when TLS terminates upstream (HTTPS deployment).
       # Over plain HTTP (local network / Pi) keep this "false".
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      # Label printer — mount the host CUPS socket and set LABEL_PRINTER_ENABLED=true.
+      # See README § Setup Label printer for full instructions.
+      LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
+      LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
+    extra_hosts:
+      - "host-gateway:host-gateway"
     volumes:
       - app_data:/data
       - ./config:/config:ro
+      # Uncomment to enable label printing via the host CUPS server:
+      # - /run/cups/cups.sock:/run/cups/cups.sock
     depends_on:
       db:
         condition: service_healthy
