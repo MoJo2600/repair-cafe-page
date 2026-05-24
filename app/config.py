@@ -24,7 +24,7 @@ class BaseConfig:
     """Base configuration with common settings."""
 
     # Flask session secret — must be set via SECRET_KEY env var in production.
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
 
     # Flask
     DEBUG = False
@@ -52,7 +52,7 @@ class BaseConfig:
     MAIL_SENDER_NAME = os.environ.get("MAIL_SENDER_NAME", "RepairCafe")
     EXPORT_MAIL_RECEIVER = os.environ.get("EXPORT_MAIL_RECEIVER")
     MAIL_TOKEN = os.environ.get("MAIL_TOKEN")
-    ZIPPASSWORD = os.environ.get("PAGE_PASSWORD")
+    ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
 
     # Paths
     IMPORT_EXCEL_PATH = "config/import.xlsx"

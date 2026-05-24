@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-   # image: ghcr.io/mojo2600/repaircafepage-frontend:latest
+    image: ghcr.io/mojo2600/repaircafepage-frontend:latest
     restart: unless-stopped
     ports:
       - "80:80"
@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    #image: ghcr.io/mojo2600/repaircafepage-backend:latest
+    image: ghcr.io/mojo2600/repaircafepage-backend:latest
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -25,14 +25,14 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      SECRET_KEY: ${FLASK_SECRET_KEY}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
       # Optional – email export
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       MAIL_TOKEN: ${MAIL_TOKEN:-}
       MAIL_SENDER: ${MAIL_SENDER:-}
       MAIL_SENDER_NAME: ${MAIL_SENDER_NAME:-RepairCafe}
       EXPORT_MAIL_RECEIVER: ${EXPORT_MAIL_RECEIVER:-}
-      PAGE_PASSWORD: ${PAGE_PASSWORD:-}
+      ZIP_PASSWORD: ${ZIP_PASSWORD:-}
       # Set to "true" only when TLS terminates upstream (HTTPS deployment).
       # Over plain HTTP (local network / Pi) keep this "false".
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}

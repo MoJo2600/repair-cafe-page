@@ -74,7 +74,7 @@ class ProdConfig(FlaskConfig, DBConfig):
     MAIL_SENDER = os.environ.get("MAIL_SENDER")
     MAIL_SENDER_NAME = os.environ.get("MAIL_SENDER_NAME")
     EXPORT_MAIL_RECEIVER = os.environ.get("EXPORT_MAIL_RECEIVER")
-    ZIPPASSWORD = os.environ.get("PAGE_PASSWORD")
+    ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
     MAIL_TOKEN = os.environ.get("MAIL_TOKEN")
     pass
 
@@ -92,6 +92,6 @@ class DevConfig(FlaskConfig, DBConfig):
     MAIL_SENDER = os.environ.get("MAIL_SENDER")
     MAIL_SENDER_NAME = os.environ.get("MAIL_SENDER_NAME", "RepairCafe")
     EXPORT_MAIL_RECEIVER = os.environ.get("EXPORT_MAIL_RECEIVER")
-    ZIPPASSWORD = os.environ.get("PAGE_PASSWORD")
+    ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
     MAIL_TOKEN = os.environ.get("MAIL_TOKEN")
     DEBUG = True

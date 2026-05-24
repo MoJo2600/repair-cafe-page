@@ -35,6 +35,82 @@ docker compose up -d
 
 The app is available at `http://<host>`.
 
+
+### Deploy with Docker Compose
+
+compose.yml
+
+```yaml
+services:
+  frontend:
+    image: ghcr.io/mojo2600/repaircafepage-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    image: ghcr.io/mojo2600/repaircafepage-backend:latest
+    restart: unless-stopped
+    environment:
+      FLASK_ENV: production
+      MYSQL_HOST: db
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafedb}
+      MYSQL_USER: ${MYSQL_USER:-repaircafe}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+      SESSION_COOKIE_SECURE: "false"     # set "true" if HTTPS terminates upstream
+      EMAIL_ENABLED: "false"
+      MAIL_TOKEN: ""
+      MAIL_SENDER: ""
+      MAIL_SENDER_NAME: RepairCafe
+      EXPORT_MAIL_RECEIVER: ""
+      ZIP_PASSWORD: ${ZIP_PASSWORD:-}
+    volumes:
+      - app_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafedb}
+      MYSQL_USER: ${MYSQL_USER:-repaircafe}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  db_data:
+  app_data:
+```
+
+.env
+
+```bash
+# Database MYSQL_DATABASE=repaircafepage
+MYSQL_USER=repaircafe
+MYSQL_PASSWORD=change_me
+MYSQL_ROOT_PASSWORD=change_me_root
+
+# Flask secret key for session signing – use a long random string in production.
+FLASK_SECRET_KEY=change_me_secret
+```
+
+
+Database migrations run automatically on first backend startup — no manual
+step is needed.
+
 ### Update
 
 ```bash
