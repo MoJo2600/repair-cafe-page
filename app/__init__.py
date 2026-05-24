@@ -126,6 +126,17 @@ def create_app(config_name=None):
         storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH")
     )
 
+    # Initialize Label service and attach to app
+    from app.services.label_service import LabelService
+
+    app.label_service = LabelService(  # type: ignore
+        default_device=app.config.get("LABEL_PRINTER_DEVICE", "/dev/usb/lp0"),
+        default_method=app.config.get("LABEL_PRINT_METHOD", "file"),
+        default_cups_name=app.config.get("LABEL_PRINTER_NAME", "SLP650"),
+        default_network_ip=app.config.get("LABEL_PRINTER_IP"),
+        default_network_port=app.config.get("LABEL_PRINTER_PORT", 9100),
+    )
+
     # Initialize Swagger
     swagger = init_swagger(app)
     app.swagger = swagger  # type: ignore

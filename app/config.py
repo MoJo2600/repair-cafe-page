@@ -65,6 +65,13 @@ class BaseConfig:
         ),
     )
 
+    # Label printer
+    LABEL_PRINT_METHOD = os.environ.get("LABEL_PRINT_METHOD", "file")
+    LABEL_PRINTER_DEVICE = os.environ.get("LABEL_PRINTER_DEVICE", "/dev/usb/lp0")
+    LABEL_PRINTER_NAME = os.environ.get("LABEL_PRINTER_NAME", "SLP650")
+    LABEL_PRINTER_IP = os.environ.get("LABEL_PRINTER_IP") or None
+    LABEL_PRINTER_PORT = int(os.environ.get("LABEL_PRINTER_PORT", "9100"))
+
     # Test data
     TEST_ROW = {
         "id": "123",

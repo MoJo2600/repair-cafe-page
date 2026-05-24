@@ -493,3 +493,82 @@ def api_get_disclaimer(id: int):
             status=500,
             mimetype="application/json",
         )
+
+
+@repairs_bp.route("/repairs/<int:id>/print-label", methods=["POST"])
+def api_print_label(id: int):
+    """
+    Print a QR code label for a repair on a label printer.
+    ---
+    operationId: printRepairLabel
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: ID of the repair to print a label for
+      - name: body
+        in: body
+        required: false
+        schema:
+          type: object
+          properties:
+            method:
+              type: string
+              enum: [usb, file, cups, network]
+              description: Print method (defaults to LABEL_PRINT_METHOD env var)
+            printer_device:
+              type: string
+              description: Device path for USB/file printing (e.g. /dev/usb/lp0)
+            printer_name:
+              type: string
+              description: CUPS printer name
+            printer_ip:
+              type: string
+              description: IP address for network printing
+            printer_port:
+              type: integer
+              description: TCP port for network printing (default 9100)
+    responses:
+      200:
+        description: Label printed successfully
+      404:
+        description: Repair not found
+      500:
+        description: Print error
+    """
+    try:
+        repair = Repair.query.get_or_404(id)
+        data = repair.to_dict()
+
+        req_body = request.get_json(silent=True) or {}
+
+        # Build base URL for the QR code link from the incoming request
+        base_url = req_body.get("base_url") or request.host_url.rstrip("/")
+
+        label_service = current_app.label_service  # type: ignore
+        result = label_service.print_label(
+            repair_data=data,
+            base_url=base_url,
+            method=req_body.get("method"),
+            printer_device=req_body.get("printer_device"),
+            printer_name=req_body.get("printer_name"),
+            printer_ip=req_body.get("printer_ip"),
+            printer_port=req_body.get("printer_port"),
+        )
+
+        status_code = 200 if result.get("reply") == "done" else 500
+        return Response(
+            json.dumps(result),
+            status=status_code,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error printing label for repair {id}: {e}", exc_info=True)
+        return Response(
+            json.dumps({"reply": "error", "error": str(e)}),
+            status=500,
+            mimetype="application/json",
+        )

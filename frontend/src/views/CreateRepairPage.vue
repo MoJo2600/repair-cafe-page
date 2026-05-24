@@ -220,6 +220,22 @@
                     prepend-icon="mdi-file-pdf-box" class="mt-6" download>
                     Haftungsausschluss herunterladen &amp; drucken
                   </v-btn>
+
+                  <div class="mt-4">
+                    <v-btn
+                      color="secondary"
+                      variant="tonal"
+                      prepend-icon="mdi-printer"
+                      :loading="printingLabel"
+                      :disabled="createdRepairId === null"
+                      @click="printLabel"
+                    >
+                      Etikett drucken
+                    </v-btn>
+                    <div v-if="printLabelError" class="text-error text-caption mt-1">
+                      {{ printLabelError }}
+                    </div>
+                  </div>
                 </v-card-text>
               </v-card>
             </v-stepper-window-item>
@@ -256,6 +272,8 @@ const step2Form = ref<any>(null)
 const step3Form = ref<any>(null)
 const submitting = ref(false)
 const createdRepairId = ref<number | null>(null)
+const printingLabel = ref(false)
+const printLabelError = ref('')
 const disclaimerUrl = computed(() =>
   createdRepairId.value !== null
     ? `/api/repairs/${createdRepairId.value}/disclaimer`
@@ -554,6 +572,7 @@ function createAnother() {
   // Reset form
   step.value = 1
   createdRepairId.value = null
+  printLabelError.value = ''
   formData.value = {
     datum: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}T${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
     vorname: '',
@@ -574,6 +593,26 @@ function createAnother() {
   selectedCustomerId.value = null
   customerSearchQuery.value = ''
   customerSearchResults.value = []
+}
+
+async function printLabel() {
+  if (createdRepairId.value === null) return
+  printingLabel.value = true
+  printLabelError.value = ''
+  try {
+    const result = await RepairsService.printLabel(createdRepairId.value)
+    if (result.reply === 'done') {
+      showToast?.('Etikett erfolgreich gedruckt', { color: 'success' })
+    } else {
+      printLabelError.value = result.error ?? 'Drucken fehlgeschlagen'
+      showToast?.(printLabelError.value, { color: 'error' })
+    }
+  } catch (error) {
+    printLabelError.value = (error as any)?.body?.error ?? (error as Error).message ?? 'Unbekannter Fehler'
+    showToast?.(`Fehler beim Drucken: ${printLabelError.value}`, { color: 'error' })
+  } finally {
+    printingLabel.value = false
+  }
 }
 
 // Camera functions
