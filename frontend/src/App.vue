@@ -13,22 +13,44 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" temporary>
-      <v-list>
-        <v-list-item prepend-icon="mdi-home" title="Home" value="home" :to="'/'"></v-list-item>
-        <v-list-item prepend-icon="mdi-format-list-bulleted" title="Repairs List" value="list"
-          :to="'/repairs'"></v-list-item>
-        <v-list-item prepend-icon="mdi-account-group" title="Kunden" value="customers" :to="'/customers'"></v-list-item>
-        <v-list-item v-if="authStore.isAdmin" prepend-icon="mdi-account-cog" title="Benutzerverwaltung" value="users"
-          :to="'/users'"></v-list-item>
-        <v-list-item v-if="authStore.isAdmin" prepend-icon="mdi-cog" title="Einstellungen" value="settings"
-          :to="'/settings'"></v-list-item>
-        <!-- <v-list-item 
-          prepend-icon="mdi-pencil" 
-          title="Edit" 
-          value="edit"
-          :to="'/edit'"
-        ></v-list-item> -->
+    <v-navigation-drawer v-model="drawer" :temporary="false" width="180" app>
+      <v-list nav>
+        <v-list-item :to="'/dashboard'" value="dashboard" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-view-dashboard" class="mb-1" />
+            <span class="text-caption">Dashboard</span>
+          </div>
+        </v-list-item>
+        <v-list-item :to="'/'" value="home" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-home" class="mb-1" />
+            <span class="text-caption">Reparaturen</span>
+          </div>
+        </v-list-item>
+        <v-list-item :to="'/repairs'" value="list" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-format-list-bulleted" class="mb-1" />
+            <span class="text-caption">Reparaturliste</span>
+          </div>
+        </v-list-item>
+        <v-list-item :to="'/customers'" value="customers" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-account-group" class="mb-1" />
+            <span class="text-caption">Kunden</span>
+          </div>
+        </v-list-item>
+        <v-list-item v-if="authStore.isAdmin" :to="'/users'" value="users" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-account-cog" class="mb-1" />
+            <span class="text-caption">Benutzerverwaltung</span>
+          </div>
+        </v-list-item>
+        <v-list-item v-if="authStore.isAdmin" :to="'/settings'" value="settings" class="text-center" min-height="64">
+          <div class="d-flex flex-column align-center justify-center py-1">
+            <v-icon icon="mdi-cog" class="mb-1" />
+            <span class="text-caption">Einstellungen</span>
+          </div>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
@@ -95,7 +117,7 @@ import jsQR from 'jsqr'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const drawer = ref(false)
+const drawer = ref(true)
 
 // Set all favicon / touch-icon links to the dynamic logo endpoint
 onMounted(() => {

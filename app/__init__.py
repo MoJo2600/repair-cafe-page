@@ -192,6 +192,7 @@ def unauthorized_callback():
 def register_blueprints(app):
     """Register Flask blueprints."""
     # Import blueprints here to avoid circular imports
+    from app.api.attachments import attachments_bp
     from app.api.config import config_bp
     from app.api.customers import customers_bp
     from app.api.health import health_bp
@@ -208,6 +209,7 @@ def register_blueprints(app):
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(repairs_bp, url_prefix="/api")
     app.register_blueprint(repair_logs_bp, url_prefix="/api")
+    app.register_blueprint(attachments_bp, url_prefix="/api")
     app.register_blueprint(vde_tests_bp, url_prefix="/api")
     app.register_blueprint(config_bp, url_prefix="/api")
     app.register_blueprint(customers_bp, url_prefix="/api")

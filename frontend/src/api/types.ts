@@ -18,6 +18,8 @@ export type {
   RepairUpdate,
   RepairResponse,
   RepairCreateResponse,
+  RepairsTimelinePoint,
+  RepairsTimelineResponse,
   RepairLogCreate,
   RepairLogResponse,
   RepairLogListResponse,

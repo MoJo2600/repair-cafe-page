@@ -5,16 +5,20 @@
 import type { CancelablePromise } from "../core/CancelablePromise";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
+import type { RepairsTimelineResponse } from "../generated/data-contracts";
 export class RepairsService {
   /**
    * Get all repairs as JSON
    * @returns any List of all repairs
    * @throws ApiError
    */
-  public static listRepairs(): CancelablePromise<any> {
+  public static listRepairs(customerId?: number): CancelablePromise<any> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/list",
+      query: {
+        customer_id: customerId,
+      },
       errors: {
         500: `Internal Server Error - database query failed`,
       },
@@ -182,6 +186,17 @@ export class RepairsService {
         404: `Repair not found`,
         500: `Internal server error`,
       },
+    });
+  }
+
+  /**
+   * Get weekly repair counts per status for the last 12 months.
+   * @returns RepairsTimelineResponse
+   */
+  public static getRepairsTimeline(): CancelablePromise<RepairsTimelineResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/repairs/stats/timeline",
     });
   }
 }

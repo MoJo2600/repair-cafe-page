@@ -322,6 +322,10 @@ class RepairResponse(RepairBase):
     user: Optional["UserResponse"] = Field(
         None, description="Assigned reparateur user object"
     )
+    created_by_id: Optional[int] = Field(None, description="User who created the repair record")
+    created_by: Optional["UserResponse"] = Field(
+        None, description="User who created the repair record"
+    )
     reparatur_dauer: Optional[int] = Field(
         None, ge=0, description="Repair duration in minutes"
     )
@@ -330,6 +334,7 @@ class RepairResponse(RepairBase):
         pattern="^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
         description="Repair status",
     )
+    closed_at: Optional[datetime] = Field(None, description="Timestamp when the repair was closed")
     qr_token: str = Field(..., max_length=32, description="QR code token")
 
     model_config = ConfigDict(from_attributes=True)
@@ -605,3 +610,56 @@ class FeaturesResponse(BaseModel):
     label_printer: bool = Field(
         False, description="Whether the label printer is enabled"
     )
+
+
+class RepairsTimelinePoint(BaseModel):
+    """One weekly bucket in the repairs timeline."""
+
+    week: str = Field(..., description="ISO year-week, e.g. '2026-20'")
+    label: str = Field(..., description="Human-readable label, e.g. 'KW 20 2026'")
+    offen: int = Field(0, description="Repairs with status 'Offen'")
+    in_bearbeitung: int = Field(0, description="Repairs with status 'In Bearbeitung'")
+    abgeschlossen: int = Field(0, description="Repairs with status 'Repariert'")
+    nicht_repariert: int = Field(0, description="Repairs with status 'Nicht Repariert'")
+
+
+class RepairsTimelineResponse(BaseModel):
+    """Timeline of repair counts grouped by week."""
+
+    data: list[RepairsTimelinePoint] = []
+
+
+# ---------------------------------------------------------------------------
+# Unified repair attachment schemas
+# ---------------------------------------------------------------------------
+
+ATTACHMENT_TYPES = ("log_entry", "device_photo", "disclaimer", "misc")
+
+
+class RepairAttachmentResponse(BaseModel):
+    """Schema for a single repair attachment record."""
+
+    id: int
+    repair_id: int
+    log_id: Optional[int] = None
+    attachment_type: str = Field(..., description="One of: log_entry, device_photo, disclaimer, misc")
+    original_filename: str
+    stored_filename: str
+    content_type: str
+    size: int = Field(..., description="File size in bytes")
+    uploaded_at: UtcDatetime
+    uploaded_by_id: Optional[int] = None
+    uploaded_by: Optional["UserResponse"] = Field(
+        None, description="User who uploaded the file"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RepairAttachmentListResponse(BaseModel):
+    """Schema for listing repair attachments."""
+
+    data: list[RepairAttachmentResponse] = []
+    total: int = Field(..., description="Total number of attachments")
+
+    model_config = ConfigDict(from_attributes=True)

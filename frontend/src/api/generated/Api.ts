@@ -12,20 +12,25 @@
 
 import {
   APIResponse,
+  AppConfigResponse,
   AuthResponse,
   CreateRepairLogParams,
   CreateVdeTestParams,
   CustomerWithRepairCountResponse,
   DeleteRepairLogParams,
   DeleteSettingParams,
+  FeaturesResponse,
   GetRepairByQrTokenParams,
   GetRepairDisclaimerParams,
   GetRepairLogParams,
   GetStatDataParams,
   GetVdeTestParams,
   ListRepairLogsParams,
+  ListRepairsParams,
   ListVdeTestsParams,
   LoginRequest,
+  PrintRepairLabelParams,
+  PrintRepairLabelPayload,
   PruefgeraetResponse,
   RepairCreate,
   RepairCreateResponse,
@@ -33,7 +38,9 @@ import {
   RepairLogListResponse,
   RepairResponse,
   RepairUpdate,
+  RepairsTimelineResponse,
   SettingResponse,
+  UpdateAppConfigPayload,
   UpdateRepairParams,
   UpdateSettingParams,
   UploadDisclaimerTemplatePayload,
@@ -95,6 +102,39 @@ export class Api<
    * No description
    *
    * @tags Configuration
+   * @name GetAppConfig
+   * @summary Get application-level configuration (organisation name and website).
+   * @request GET:/api/config/app-config
+   */
+  getAppConfig = (params: RequestParams = {}) =>
+    this.request<AppConfigResponse, any>({
+      path: `/api/config/app-config`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
+   * @name UpdateAppConfig
+   * @summary Update application-level configuration (admin only).
+   * @request PUT:/api/config/app-config
+   */
+  updateAppConfig = (
+    body: UpdateAppConfigPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<AppConfigResponse, void>({
+      path: `/api/config/app-config`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
    * @name GetDisclaimerTemplate
    * @summary Serve the active disclaimer PDF template for inline display.
    * @request GET:/api/config/disclaimer
@@ -135,6 +175,20 @@ export class Api<
   getDropdownConfig = (params: RequestParams = {}) =>
     this.request<void, any>({
       path: `/api/config/dropdowns`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
+   * @name GetFeatures
+   * @summary Return server-side feature flags derived from environment variables.
+   * @request GET:/api/config/features
+   */
+  getFeatures = (params: RequestParams = {}) =>
+    this.request<FeaturesResponse, any>({
+      path: `/api/config/features`,
       method: "GET",
       ...params,
     });
@@ -225,10 +279,11 @@ export class Api<
    * @summary Get all repairs as JSON
    * @request GET:/api/list
    */
-  listRepairs = (params: RequestParams = {}) =>
+  listRepairs = (query: ListRepairsParams, params: RequestParams = {}) =>
     this.request<void, void>({
       path: `/api/list`,
       method: "GET",
+      query: query,
       ...params,
     });
   /**
@@ -261,6 +316,20 @@ export class Api<
   ) =>
     this.request<void, void>({
       path: `/api/repairs/by-token/${token}`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name GetRepairsTimeline
+   * @summary Get repair counts grouped by week and status for the last 12 months.
+   * @request GET:/api/repairs/stats/timeline
+   */
+  getRepairsTimeline = (params: RequestParams = {}) =>
+    this.request<RepairsTimelineResponse, any>({
+      path: `/api/repairs/stats/timeline`,
       method: "GET",
       ...params,
     });
@@ -306,6 +375,26 @@ export class Api<
     this.request<void, void>({
       path: `/api/repairs/${id}/disclaimer`,
       method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name PrintRepairLabel
+   * @summary Print a QR code label for a repair on a label printer.
+   * @request POST:/api/repairs/{id}/print-label
+   */
+  printRepairLabel = (
+    { id }: PrintRepairLabelParams,
+    body: PrintRepairLabelPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${id}/print-label`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
       ...params,
     });
   /**

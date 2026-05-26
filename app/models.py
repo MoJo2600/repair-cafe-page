@@ -120,6 +120,7 @@ class Repair(db.Model):
     )
     reparatur_dauer: Mapped[Optional[int]] = mapped_column(db.SmallInteger)
     status: Mapped[str] = mapped_column(db.String(20), nullable=False, default="Offen")
+    closed_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime, nullable=True)
     qr_token: Mapped[str] = mapped_column(db.String(32), unique=True, nullable=False)
 
     # Relationship to repair logs
@@ -143,6 +144,14 @@ class Repair(db.Model):
 
     # Relationship to assigned user (reparateur)
     user = db.relationship("User", foreign_keys=[user_id])
+
+    # Relationship to attachments
+    attachments = db.relationship(
+        "RepairAttachment",
+        back_populates="repair",
+        cascade="all, delete-orphan",
+        order_by="RepairAttachment.uploaded_at",
+    )
 
     def __repr__(self):
         return f"<Repair {self.id}: {self.reparatur_art}>"
@@ -205,6 +214,13 @@ class RepairLog(db.Model):
     repair = db.relationship("Repair", back_populates="repair_logs")
     # Relationship to assigned user (reparateur)
     user = db.relationship("User", foreign_keys=[user_id])
+
+    # Relationship to attachments linked to this log entry
+    attachments = db.relationship(
+        "RepairAttachment",
+        back_populates="log",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<RepairLog {self.id}: Repair {self.repair_id} by user {self.user_id}>"
@@ -311,3 +327,46 @@ class VdeTest(db.Model):
     def from_dict(cls, data):
         """Create model from dictionary"""
         return cls(**data)
+
+
+ATTACHMENT_TYPES = ("log_entry", "device_photo", "disclaimer", "misc")
+
+
+class RepairAttachment(db.Model):
+    """Unified file attachment store for all repair-related files."""
+
+    __tablename__ = "repair_attachments"
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    repair_id: Mapped[int] = mapped_column(
+        db.Integer, db.ForeignKey("repairs.id", ondelete="CASCADE"), nullable=False
+    )
+    log_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("repair_logs.id", ondelete="SET NULL"), nullable=True
+    )
+    attachment_type: Mapped[str] = mapped_column(
+        db.String(50), nullable=False, default="misc"
+    )
+    original_filename: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(
+        db.String(255), nullable=False, unique=True
+    )
+    content_type: Mapped[str] = mapped_column(db.String(100), nullable=False)
+    size: Mapped[int] = mapped_column(db.Integer, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+    uploaded_by_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    repair = db.relationship("Repair", back_populates="attachments")
+    log = db.relationship("RepairLog", back_populates="attachments")
+    uploaded_by = db.relationship("User", foreign_keys=[uploaded_by_id])
+
+    def __repr__(self):
+        return (
+            f"<RepairAttachment {self.id}: repair={self.repair_id}"
+            f" type={self.attachment_type} file={self.original_filename}>"
+        )

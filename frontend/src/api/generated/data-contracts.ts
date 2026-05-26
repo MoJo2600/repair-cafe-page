@@ -30,20 +30,12 @@ export interface AppConfigResponse {
    * Organisation display name
    * @default "Repair Café"
    */
-  org_name: string;
+  org_name?: string;
   /**
    * Organisation website URL
    * @default ""
    */
-  org_website: string;
-}
-
-export interface FeaturesResponse {
-  /**
-   * Whether the label printer is enabled
-   * @default false
-   */
-  label_printer: boolean;
+  org_website?: string;
 }
 
 export interface AuthResponse {
@@ -86,6 +78,14 @@ export interface CustomerWithRepairCountResponse {
   vorname: string;
 }
 
+export interface FeaturesResponse {
+  /**
+   * Whether the label printer is enabled
+   * @default false
+   */
+  label_printer?: boolean;
+}
+
 export interface LoginRequest {
   /** @minLength 1 */
   password: string;
@@ -106,6 +106,32 @@ export interface PruefgeraetResponse {
    * @default null
    */
   serial_number?: string;
+}
+
+export interface RepairAttachmentListResponse {
+  /** @default [] */
+  data?: RepairAttachmentResponse[];
+  /** Total number of attachments */
+  total: number;
+}
+
+export interface RepairAttachmentResponse {
+  /** One of: log_entry, device_photo, disclaimer, misc */
+  attachment_type: string;
+  content_type: string;
+  id: number;
+  /** @default null */
+  log_id?: number;
+  original_filename: string;
+  repair_id: number;
+  /** File size in bytes */
+  size: number;
+  stored_filename: string;
+  /** @format date-time */
+  uploaded_at: string;
+  uploaded_by?: UserResponse;
+  /** @default null */
+  uploaded_by_id?: number;
 }
 
 export interface RepairCreate {
@@ -282,6 +308,17 @@ export interface RepairLogResponse {
 }
 
 export interface RepairResponse {
+  /**
+   * Timestamp when the repair was closed
+   * @default null
+   */
+  closed_at?: string;
+  created_by?: UserResponse;
+  /**
+   * User who created the repair record
+   * @default null
+   */
+  created_by_id?: number;
   customer?: CustomerResponse;
   /**
    * Linked customer ID
@@ -432,6 +469,38 @@ export interface RepairUpdate {
    * @default null
    */
   user_id?: number;
+}
+
+export interface RepairsTimelinePoint {
+  /**
+   * Repairs with status 'Repariert'
+   * @default 0
+   */
+  abgeschlossen?: number;
+  /**
+   * Repairs with status 'In Bearbeitung'
+   * @default 0
+   */
+  in_bearbeitung?: number;
+  /** Human-readable label, e.g. 'KW 20 2026' */
+  label: string;
+  /**
+   * Repairs with status 'Nicht Repariert'
+   * @default 0
+   */
+  nicht_repariert?: number;
+  /**
+   * Repairs with status 'Offen'
+   * @default 0
+   */
+  offen?: number;
+  /** ISO year-week, e.g. '2026-20' */
+  week: string;
+}
+
+export interface RepairsTimelineResponse {
+  /** @default [] */
+  data?: RepairsTimelinePoint[];
 }
 
 export interface SettingResponse {
@@ -665,6 +734,11 @@ export interface VdeTestResponse {
   sichtpruefung_zugentlastung?: boolean;
 }
 
+export interface UpdateAppConfigPayload {
+  org_name?: string;
+  org_website?: string;
+}
+
 export interface UploadDisclaimerTemplatePayload {
   /**
    * PDF file with required AcroForm fields
@@ -681,6 +755,11 @@ export interface UploadLogoPayload {
   file: File;
 }
 
+export interface ListRepairsParams {
+  /** Filter repairs by customer ID */
+  customer_id?: number;
+}
+
 export interface GetRepairByQrTokenParams {
   /** QR token of the repair */
   token: string;
@@ -693,6 +772,16 @@ export interface UpdateRepairParams {
 
 export interface GetRepairDisclaimerParams {
   /** Repair ID */
+  id: number;
+}
+
+export interface PrintRepairLabelPayload {
+  /** Base URL for the QR code link (defaults to request host URL) */
+  base_url?: string;
+}
+
+export interface PrintRepairLabelParams {
+  /** ID of the repair to print a label for */
   id: number;
 }
 
