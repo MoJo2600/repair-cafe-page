@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.2.0...v1.3.0) (2026-05-29)
+
+
+### Features
+
+* label printing and UI adjustments ([#9](https://github.com/MoJo2600/repair-cafe-page/issues/9)) ([e37cae3](https://github.com/MoJo2600/repair-cafe-page/commit/e37cae3d8617a527edaf588d0314227d14efabb0))
+
+
+### Bug Fixes
+
+* container launch error ([bfdaacd](https://github.com/MoJo2600/repair-cafe-page/commit/bfdaacdc6398f423a27de158525cdb02f4cd7d6d))
+* missing env variable, update docu ([f0c4edc](https://github.com/MoJo2600/repair-cafe-page/commit/f0c4edc55a2907033b7bce047eeb110b6523b3b1))
+* production readyness ([47fbcd4](https://github.com/MoJo2600/repair-cafe-page/commit/47fbcd489ad18ceafd22c6cd59f135f706877f6d))
+
 ## [1.2.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.1.4...v1.2.0) (2026-05-22)
 
 
