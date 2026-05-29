@@ -211,7 +211,6 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
             if new_status in closed_statuses:
                 if repair.closed_at is None:
                     repair.closed_at = datetime.now(timezone.utc)
-                repair.user_id = None
             else:
                 # Reopening (→ Offen or → In Bearbeitung from closed) clears closed_at
                 repair.closed_at = None
@@ -582,10 +581,7 @@ def api_print_label(id: int):
         required: false
         schema:
           type: object
-          properties:
-            base_url:
-              type: string
-              description: Base URL for the QR code link (defaults to request host URL)
+          properties: {}
     responses:
       200:
         description: Label printed successfully
@@ -606,20 +602,18 @@ def api_print_label(id: int):
         repair = Repair.query.get_or_404(id)
         data = repair.to_dict()
 
-        req_body = request.get_json(silent=True) or {}
-
-        # Build base URL for the QR code link from the incoming request
-        base_url = req_body.get("base_url") or request.host_url.rstrip("/")
-
-        label_service = current_app.label_service  # type: ignore
-
         from app.api.config import _get_app_config
 
         app_cfg = _get_app_config()
 
+        # Use app_url from config; fall back to the incoming request's host URL
+        app_url = app_cfg.app_url or request.host_url.rstrip("/")
+
+        label_service = current_app.label_service  # type: ignore
+
         result = label_service.print_label(
             repair_data=data,
-            base_url=base_url,
+            app_url=app_url,
             org_name=app_cfg.org_name,
             org_website=app_cfg.org_website,
         )

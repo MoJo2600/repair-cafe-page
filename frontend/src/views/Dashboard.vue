@@ -1,15 +1,13 @@
 <template>
   <v-container fluid>
-    <!-- Next Repair Card -->
+    <!-- Next Repair + In Progress -->
     <v-row>
-      <v-col cols="12">
-        <v-card color="primary" variant="elevated" class="pa-2">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon size="40" class="mr-3">mdi-tools</v-icon>
-              <div>
-                <div class="text-h5">Nächste Reparatur</div>
-              </div>
+      <v-col cols="12" md="8">
+        <v-card color="primary" variant="elevated" class="pa-2" height="100%">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3">mdi-tools</v-icon>
+            <div>
+              <div class="text-h5">Nächste Reparatur</div>
             </div>
           </v-card-title>
           <v-card-text>
@@ -21,13 +19,49 @@
               <v-divider class="my-3 opacity-50"></v-divider>
               <div class="text-body-1">
                 <div><strong>Gerät:</strong> {{ repairStore.nextRepair.geraet_art }}</div>
-                <div><strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }} {{ repairStore.nextRepair.customer?.nachname }}</div>
+                <div>
+                  <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
+                  {{ repairStore.nextRepair.customer?.nachname }}
+                </div>
                 <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.reparatur_art }}</div>
               </div>
             </div>
-            <div v-else class="text-h6">
-              Keine offenen Reparaturen vorhanden
+            <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="4">
+        <v-card variant="elevated" class="pa-2" height="100%">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3" color="warning">mdi-progress-wrench</v-icon>
+            <div>
+              <div class="text-h5">In Bearbeitung</div>
+              <div class="text-caption">Aktive Reparaturen</div>
             </div>
+          </v-card-title>
+          <v-card-text>
+            <div v-if="repairStore.loading" class="text-center py-4">
+              <v-progress-circular indeterminate color="warning"></v-progress-circular>
+            </div>
+            <div
+              v-else-if="repairStore.inProgressRepairs.length === 0"
+              class="text-medium-emphasis"
+            >
+              Keine aktiven Reparaturen
+            </div>
+            <v-list v-else density="compact">
+              <v-list-item
+                v-for="r in repairStore.inProgressRepairs"
+                :key="r.id"
+                :subtitle="r.user_id ? userStore.getUserDisplayName(r.user_id) : 'Nicht zugewiesen'"
+              >
+                <template #title>
+                  <span class="font-weight-bold">#{{ r.id }}</span>
+                  &nbsp;{{ r.geraet_art }}
+                </template>
+              </v-list-item>
+            </v-list>
           </v-card-text>
         </v-card>
       </v-col>
@@ -66,7 +100,9 @@
             <div v-if="repairStore.loading" class="text-center">
               <v-progress-circular indeterminate color="white"></v-progress-circular>
             </div>
-            <div v-else class="text-h2 font-weight-bold">{{ repairStore.inProgressRepairsCount }}</div>
+            <div v-else class="text-h2 font-weight-bold">
+              {{ repairStore.inProgressRepairsCount }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -102,25 +138,60 @@
             <div v-if="repairStore.loading" class="text-center">
               <v-progress-circular indeterminate color="white"></v-progress-circular>
             </div>
-            <div v-else class="text-h2 font-weight-bold">{{ repairStore.notRepairedRepairsCount }}</div>
+            <div v-else class="text-h2 font-weight-bold">
+              {{ repairStore.notRepairedRepairsCount }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Timeline Chart -->
+    <!-- Repaired by user + Timeline Chart -->
     <v-row class="mt-4">
-      <v-col cols="12">
-        <v-card class="pa-2">
+      <v-col cols="12" md="4">
+        <v-card class="pa-2" variant="elevated" height="100%">
           <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Reparaturen über Zeit
+            <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
+            <div>
+              <div class="text-h5">Reparaturen pro Reparateur</div>
+              <div class="text-caption">Erfolgreich repariert</div>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <div v-if="repairStore.loading" class="text-center py-4">
+              <v-progress-circular indeterminate color="primary" />
+            </div>
+            <div v-else-if="repairedByUser.length === 0" class="text-medium-emphasis py-2">
+              Keine abgeschlossenen Reparaturen
+            </div>
+            <v-list v-else density="compact">
+              <v-list-item v-for="entry in repairedByUser" :key="entry.name" :title="entry.name">
+                <template #append>
+                  <v-chip color="success" size="small">{{ entry.count }}</v-chip>
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="8">
+        <v-card class="pa-2" variant="elevated">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3">mdi-chart-line</v-icon>
+            <div>
+              <div class="text-h5">Reparaturen über Zeit</div>
+              <div class="text-caption">Kumulativer Verlauf</div>
+            </div>
           </v-card-title>
           <v-card-text>
             <div v-if="timelineLoading" class="text-center py-8">
               <v-progress-circular indeterminate color="primary"></v-progress-circular>
             </div>
-            <div v-else-if="timelineData.length === 0" class="text-center py-8 text-medium-emphasis">
+            <div
+              v-else-if="timelineData.length === 0"
+              class="text-center py-8 text-medium-emphasis"
+            >
               Keine Daten vorhanden
             </div>
             <Line v-else :data="chartData" :options="chartOptions" style="max-height: 320px" />
@@ -128,33 +199,15 @@
         </v-card>
       </v-col>
     </v-row>
-
-    <!-- Start Repair Dialog -->
-    <ReparateurRequiredDialog v-model="startRepairDialog" v-model:userId="startRepairUserId"
-      title="Reparatur starten"
-      message="Für den Wechsel von 'Offen' zu 'In Bearbeitung' muss ein Reparateur angegeben werden."
-      confirm-text="Reparatur starten" :loading="startingRepair" @confirm="confirmStartRepair">
-      <template #context>
-        <div v-if="selectedRepair" class="mb-4">
-          <v-alert type="info" variant="tonal" class="mb-4">
-            <div><strong>Reparatur ID:</strong> {{ selectedRepair.id }}</div>
-            <div><strong>Gerät:</strong> {{ selectedRepair.geraet_art }}</div>
-            <div><strong>Kunde:</strong> {{ selectedRepair.customer?.vorname }} {{ selectedRepair.customer?.nachname }}</div>
-          </v-alert>
-        </div>
-      </template>
-    </ReparateurRequiredDialog>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useRepairStore, normalizeRepairStatus } from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRepairStore } from '@/stores/repairStore'
+import { useUserStore } from '@/stores/userStore'
 import { RepairsService } from '@/api/services/RepairsService'
-import type { Repair, RepairsTimelinePoint } from '@/api/types'
-import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
+import type { RepairsTimelinePoint } from '@/api/types'
 import confetti from 'canvas-confetti'
 import {
   Chart as ChartJS,
@@ -170,22 +223,29 @@ import { Line } from 'vue-chartjs'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-const router = useRouter()
 const repairStore = useRepairStore()
+const userStore = useUserStore()
 
-const showToast = inject('showToast') as undefined | ((message: string, options?: { color?: string; timeout?: number }) => void)
-
-const startRepairDialog = ref(false)
-const selectedRepair = ref<Repair | null>(null)
-const startingRepair = ref(false)
-const startRepairUserId = ref<number | null>(null)
-
+// ── Timeline ──────────────────────────────────────────────────────────
 const timelineLoading = ref(false)
 const timelineData = ref<RepairsTimelinePoint[]>([])
 
 const prevRepairedCount = ref(-1)
-const repairedCount = computed(() =>
-  repairStore.repairs.filter(r => r.status === 'Repariert').length
+const repairedByUser = computed(() => {
+  const counts: Record<string, number> = {}
+  for (const r of repairStore.repairs) {
+    if (r.status !== 'Repariert') continue
+    const name = r.user
+      ? `${r.user.vorname ?? ''} ${r.user.nachname ?? ''}`.trim() || r.user.username
+      : 'Unbekannt'
+    counts[name] = (counts[name] ?? 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+})
+const repairedCount = computed(
+  () => repairStore.repairs.filter((r) => r.status === 'Repariert').length
 )
 watch(repairedCount, (newVal) => {
   if (prevRepairedCount.value < 0) return
@@ -198,10 +258,10 @@ watch(repairedCount, (newVal) => {
 const chartData = computed(() => {
   const cumsum = (key: keyof RepairsTimelinePoint) => {
     let total = 0
-    return timelineData.value.map(p => (total += p[key] as number))
+    return timelineData.value.map((p) => (total += p[key] as number))
   }
   return {
-    labels: timelineData.value.map(p => p.label),
+    labels: timelineData.value.map((p) => p.label),
     datasets: [
       {
         label: 'Offen',
@@ -211,31 +271,31 @@ const chartData = computed(() => {
         tension: 0.3,
         fill: false,
       },
-    {
-      label: 'In Bearbeitung',
-      data: cumsum('in_bearbeitung'),
-      borderColor: '#FF9800',
-      backgroundColor: 'rgba(255,152,0,0.1)',
-      tension: 0.3,
-      fill: false,
-    },
-    {
-      label: 'Abgeschlossen',
-      data: cumsum('abgeschlossen'),
-      borderColor: '#4CAF50',
-      backgroundColor: 'rgba(76,175,80,0.1)',
-      tension: 0.3,
-      fill: false,
-    },
-    {
-      label: 'Nicht Repariert',
-      data: cumsum('nicht_repariert'),
-      borderColor: '#F44336',
-      backgroundColor: 'rgba(244,67,54,0.1)',
-      tension: 0.3,
-      fill: false,
-    },
-  ],
+      {
+        label: 'In Bearbeitung',
+        data: cumsum('in_bearbeitung'),
+        borderColor: '#FF9800',
+        backgroundColor: 'rgba(255,152,0,0.1)',
+        tension: 0.3,
+        fill: false,
+      },
+      {
+        label: 'Abgeschlossen',
+        data: cumsum('abgeschlossen'),
+        borderColor: '#4CAF50',
+        backgroundColor: 'rgba(76,175,80,0.1)',
+        tension: 0.3,
+        fill: false,
+      },
+      {
+        label: 'Nicht Repariert',
+        data: cumsum('nicht_repariert'),
+        borderColor: '#F44336',
+        backgroundColor: 'rgba(244,67,54,0.1)',
+        tension: 0.3,
+        fill: false,
+      },
+    ],
   }
 })
 
@@ -252,9 +312,10 @@ const chartOptions = {
 }
 
 onMounted(async () => {
+  await userStore.fetchUsers()
   await repairStore.fetchRepairs()
   // Set baseline after initial load so the watcher doesn't fire on mount
-  prevRepairedCount.value = repairStore.repairs.filter(r => r.status === 'Repariert').length
+  prevRepairedCount.value = repairStore.repairs.filter((r) => r.status === 'Repariert').length
   repairStore.startAutoRefresh()
   timelineLoading.value = true
   try {
@@ -270,52 +331,4 @@ onMounted(async () => {
 onUnmounted(() => {
   repairStore.stopAutoRefresh()
 })
-
-function openStartRepairDialog(repair: Repair) {
-  selectedRepair.value = repair
-  startRepairUserId.value = null
-  startRepairDialog.value = true
-}
-
-function closeStartRepairDialog() {
-  startRepairDialog.value = false
-  selectedRepair.value = null
-  startRepairUserId.value = null
-}
-
-async function confirmStartRepair(userId: number) {
-  if (!selectedRepair.value) return
-
-  const qrToken = selectedRepair.value.qr_token
-  const repairId = selectedRepair.value.id
-  const fromStatus = normalizeRepairStatus(selectedRepair.value.status)
-
-  startingRepair.value = true
-  try {
-    await repairStore.transitionRepairStatus({
-      repairId,
-      fromStatus,
-      toStatus: 'In Bearbeitung',
-      user_id: userId,
-    })
-
-    await RepairLogsService.createRepairLog(repairId, {
-      user_id: userId,
-      reparatur_dauer: 0,
-      reparatur_besch: '',
-      log_type: 'status_change',
-      status_from: fromStatus,
-      status_to: 'In Bearbeitung',
-    })
-
-    showToast?.('Reparatur wurde gestartet', { color: 'success' })
-    closeStartRepairDialog()
-    router.push(`/edit/${qrToken}`)
-  } catch (error) {
-    console.error('Error starting repair:', error)
-    showToast?.('Fehler beim Starten der Reparatur', { color: 'error' })
-  } finally {
-    startingRepair.value = false
-  }
-}
 </script>

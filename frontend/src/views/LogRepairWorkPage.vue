@@ -1,8 +1,6 @@
 <template>
   <v-container class="d-flex justify-center align-center" style="min-height: 80vh">
     <v-card max-width="1200px" width="100%">
-      <!-- <v-card-title v-if="formData" class="text-h5">{{ formData.geraet_art }}</v-card-title> -->
-
       <v-card-text v-if="loading">
         <v-progress-circular indeterminate color="primary"></v-progress-circular>
         <span class="ml-3">Lade Reparaturdaten...</span>
@@ -16,26 +14,11 @@
         <v-row align="start">
           <!-- Left column: summary + logs + attachments -->
           <v-col cols="12" md="8">
-            <RepairSummaryCard :repair-data="repairRecord" :vde-tests="summaryVdeTests" />
-
-            <!-- <v-alert v-if="repairRecord.user" type="info" variant="tonal" class="mb-4">
-              <div class="d-flex align-center justify-space-between flex-wrap ga-2">
-                <div>
-                  <strong>Aktuell zustaendig:</strong> {{ repairRecord.user.vorname }}
-                  {{ repairRecord.user.nachname }}
-                </div>
-                <v-chip
-                  size="small"
-                  :color="selectedRepairStatus === 'In Bearbeitung' ? 'info' : 'default'"
-                >
-                  {{
-                    selectedRepairStatus === 'In Bearbeitung'
-                      ? 'Arbeitet gerade an der Reparatur'
-                      : 'Zuletzt zugewiesen'
-                  }}
-                </v-chip>
-              </div>
-            </v-alert> -->
+            <RepairSummaryCard
+              :repair-data="repairRecord"
+              :vde-tests="summaryVdeTests"
+              @updated="onRepairFieldsUpdated"
+            />
 
             <!-- Repair Logs Section -->
             <div>
@@ -709,19 +692,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import confetti from 'canvas-confetti'
 import { RepairsService } from '@/api/services/RepairsService'
 import {
-  useRepairStore,
   normalizeRepairStatus,
-  REPAIR_STATUSES,
   getRepairStatusColor,
   getRepairStatusIcon,
   getRepairStatusDetailOptions,
   calculateRepairDurationFromLogs,
-  requiresCompletionDetailsForTransition,
-  requiresFailureDetailsForTransition,
-  type RepairStatus,
 } from '@/stores/repairStore'
 import { RepairLogsService } from '@/api/services/RepairLogsService'
 import { VdeTestsService, type VdeTestCreate } from '@/api/services/VdeTestsService'
@@ -735,6 +712,7 @@ import RepairNotRepairableDialog from '@/components/RepairNotRepairableDialog.vu
 import AbbruchSignatureDialog from '@/components/AbbruchSignatureDialog.vue'
 import VdeTestDialog from '@/components/VdeTestDialog.vue'
 import { useRepairThread } from '@/composables/useRepairThread'
+import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -746,14 +724,12 @@ interface NewLogFormData {
 
 const router = useRouter()
 const route = useRoute()
-const repairStore = useRepairStore()
 const userStore = useUserStore()
 const authStore = useAuthStore()
 
 const loading = ref(true)
 const error = ref('')
 const saving = ref(false)
-const savingStatus = ref(false)
 const logFormValid = ref(false)
 const logForm = ref<{
   validate: () => Promise<{ valid: boolean }>
@@ -817,30 +793,7 @@ const pendingLogFiles = ref<File[]>([])
 // Repair status selection
 const selectedRepairStatus = ref<string>('')
 const selectedStatusDetail = ref<string>('')
-const repairStatusOptions = [...REPAIR_STATUSES]
 const currentRepairStatus = computed(() => normalizeRepairStatus(repairRecord.value?.status))
-
-const availableNextStatuses = computed<RepairStatus[]>(() =>
-  (repairStatusOptions as RepairStatus[]).filter((s) => !isStatusChangeDisabled(s))
-)
-
-const bestNextStatus = computed<RepairStatus | null>(() => {
-  const current = currentRepairStatus.value
-  const preferred: RepairStatus | null =
-    current === 'Offen'
-      ? 'In Bearbeitung'
-      : current === 'In Bearbeitung'
-        ? 'Repariert'
-        : current === 'Nicht Repariert'
-          ? 'In Bearbeitung'
-          : null
-  if (preferred && availableNextStatuses.value.includes(preferred)) return preferred
-  return availableNextStatuses.value[0] ?? null
-})
-
-const otherNextStatuses = computed<RepairStatus[]>(() =>
-  availableNextStatuses.value.filter((s) => s !== bestNextStatus.value)
-)
 
 watch(selectedRepairStatus, (newStatus) => {
   const allowedDetails = getRepairStatusDetailOptions(newStatus)
@@ -866,11 +819,6 @@ function getAttachmentIcon(contentType: string): string {
   if (contentType === 'application/pdf') return 'mdi-file-pdf-box'
   return 'mdi-file-outline'
 }
-
-// Check if VDE test is required for the selected status
-const vdeTestRequired = computed(() => {
-  return selectedRepairStatus.value === 'Repariert' || selectedStatusDetail.value === 'Abbruch'
-})
 
 const newLog = ref<NewLogFormData>({
   user_id: null,
@@ -930,25 +878,6 @@ const editLog = ref({
   reparatur_besch: '',
   reparatur_dauer: 0 as number | null,
 })
-const transitionDialog = ref(false)
-const completionDialog = ref(false)
-const pendingTransitionStatus = ref<string>('')
-const transitionUserId = ref<number | null>(null)
-const completionData = ref({
-  description: '',
-  duration: null as number | null,
-  needsVdeTest: false,
-})
-
-const notRepairableDialog = ref(false)
-const notRepairableData = ref({
-  description: '',
-  statusDetail: '',
-})
-
-const abbruchSignatureDialog = ref(false)
-const pendingAbbruchPayload = ref<{ description: string; statusDetail: string } | null>(null)
-
 const labelPrinterEnabled = ref(false)
 const printingLabel = ref(false)
 
@@ -992,6 +921,16 @@ function formatDateTime(dateString: string): string {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${day}.${month}.${year} ${hours}:${minutes}`
+}
+
+function onRepairFieldsUpdated(fields: {
+  reparatur_art: string
+  geraet_art: string
+  defekt_besch: string
+}) {
+  if (repairRecord.value) {
+    repairRecord.value = { ...repairRecord.value, ...fields }
+  }
 }
 
 async function loadRepairLogs() {
@@ -1066,6 +1005,38 @@ function assignToMe() {
   selectedAssigneeId.value = me.id
   assignUser(me.id)
 }
+
+// ── Status-transition composable ──────────────────────────────────────────────
+const {
+  savingStatus,
+  transitionDialog,
+  transitionUserId,
+  completionDialog,
+  completionData,
+  notRepairableDialog,
+  abbruchSignatureDialog,
+  availableNextStatuses,
+  bestNextStatus,
+  otherNextStatuses,
+  handleCloseRepair,
+  closeRepair,
+  confirmTransitionWithReparateur,
+  confirmRepairCompletion,
+  confirmNotRepairable,
+  confirmAbbruchSignature,
+} = useRepairStatusTransition({
+  repairRecord,
+  selectedRepairStatus,
+  selectedStatusDetail,
+  currentRepairStatus,
+  hasVdeTest,
+  lastVdeTestPassed,
+  suggestedRepairDuration,
+  selectedAssigneeId,
+  showSnackbar,
+  loadRepairLogs,
+  onNeedsVdeTest: (preFilledUserId) => openVdeDialogForCloseFlow(preFilledUserId),
+})
 
 onMounted(async () => {
   const qrToken = route.params.qrToken as string
@@ -1423,111 +1394,6 @@ function closeLogDialog() {
   }, 300)
 }
 
-function isStatusChangeDisabled(status: string): boolean {
-  const targetStatus = normalizeRepairStatus(status)
-  return (
-    currentRepairStatus.value === targetStatus ||
-    !repairStore.canTransitionStatus(currentRepairStatus.value, targetStatus)
-  )
-}
-
-function openRepairCompletionDialog() {
-  completionData.value = {
-    description: repairRecord.value?.reparatur_besch || '',
-    duration:
-      suggestedRepairDuration.value > 0
-        ? suggestedRepairDuration.value
-        : repairRecord.value?.reparatur_dauer || 0,
-    needsVdeTest: !lastVdeTestPassed.value,
-  }
-  completionDialog.value = true
-}
-
-function closeRepairCompletionDialog() {
-  completionDialog.value = false
-}
-
-function handleCloseRepair(status: string) {
-  const fromStatus = normalizeRepairStatus(repairRecord.value?.status)
-  selectedRepairStatus.value = status
-  const toStatus = normalizeRepairStatus(status)
-
-  if (fromStatus === toStatus) {
-    return
-  }
-
-  if (requiresCompletionDetailsForTransition(fromStatus, toStatus)) {
-    openRepairCompletionDialog()
-    return
-  }
-
-  if (requiresFailureDetailsForTransition(fromStatus, toStatus)) {
-    notRepairableData.value = { description: '', statusDetail: '' }
-    notRepairableDialog.value = true
-    return
-  }
-
-  if (
-    repairStore.requiresReparateurForTransition(fromStatus, toStatus) &&
-    !repairRecord.value?.user_id
-  ) {
-    transitionUserId.value = null
-    pendingTransitionStatus.value = status
-    transitionDialog.value = true
-    return
-  }
-
-  // Check if VDE test is required but not present
-  if (vdeTestRequired.value && !hasVdeTest.value) {
-    openVdeDialogForCloseFlow()
-    return
-  }
-
-  // Otherwise, close directly
-  closeRepair(status)
-}
-
-function closeTransitionDialog() {
-  transitionDialog.value = false
-  pendingTransitionStatus.value = ''
-  transitionUserId.value = null
-}
-
-async function confirmTransitionWithReparateur(userId: number) {
-  const targetStatus = pendingTransitionStatus.value
-
-  closeTransitionDialog()
-
-  if (vdeTestRequired.value && !hasVdeTest.value) {
-    openVdeDialogForCloseFlow()
-    return
-  }
-
-  await closeRepair(targetStatus, userId)
-}
-
-async function confirmRepairCompletion(payload: {
-  description: string
-  duration: number
-  needsVdeTest: boolean
-}) {
-  completionData.value = {
-    description: payload.description,
-    duration: payload.duration,
-    needsVdeTest: payload.needsVdeTest,
-  }
-
-  closeRepairCompletionDialog()
-
-  if (payload.needsVdeTest) {
-    selectedRepairStatus.value = 'Repariert'
-    openVdeDialogForCloseFlow()
-    return
-  }
-
-  await closeRepair('Repariert')
-}
-
 async function handleVdeSubmit(payload: VdeFormData) {
   if (!repairRecord.value?.id) return
 
@@ -1586,146 +1452,6 @@ async function handleVdeSubmit(payload: VdeFormData) {
     showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
   } finally {
     saving.value = false
-  }
-}
-
-async function closeRepair(status: string = selectedRepairStatus.value, userId?: number) {
-  if (!repairRecord.value?.id || !status) return
-
-  savingStatus.value = true
-
-  try {
-    const fromStatus = normalizeRepairStatus(repairRecord.value.status)
-    const toStatus = normalizeRepairStatus(status)
-
-    // Only pass statusDetail if it is valid for the target status
-    const validDetailsForTarget = getRepairStatusDetailOptions(toStatus)
-    const validStatusDetail = validDetailsForTarget.includes(selectedStatusDetail.value)
-      ? selectedStatusDetail.value
-      : undefined
-
-    if (toStatus === 'Repariert') {
-      await repairStore.completeSuccessfulRepair({
-        repairId: repairRecord.value.id,
-        fromStatus,
-        statusDetail: validStatusDetail,
-        user_id: userId || repairRecord.value.user_id || undefined,
-        repairDescription: completionData.value.description,
-        repairDuration: Number(completionData.value.duration ?? 0),
-      })
-      await RepairLogsService.createRepairLog(repairRecord.value.id, {
-        user_id: userId || repairRecord.value.user_id || undefined,
-        reparatur_dauer: Number(completionData.value.duration ?? 0),
-        reparatur_besch: completionData.value.description,
-        status_from: fromStatus,
-        status_to: 'Repariert',
-      })
-    } else {
-      await repairStore.transitionRepairStatus({
-        repairId: repairRecord.value.id,
-        fromStatus,
-        toStatus,
-        statusDetail: validStatusDetail,
-        user_id: userId || repairRecord.value.user_id || undefined,
-      })
-      await RepairLogsService.createRepairLog(repairRecord.value.id, {
-        user_id: userId || repairRecord.value.user_id || undefined,
-        reparatur_dauer: 0,
-        reparatur_besch: '',
-        log_type: 'status_change',
-        status_from: fromStatus,
-        status_to: toStatus,
-      })
-    }
-
-    showSnackbar(`Status update erfolgreich: ${toStatus}`)
-    if (toStatus === 'Repariert') {
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-      })
-    }
-    repairRecord.value.status = status
-    repairRecord.value.status_detail = selectedStatusDetail.value
-    if (userId) {
-      repairRecord.value.user_id = userId
-    }
-    if (toStatus === 'Repariert') {
-      repairRecord.value.reparatur_besch = completionData.value.description
-      repairRecord.value.reparatur_dauer = Number(completionData.value.duration ?? 0)
-    }
-    const closedStatuses = ['Repariert', 'Nicht Repariert']
-    if (closedStatuses.includes(toStatus)) {
-      repairRecord.value.user_id = null
-      repairRecord.value.user = null
-    }
-
-    // Navigate back after successful close
-    // setTimeout(() => goBack(), 1500)
-  } catch (err) {
-    console.error('Error closing repair:', err)
-    showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
-  } finally {
-    savingStatus.value = false
-  }
-}
-
-async function confirmNotRepairable(payload: { description: string; statusDetail: string }) {
-  notRepairableData.value = payload
-  notRepairableDialog.value = false
-
-  if (payload.statusDetail === 'Abbruch') {
-    pendingAbbruchPayload.value = payload
-    abbruchSignatureDialog.value = true
-    return
-  }
-
-  await saveNotRepairable(payload)
-}
-
-async function confirmAbbruchSignature(_signaturePayload: { signature: string }) {
-  abbruchSignatureDialog.value = false
-  // Signature data will be stored in a later implementation step
-  if (pendingAbbruchPayload.value) {
-    await saveNotRepairable(pendingAbbruchPayload.value)
-    pendingAbbruchPayload.value = null
-  }
-}
-
-async function saveNotRepairable(payload: { description: string; statusDetail: string }) {
-  if (!repairRecord.value) return
-
-  savingStatus.value = true
-  try {
-    const fromStatus = normalizeRepairStatus(repairRecord.value.status)
-    await repairStore.completeFailedRepair({
-      repairId: repairRecord.value.id,
-      fromStatus,
-      statusDetail: payload.statusDetail || undefined,
-      user_id: repairRecord.value.user_id || undefined,
-      repairDescription: payload.description,
-    })
-    await RepairLogsService.createRepairLog(repairRecord.value.id, {
-      user_id: repairRecord.value.user_id || undefined,
-      reparatur_dauer: 0,
-      reparatur_besch: payload.description,
-      status_from: fromStatus,
-      status_to: 'Nicht Repariert',
-    })
-    showSnackbar('Reparatur als nicht reparierbar abgeschlossen')
-    repairRecord.value.status = 'Nicht Repariert'
-    repairRecord.value.status_detail = payload.statusDetail
-    repairRecord.value.reparatur_besch = payload.description
-    selectedRepairStatus.value = 'Nicht Repariert'
-    repairRecord.value.user_id = null
-    repairRecord.value.user = null
-    // setTimeout(() => goBack(), 1500)
-  } catch (err) {
-    console.error('Error closing repair as not repairable:', err)
-    showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
-  } finally {
-    savingStatus.value = false
   }
 }
 

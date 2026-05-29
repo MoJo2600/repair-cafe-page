@@ -324,13 +324,15 @@ def upload_logo():
 
 
 def _get_app_config() -> AppConfigResponse:
-    """Read org_name and org_website from the DB, falling back to defaults."""
+    """Read org_name, org_website and app_url from the DB, falling back to defaults."""
     defaults = AppConfigResponse()
     org_name_row = db.session.get(AppConfig, "org_name")
     org_website_row = db.session.get(AppConfig, "org_website")
+    app_url_row = db.session.get(AppConfig, "app_url")
     return AppConfigResponse(
         org_name=org_name_row.value if org_name_row else defaults.org_name,
         org_website=org_website_row.value if org_website_row else defaults.org_website,
+        app_url=app_url_row.value if app_url_row else defaults.app_url,
     )
 
 
@@ -374,6 +376,9 @@ def update_app_config():
               type: string
             org_website:
               type: string
+            app_url:
+              type: string
+              description: Application base URL for QR code links on printed labels
     responses:
       200:
         description: Updated configuration
@@ -409,6 +414,16 @@ def update_app_config():
         else:
             db.session.add(
                 AppConfig(key="org_website", value=body.org_website, updated_at=now)
+            )
+
+    if body.app_url is not None:
+        row = db.session.get(AppConfig, "app_url")
+        if row:
+            row.value = body.app_url
+            row.updated_at = now
+        else:
+            db.session.add(
+                AppConfig(key="app_url", value=body.app_url, updated_at=now)
             )
 
     db.session.commit()

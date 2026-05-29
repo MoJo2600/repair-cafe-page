@@ -589,7 +589,8 @@ class AppConfigResponse(BaseModel):
     """Schema for application-level configuration (org name, website)."""
 
     org_name: str = Field("Repair Café", description="Organisation display name")
-    org_website: str = Field("", description="Organisation website URL")
+    org_website: str = Field("", description="Organisation website URL printed on the label")
+    app_url: str = Field("", description="Application base URL used for QR code links on labels")
 
 
 class AppConfigUpdate(BaseModel):
@@ -597,6 +598,7 @@ class AppConfigUpdate(BaseModel):
 
     org_name: Optional[str] = Field(None, max_length=200)
     org_website: Optional[str] = Field(None, max_length=200)
+    app_url: Optional[str] = Field(None, max_length=200)
 
 
 # ---------------------------------------------------------------------------

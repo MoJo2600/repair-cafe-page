@@ -1,5 +1,5 @@
 <template>
-  <v-container class="d-flex justify-center align-center" style="min-height: 80vh;">
+  <v-container class="d-flex justify-center align-center" style="min-height: 80vh">
     <v-card max-width="800px" width="100%">
       <v-card-title class="text-h5">Neue Reparatur erfassen</v-card-title>
       <v-card-text>
@@ -9,9 +9,17 @@
             <v-divider></v-divider>
             <v-stepper-item title="Reparaturdaten" :value="2" :complete="step > 2"></v-stepper-item>
             <v-divider></v-divider>
-            <v-stepper-item title="Haftungsbegrenzung" :value="3" :complete="step > 3"></v-stepper-item>
+            <v-stepper-item
+              title="Haftungsbegrenzung"
+              :value="3"
+              :complete="step > 3"
+            ></v-stepper-item>
             <v-divider></v-divider>
-            <v-stepper-item title="Zusammenfassung" :value="4" :complete="step > 4"></v-stepper-item>
+            <v-stepper-item
+              title="Zusammenfassung"
+              :value="4"
+              :complete="step > 4"
+            ></v-stepper-item>
             <v-divider></v-divider>
             <v-stepper-item title="Bestätigung" :value="5" :complete="step > 5"></v-stepper-item>
           </v-stepper-header>
@@ -23,13 +31,29 @@
                 <v-card variant="tonal" color="primary" class="mb-4">
                   <v-card-text>
                     <div class="text-subtitle-2 mb-2">Bestehenden Kunden suchen</div>
-                    <v-autocomplete v-model:search="customerSearchQuery" :items="customerSearchResults"
+                    <v-autocomplete
+                      v-model:search="customerSearchQuery"
+                      :items="customerSearchResults"
                       :loading="customerSearchLoading"
-                      :item-title="(c: CustomerResponse) => `${c.vorname} ${c.nachname}${c.telefon ? ' · ' + c.telefon : ''}${c.email ? ' · ' + c.email : ''}`"
-                      item-value="id" label="Name, Telefon oder E-Mail eingeben…"
-                      prepend-inner-icon="mdi-account-search" clearable no-filter return-object hide-no-data
-                      :no-data-text="customerSearchQuery.length >= 2 ? 'Kein Kunde gefunden' : 'Mindestens 2 Zeichen eingeben'"
-                      @update:search="onCustomerSearchInput" @update:model-value="selectCustomer"></v-autocomplete>
+                      :item-title="
+                        (c: CustomerResponse) =>
+                          `${c.vorname} ${c.nachname}${c.telefon ? ' · ' + c.telefon : ''}${c.email ? ' · ' + c.email : ''}`
+                      "
+                      item-value="id"
+                      label="Name, Telefon oder E-Mail eingeben…"
+                      prepend-inner-icon="mdi-account-search"
+                      clearable
+                      no-filter
+                      return-object
+                      hide-no-data
+                      :no-data-text="
+                        customerSearchQuery.length >= 2
+                          ? 'Kein Kunde gefunden'
+                          : 'Mindestens 2 Zeichen eingeben'
+                      "
+                      @update:search="onCustomerSearchInput"
+                      @update:model-value="selectCustomer"
+                    ></v-autocomplete>
                     <div v-if="selectedCustomerId" class="text-caption text-success">
                       <v-icon size="x-small">mdi-check-circle</v-icon>
                       Kunde verknüpft · Felder wurden ausgefüllt
@@ -40,27 +64,58 @@
                   </v-card-text>
                 </v-card>
 
-                <v-text-field v-model="formData.datum" label="Datum" type="datetime-local" required
-                  :rules="[v => !!v || 'Datum ist erforderlich']"></v-text-field>
-                <v-text-field v-model="formData.vorname" label="Vorname" required
-                  :rules="[v => !!v || 'Vorname ist erforderlich']"></v-text-field>
-                <v-text-field v-model="formData.nachname" label="Nachname" required
-                  :rules="[v => !!v || 'Nachname ist erforderlich']"></v-text-field>
+                <v-text-field
+                  v-model="formData.datum"
+                  label="Datum"
+                  type="datetime-local"
+                  required
+                  :rules="[(v) => !!v || 'Datum ist erforderlich']"
+                ></v-text-field>
+                <v-text-field
+                  v-model="formData.vorname"
+                  label="Vorname"
+                  required
+                  :rules="[(v) => !!v || 'Vorname ist erforderlich']"
+                ></v-text-field>
+                <v-text-field
+                  v-model="formData.nachname"
+                  label="Nachname"
+                  required
+                  :rules="[(v) => !!v || 'Nachname ist erforderlich']"
+                ></v-text-field>
                 <v-text-field v-model="formData.telefon" label="Telefon"></v-text-field>
-                <v-text-field v-model="formData.email" label="Email (optional)" type="email"
-                  :rules="emailRules"></v-text-field>
+                <v-text-field
+                  v-model="formData.email"
+                  label="Email (optional)"
+                  type="email"
+                  :rules="emailRules"
+                ></v-text-field>
               </v-form>
             </v-stepper-window-item>
 
             <!-- Step 2: Repair Information -->
             <v-stepper-window-item :value="2">
               <v-form ref="step2Form" v-model="step2Valid">
-                <v-select v-model="formData.reparatur_art" label="Kategorie" :items="categories" required
-                  :rules="[v => !!v || 'Kategorie ist erforderlich']"></v-select>
-                <v-text-field v-model="formData.geraet_art" label="Geräte Art / Bezeichnung" required
-                  :rules="[v => !!v || 'Geräte Art / Bezeichnung ist erforderlich']"></v-text-field>
-                <v-textarea v-model="formData.defekt_besch" label="Beschreibung des Defekts" rows="3" required
-                  :rules="[v => !!v || 'Beschreibung ist erforderlich']"></v-textarea>
+                <v-select
+                  v-model="formData.reparatur_art"
+                  label="Kategorie"
+                  :items="categories"
+                  required
+                  :rules="[(v) => !!v || 'Kategorie ist erforderlich']"
+                ></v-select>
+                <v-text-field
+                  v-model="formData.geraet_art"
+                  label="Geräte Art / Bezeichnung"
+                  required
+                  :rules="[(v) => !!v || 'Geräte Art / Bezeichnung ist erforderlich']"
+                ></v-text-field>
+                <v-textarea
+                  v-model="formData.defekt_besch"
+                  label="Beschreibung des Defekts"
+                  rows="3"
+                  required
+                  :rules="[(v) => !!v || 'Beschreibung ist erforderlich']"
+                ></v-textarea>
 
                 <!-- Photo Capture Section -->
                 <v-card variant="outlined" class="mt-4">
@@ -69,26 +124,47 @@
                     Fotos des Geräts
                   </v-card-title>
                   <v-card-text>
-                    <p class="text-caption mb-3">Nehmen Sie Fotos des Geräts auf, um den Zustand zu dokumentieren.</p>
+                    <p class="text-caption mb-3">
+                      Nehmen Sie Fotos des Geräts auf, um den Zustand zu dokumentieren.
+                    </p>
 
                     <!-- Camera preview -->
                     <div v-if="cameraActive" class="mb-3">
-                      <video ref="videoElement" autoplay playsinline
-                        style="width: 100%; max-height: 400px; background: #000; border-radius: 4px;"></video>
-                      <canvas ref="photoCanvas" style="display: none;"></canvas>
+                      <video
+                        ref="videoElement"
+                        autoplay
+                        playsinline
+                        style="width: 100%; max-height: 400px; background: #000; border-radius: 4px"
+                      ></video>
+                      <canvas ref="photoCanvas" style="display: none"></canvas>
                     </div>
 
                     <!-- Camera controls -->
                     <div class="d-flex gap-2 mb-3">
-                      <v-btn v-if="!cameraActive" color="primary" prepend-icon="mdi-camera" @click="startCamera"
-                        :disabled="cameraPermissionDenied">
+                      <v-btn
+                        v-if="!cameraActive"
+                        color="primary"
+                        prepend-icon="mdi-camera"
+                        :disabled="cameraPermissionDenied"
+                        @click="startCamera"
+                      >
                         Kamera starten
                       </v-btn>
-                      <v-btn v-if="cameraActive" color="success" prepend-icon="mdi-camera" @click="capturePhoto">
+                      <v-btn
+                        v-if="cameraActive"
+                        color="success"
+                        prepend-icon="mdi-camera"
+                        @click="capturePhoto"
+                      >
                         Foto aufnehmen
                       </v-btn>
-                      <v-btn v-if="cameraActive" color="grey" variant="outlined" prepend-icon="mdi-close"
-                        @click="stopCamera">
+                      <v-btn
+                        v-if="cameraActive"
+                        color="grey"
+                        variant="outlined"
+                        prepend-icon="mdi-close"
+                        @click="stopCamera"
+                      >
                         Kamera stoppen
                       </v-btn>
                     </div>
@@ -101,21 +177,43 @@
                     <!-- Captured photos gallery -->
                     <div v-if="devicePhotos.length > 0">
                       <v-divider class="mb-3"></v-divider>
-                      <div class="text-subtitle-2 mb-2">Aufgenommene Fotos ({{ devicePhotos.length }})</div>
+                      <div class="text-subtitle-2 mb-2">
+                        Aufgenommene Fotos ({{ devicePhotos.length }})
+                      </div>
                       <v-row>
-                        <v-col v-for="(photo, index) in devicePhotos" :key="index" cols="6" sm="4" md="3">
+                        <v-col
+                          v-for="(photo, index) in devicePhotos"
+                          :key="index"
+                          cols="6"
+                          sm="4"
+                          md="3"
+                        >
                           <v-card>
-                            <v-img :src="photo" aspect-ratio="1" cover class="cursor-pointer" @click="viewPhoto(photo)">
-                              <template v-slot:placeholder>
+                            <v-img
+                              :src="photo"
+                              aspect-ratio="1"
+                              cover
+                              class="cursor-pointer"
+                              @click="viewPhoto(photo)"
+                            >
+                              <template #placeholder>
                                 <v-row class="fill-height ma-0" align="center" justify="center">
-                                  <v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+                                  <v-progress-circular
+                                    indeterminate
+                                    color="grey-lighten-5"
+                                  ></v-progress-circular>
                                 </v-row>
                               </template>
                             </v-img>
                             <v-card-actions>
                               <v-spacer></v-spacer>
-                              <v-btn icon="mdi-delete" size="small" color="error" variant="text"
-                                @click="deletePhoto(index)"></v-btn>
+                              <v-btn
+                                icon="mdi-delete"
+                                size="small"
+                                color="error"
+                                variant="text"
+                                @click="deletePhoto(index)"
+                              ></v-btn>
                             </v-card-actions>
                           </v-card>
                         </v-col>
@@ -129,39 +227,61 @@
             <!-- Step 3: Haftungsbegrenzung -->
             <v-stepper-window-item :value="3">
               <v-form ref="step3Form" v-model="step3Valid">
-
                 <v-card variant="outlined" class="mb-4">
                   <v-card-title class="text-h6">Bedingungen</v-card-title>
                   <v-card-text>
-                    <iframe src="/api/config/disclaimer" width="100%" height="500px" style="border: none;"
-                      title="Disclaimer"></iframe>
+                    <iframe
+                      src="/api/config/disclaimer"
+                      width="100%"
+                      height="500px"
+                      style="border: none"
+                      title="Disclaimer"
+                    ></iframe>
                   </v-card-text>
                 </v-card>
 
                 <!-- Mode toggle -->
-                <v-btn-toggle v-model="disclaimerMode" mandatory color="primary" class="mb-4" density="comfortable">
-                  <v-btn value="sign" prepend-icon="mdi-draw">
-                    Unterschreiben
-                  </v-btn>
-                  <v-btn value="upload" prepend-icon="mdi-upload">
-                    PDF hochladen
-                  </v-btn>
+                <v-btn-toggle
+                  v-model="disclaimerMode"
+                  mandatory
+                  color="primary"
+                  class="mb-4"
+                  density="comfortable"
+                >
+                  <v-btn value="sign" prepend-icon="mdi-draw"> Unterschreiben </v-btn>
+                  <v-btn value="upload" prepend-icon="mdi-upload"> PDF hochladen </v-btn>
                 </v-btn-toggle>
 
                 <!-- Signature card -->
                 <v-card v-if="disclaimerMode === 'sign'" variant="outlined" class="mb-4">
                   <v-card-title class="text-h6">Unterschrift</v-card-title>
                   <v-card-text>
-                    <p class="mb-3">Mit meiner Unterschrift bestätige ich die Bedingungen und bestätige die
-                      Datenschutzerklärung
-                      gelesen und verstanden zu haben:</p>
+                    <p class="mb-3">
+                      Mit meiner Unterschrift bestätige ich die Bedingungen und bestätige die
+                      Datenschutzerklärung gelesen und verstanden zu haben:
+                    </p>
                     <div class="signature-container" :class="{ 'error-border': signatureError }">
-                      <canvas ref="signatureCanvas" width="700" height="200" @mousedown="startDrawing" @mousemove="draw"
-                        @mouseup="stopDrawing" @mouseleave="stopDrawing" @touchstart="startDrawingTouch"
-                        @touchmove="drawTouch" @touchend="stopDrawing"
-                        style="border: 1px solid #ccc; cursor: crosshair; width: 100%; max-width: 700px; touch-action: none;"></canvas>
+                      <canvas
+                        ref="signatureCanvas"
+                        width="700"
+                        height="200"
+                        style="
+                          border: 1px solid #ccc;
+                          cursor: crosshair;
+                          width: 100%;
+                          max-width: 700px;
+                          touch-action: none;
+                        "
+                        @mousedown="startDrawing"
+                        @mousemove="draw"
+                        @mouseup="stopDrawing"
+                        @mouseleave="stopDrawing"
+                        @touchstart="startDrawingTouch"
+                        @touchmove="drawTouch"
+                        @touchend="stopDrawing"
+                      ></canvas>
                     </div>
-                    <v-btn @click="clearSignature" variant="outlined" size="small" class="mt-2">
+                    <v-btn variant="outlined" size="small" class="mt-2" @click="clearSignature">
                       Unterschrift löschen
                     </v-btn>
                     <div v-if="signatureError" class="text-error text-caption mt-1">
@@ -174,10 +294,18 @@
                 <v-card v-else variant="outlined" class="mb-4">
                   <v-card-title class="text-h6">PDF hochladen</v-card-title>
                   <v-card-text>
-                    <p class="mb-3">Laden Sie eine bereits unterschriebene Haftungsausschluss-PDF hoch:</p>
-                    <v-file-input v-model="uploadedPdfFile" label="PDF-Datei auswählen" accept=".pdf,application/pdf"
-                      prepend-icon="mdi-file-pdf-box" :error-messages="uploadedPdfError" show-size
-                      @update:model-value="uploadedPdfError = ''"></v-file-input>
+                    <p class="mb-3">
+                      Laden Sie eine bereits unterschriebene Haftungsausschluss-PDF hoch:
+                    </p>
+                    <v-file-input
+                      v-model="uploadedPdfFile"
+                      label="PDF-Datei auswählen"
+                      accept=".pdf,application/pdf"
+                      prepend-icon="mdi-file-pdf-box"
+                      :error-messages="uploadedPdfError"
+                      show-size
+                      @update:model-value="uploadedPdfError = ''"
+                    ></v-file-input>
                   </v-card-text>
                 </v-card>
               </v-form>
@@ -196,34 +324,54 @@
                   <h2 class="text-h4 mb-4">Reparatur erfolgreich erstellt!</h2>
                   <v-divider class="my-4"></v-divider>
                   <div class="text-h5 mb-2">Reparatur ID:</div>
-                  <div class="text-h3 font-weight-bold primary--text mb-4">{{ createdRepairId }}</div>
+                  <div class="text-h3 font-weight-bold primary--text mb-4">
+                    {{ createdRepairId }}
+                  </div>
                   <p class="text-body-1 mb-4">
-                    Die Reparatur wurde erfolgreich im System erfasst.
-                    Sie können diese ID verwenden, um den Status der Reparatur zu verfolgen.
+                    Die Reparatur wurde erfolgreich im System erfasst. Sie können diese ID
+                    verwenden, um den Status der Reparatur zu verfolgen.
                   </p>
                   <v-card variant="outlined" class="mt-4 pa-4">
                     <div class="text-subtitle-1 font-weight-bold mb-2">Nächste Schritte:</div>
                     <v-list density="compact">
                       <v-list-item prepend-icon="mdi-printer">
-                        <v-list-item-title>Kleben Sie den gedrucken QR Code auf das Gerät</v-list-item-title>
+                        <v-list-item-title
+                          >Kleben Sie den gedrucken QR Code auf das Gerät</v-list-item-title
+                        >
                       </v-list-item>
                       <v-list-item prepend-icon="mdi-clipboard-check">
                         <v-list-item-title>Übergeben Sie das Gerät zur Reparatur</v-list-item-title>
                       </v-list-item>
                       <v-list-item prepend-icon="mdi-qrcode">
-                        <v-list-item-title>Scannen Sie den QR-Code für schnellen Zugriff</v-list-item-title>
+                        <v-list-item-title
+                          >Scannen Sie den QR-Code für schnellen Zugriff</v-list-item-title
+                        >
                       </v-list-item>
                     </v-list>
                   </v-card>
 
-                  <v-btn v-if="disclaimerUrl" :href="disclaimerUrl" target="_blank" color="primary" variant="outlined"
-                    prepend-icon="mdi-file-pdf-box" class="mt-6" download>
+                  <v-btn
+                    v-if="disclaimerUrl"
+                    :href="disclaimerUrl"
+                    target="_blank"
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-file-pdf-box"
+                    class="mt-6"
+                    download
+                  >
                     Haftungsausschluss herunterladen &amp; drucken
                   </v-btn>
 
                   <div v-if="labelPrinterEnabled" class="mt-4">
-                    <v-btn color="secondary" variant="tonal" prepend-icon="mdi-printer" :loading="printingLabel"
-                      :disabled="createdRepairId === null" @click="printLabel">
+                    <v-btn
+                      color="secondary"
+                      variant="tonal"
+                      prepend-icon="mdi-printer"
+                      :loading="printingLabel"
+                      :disabled="createdRepairId === null"
+                      @click="printLabel"
+                    >
                       Etikett drucken
                     </v-btn>
                     <div v-if="printLabelError" class="text-error text-caption mt-1">
@@ -241,10 +389,13 @@
         <v-spacer></v-spacer>
         <v-btn v-if="step > 1 && step < 4" @click="step--">Zurück</v-btn>
         <v-btn v-if="step < 4" color="primary" @click="nextStep">Weiter</v-btn>
-        <v-btn v-if="step === 4" color="primary" @click="submitForm" :loading="submitting">Speichern</v-btn>
+        <v-btn v-if="step === 4" color="primary" :loading="submitting" @click="submitForm"
+          >Speichern</v-btn
+        >
         <v-btn v-if="step === 5" color="primary" @click="goToRepairsList">Zur Reparaturliste</v-btn>
-        <v-btn v-if="step === 5" color="secondary" variant="outlined" @click="createAnother">Weitere Reparatur
-          erfassen</v-btn>
+        <v-btn v-if="step === 5" color="secondary" variant="outlined" @click="createAnother"
+          >Weitere Reparatur erfassen</v-btn
+        >
       </v-card-actions>
     </v-card>
   </v-container>
@@ -280,12 +431,12 @@ onMounted(async () => {
   }
 })
 const disclaimerUrl = computed(() =>
-  createdRepairId.value !== null
-    ? `/api/repairs/${createdRepairId.value}/disclaimer`
-    : null
+  createdRepairId.value !== null ? `/api/repairs/${createdRepairId.value}/disclaimer` : null
 )
 
-const showToast = inject('showToast') as undefined | ((message: string, options?: { color?: string; timeout?: number }) => void)
+const showToast = inject('showToast') as
+  | undefined
+  | ((message: string, options?: { color?: string; timeout?: number }) => void)
 
 const categories = ['Elektronik', 'Kleidung', 'Möbel', 'Sonstiges']
 
@@ -306,7 +457,7 @@ const formData = ref({
   reparatur_art: '',
   geraet_art: '',
   defekt_besch: '',
-  status: 'Offen'
+  status: 'Offen',
 })
 
 const termsAccepted = ref(false)
@@ -331,9 +482,7 @@ const devicePhotos = ref<string[]>([])
 let cameraStream: MediaStream | null = null
 
 // Email validation rules: optional but must be valid if provided
-const emailRules = [
-  (v: string) => !v || /.+@.+\..+/.test(v) || 'Email muss gültig sein'
-]
+const emailRules = [(v: string) => !v || /.+@.+\..+/.test(v) || 'Email muss gültig sein']
 
 // Customer search state
 const customerSearchQuery = ref('')
@@ -472,8 +621,13 @@ function isCanvasEmpty(): boolean {
   const ctx = getContext()
   if (!ctx) return true
 
-  const pixelData = ctx.getImageData(0, 0, signatureCanvas.value.width, signatureCanvas.value.height)
-  return !pixelData.data.some(channel => channel !== 0)
+  const pixelData = ctx.getImageData(
+    0,
+    0,
+    signatureCanvas.value.width,
+    signatureCanvas.value.height
+  )
+  return !pixelData.data.some((channel) => channel !== 0)
 }
 
 async function nextStep() {
@@ -546,10 +700,17 @@ async function submitForm() {
         createdRepairId.value = response.id || null
 
         // Upload pre-signed PDF if applicable
-        if (disclaimerMode.value === 'upload' && uploadedPdfFile.value && createdRepairId.value !== null) {
+        if (
+          disclaimerMode.value === 'upload' &&
+          uploadedPdfFile.value &&
+          createdRepairId.value !== null
+        ) {
           const fd = new FormData()
           fd.append('file', uploadedPdfFile.value)
-          await fetch(`/api/repairs/${createdRepairId.value}/disclaimer`, { method: 'POST', body: fd })
+          await fetch(`/api/repairs/${createdRepairId.value}/disclaimer`, {
+            method: 'POST',
+            body: fd,
+          })
         }
 
         showToast?.('Reparatur erfolgreich erstellt', { color: 'success' })
@@ -561,7 +722,8 @@ async function submitForm() {
       }
     } catch (error) {
       console.error('Error submitting repair:', error)
-      const errorMessage = (error as any)?.body?.error || (error as Error).message || 'Unbekannter Fehler'
+      const errorMessage =
+        (error as any)?.body?.error || (error as Error).message || 'Unbekannter Fehler'
       showToast?.(`Fehler beim Speichern der Reparatur: ${errorMessage}`, { color: 'error' })
     } finally {
       submitting.value = false
@@ -587,7 +749,7 @@ function createAnother() {
     reparatur_art: '',
     geraet_art: '',
     defekt_besch: '',
-    status: 'Offen'
+    status: 'Offen',
   }
   signatureData.value = null
   signatureError.value = ''
@@ -613,7 +775,8 @@ async function printLabel() {
       showToast?.(printLabelError.value, { color: 'error' })
     }
   } catch (error) {
-    printLabelError.value = (error as any)?.body?.error ?? (error as Error).message ?? 'Unbekannter Fehler'
+    printLabelError.value =
+      (error as any)?.body?.error ?? (error as Error).message ?? 'Unbekannter Fehler'
     showToast?.(`Fehler beim Drucken: ${printLabelError.value}`, { color: 'error' })
   } finally {
     printingLabel.value = false
@@ -626,7 +789,7 @@ async function startCamera() {
     cameraPermissionDenied.value = false
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment' }, // Use back camera on mobile if available
-      audio: false
+      audio: false,
     })
     cameraStream = stream
     if (videoElement.value) {
@@ -642,7 +805,7 @@ async function startCamera() {
 
 function stopCamera() {
   if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop())
+    cameraStream.getTracks().forEach((track) => track.stop())
     cameraStream = null
   }
   if (videoElement.value) {

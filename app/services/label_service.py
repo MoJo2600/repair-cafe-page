@@ -24,7 +24,7 @@ def _load_fonts():
         return (
             ImageFont.truetype(_FONT_PATH_BOLD, 38),
             ImageFont.truetype(_FONT_PATH, 27),
-            ImageFont.truetype(_FONT_PATH, 21),
+            ImageFont.truetype(_FONT_PATH, 25),
         )
     except OSError:
         default = ImageFont.load_default()
@@ -33,7 +33,7 @@ def _load_fonts():
 
 def generate_label_image(
     repair_data: dict,
-    base_url: str = "",
+    app_url: str = "",
     org_name: str = "Repair Café",
     org_website: str = "",
 ) -> Image.Image:
@@ -42,9 +42,9 @@ def generate_label_image(
 
     Args:
         repair_data: Dict with repair fields (id, qr_token, datum, vorname, nachname, geraet_art).
-        base_url: Base URL used as the root for the QR code link (e.g. "http://repaircafe/").
+        app_url: Base URL of the application used for the QR code link (e.g. "https://repaircafe.example.org").
         org_name: Organisation name printed at the bottom of the label.
-        org_website: Organisation website printed at the bottom of the label.
+        org_website: Organisation website printed at the bottom of the label (can differ from app_url).
 
     Returns:
         PIL Image object ready for printing.
@@ -93,7 +93,7 @@ def generate_label_image(
 
     # QR code — right side
     qr_token = repair_data.get("qr_token", "")
-    qr_url = f"{base_url.rstrip('/')}/edit/{qr_token}" if qr_token else "unknown"
+    qr_url = f"{app_url.rstrip('/')}/edit/{qr_token}" if qr_token else "unknown"
     qr = qrcode.QRCode(version=1, box_size=3, border=1)
     qr.add_data(qr_url)
     qr.make(fit=True)
@@ -115,10 +115,10 @@ def generate_label_image(
         logo = Image.open(logo_path).resize((95, 95))
         img.paste(logo, (0, LABEL_HEIGHT - 95))
         if org_name:
-            draw.text((102, LABEL_HEIGHT - 56), org_name, fill="black", font=font_small)
+            draw.text((102, LABEL_HEIGHT - 80), org_name, fill="black", font=font_small)
         if org_website:
             draw.text(
-                (102, LABEL_HEIGHT - 27), org_website, fill="black", font=font_small
+                (102, LABEL_HEIGHT - 38), org_website, fill="black", font=font_small
             )
     except Exception as exc:
         logger.warning("Could not load logo for label: %s", exc)
@@ -135,7 +135,7 @@ class LabelService:
     def print_label(
         self,
         repair_data: dict,
-        base_url: str = "",
+        app_url: str = "",
         org_name: str = "Repair Café",
         org_website: str = "",
     ) -> dict:
@@ -146,7 +146,7 @@ class LabelService:
         """
         repair_id = repair_data.get("id", "?")
         label_image = generate_label_image(
-            repair_data, base_url=base_url, org_name=org_name, org_website=org_website
+            repair_data, app_url=app_url, org_name=org_name, org_website=org_website
         )
         return self._print_cups(label_image, repair_id)
 

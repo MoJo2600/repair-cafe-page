@@ -122,6 +122,9 @@ class Repair(db.Model):
     status: Mapped[str] = mapped_column(db.String(20), nullable=False, default="Offen")
     closed_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime, nullable=True)
     qr_token: Mapped[str] = mapped_column(db.String(32), unique=True, nullable=False)
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL")
+    )
 
     # Relationship to repair logs
     repair_logs = db.relationship(
@@ -144,6 +147,9 @@ class Repair(db.Model):
 
     # Relationship to assigned user (reparateur)
     user = db.relationship("User", foreign_keys=[user_id])
+
+    # Relationship to user who created the repair record
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
 
     # Relationship to attachments
     attachments = db.relationship(

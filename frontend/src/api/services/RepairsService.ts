@@ -2,10 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CancelablePromise } from "../core/CancelablePromise";
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
-import type { RepairsTimelineResponse } from "../generated/data-contracts";
+import type { CancelablePromise } from '../core/CancelablePromise'
+import { OpenAPI } from '../core/OpenAPI'
+import { request as __request } from '../core/request'
+import type { RepairsTimelineResponse } from '../generated/data-contracts'
 export class RepairsService {
   /**
    * Get all repairs as JSON
@@ -14,15 +14,15 @@ export class RepairsService {
    */
   public static listRepairs(customerId?: number): CancelablePromise<any> {
     return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/list",
+      method: 'GET',
+      url: '/api/list',
       query: {
         customer_id: customerId,
       },
       errors: {
         500: `Internal Server Error - database query failed`,
       },
-    });
+    })
   }
   /**
    * Create a new repair record
@@ -34,59 +34,59 @@ export class RepairsService {
     /**
      * Date and time of repair
      */
-    datum: string;
+    datum: string
     /**
      * Description of defect
      */
-    defekt_besch?: string;
+    defekt_besch?: string
     /**
      * Email address
      */
-    email?: string;
+    email?: string
     /**
      * Type of device
      */
-    geraet_art: string;
+    geraet_art: string
     /**
      * Last name
      */
-    nachname: string;
+    nachname: string
     /**
      * Type of repair/category
      */
-    reparatur_art: string;
+    reparatur_art: string
     /**
      * Phone number
      */
-    telefon?: string;
+    telefon?: string
     /**
      * Base64 encoded signature image
      */
-    unterschrift?: string;
+    unterschrift?: string
     /**
      * First name
      */
-    vorname: string;
+    vorname: string
   }): CancelablePromise<{
     /**
      * Created repair object
      */
-    data?: any;
+    data?: any
     /**
      * ID of created repair
      */
-    id?: number;
-    reply?: string;
+    id?: number
+    reply?: string
   }> {
     return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/repairs",
+      method: 'POST',
+      url: '/api/repairs',
       body: body,
       errors: {
         400: `Bad request - missing required fields`,
         500: `Internal server error`,
       },
-    });
+    })
   }
   /**
    * Get a repair record by QR token
@@ -96,8 +96,8 @@ export class RepairsService {
    */
   public static getRepairByQrToken(token: string): CancelablePromise<any> {
     return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/repairs/by-token/{token}",
+      method: 'GET',
+      url: '/api/repairs/by-token/{token}',
       path: {
         token: token,
       },
@@ -105,7 +105,7 @@ export class RepairsService {
         404: `Repair not found`,
         500: `Internal server error`,
       },
-    });
+    })
   }
   /**
    * Update an existing repair record
@@ -117,29 +117,29 @@ export class RepairsService {
   public static updateRepair(
     id: number,
     body: {
-      datum?: string;
-      defekt_besch?: string;
-      din_pruef?: boolean;
-      email?: string;
-      geraet_art?: string;
-      nachname?: string;
-      user_id?: number | null;
-      reparatur_art?: string;
-      reparatur_besch?: string;
-      reparatur_dauer?: number;
-      status_detail?: string;
-      reparatur_sonstiges?: string;
-      status?: string;
-      telefon?: string;
-      vorname?: string;
-    },
+      datum?: string
+      defekt_besch?: string
+      din_pruef?: boolean
+      email?: string
+      geraet_art?: string
+      nachname?: string
+      user_id?: number | null
+      reparatur_art?: string
+      reparatur_besch?: string
+      reparatur_dauer?: number
+      status_detail?: string
+      reparatur_sonstiges?: string
+      status?: string
+      telefon?: string
+      vorname?: string
+    }
   ): CancelablePromise<{
-    data?: any;
-    reply?: string;
+    data?: any
+    reply?: string
   }> {
     return __request(OpenAPI, {
-      method: "PUT",
-      url: "/api/repairs/{id}",
+      method: 'PUT',
+      url: '/api/repairs/{id}',
       path: {
         id: id,
       },
@@ -148,7 +148,7 @@ export class RepairsService {
         404: `Repair not found`,
         500: `Internal server error`,
       },
-    });
+    })
   }
 
   /**
@@ -157,36 +157,33 @@ export class RepairsService {
    * @param baseUrl Optional base URL for the QR code link (defaults to request host).
    */
   public static printLabel(
-    id: number,
-    baseUrl?: string,
+    id: number
   ): CancelablePromise<{ reply: string; message?: string; error?: string }> {
     return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/repairs/{id}/print-label",
+      method: 'POST',
+      url: '/api/repairs/{id}/print-label',
       path: { id },
-      body: baseUrl ? { base_url: baseUrl } : {},
+      body: {},
       errors: {
         404: `Repair not found`,
         500: `Print error`,
       },
-    });
+    })
   }
 
   /**
    * Delete a repair by ID
    */
-  public static deleteRepair(
-    id: number,
-  ): CancelablePromise<{ reply: string; id: number }> {
+  public static deleteRepair(id: number): CancelablePromise<{ reply: string; id: number }> {
     return __request(OpenAPI, {
-      method: "DELETE",
-      url: "/api/repairs/{id}",
+      method: 'DELETE',
+      url: '/api/repairs/{id}',
       path: { id },
       errors: {
         404: `Repair not found`,
         500: `Internal server error`,
       },
-    });
+    })
   }
 
   /**
@@ -195,8 +192,8 @@ export class RepairsService {
    */
   public static getRepairsTimeline(): CancelablePromise<RepairsTimelineResponse> {
     return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/repairs/stats/timeline",
-    });
+      method: 'GET',
+      url: '/api/repairs/stats/timeline',
+    })
   }
 }

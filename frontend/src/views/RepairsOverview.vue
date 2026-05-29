@@ -13,6 +13,15 @@
                 <div class="text-h5">Nächste Reparatur</div>
               </div>
             </div>
+            <v-btn
+              v-if="repairStore.nextRepair"
+              color="white"
+              variant="outlined"
+              prepend-icon="mdi-account-plus"
+              @click="openStartRepairDialog(repairStore.nextRepair)"
+            >
+              Zuweisen
+            </v-btn>
           </v-card-title>
           <v-card-text>
             <div v-if="repairStore.loading" class="text-center">
@@ -23,19 +32,14 @@
               <v-divider class="my-3 opacity-50"></v-divider>
               <div class="text-body-1">
                 <div><strong>Gerät:</strong> {{ repairStore.nextRepair.geraet_art }}</div>
-                <div><strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }} {{ repairStore.nextRepair.customer?.nachname }}
+                <div>
+                  <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
+                  {{ repairStore.nextRepair.customer?.nachname }}
                 </div>
                 <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.reparatur_art }}</div>
               </div>
-
-              <v-btn color="white" variant="outlined" class="mt-4"
-                @click="openStartRepairDialog(repairStore.nextRepair)">
-                Reparatur starten
-              </v-btn>
             </div>
-            <div v-else class="text-h6">
-              Keine offenen Reparaturen vorhanden
-            </div>
+            <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -66,8 +70,13 @@
               <p class="text-h6 mt-4">Keine Reparaturen in Bearbeitung</p>
             </div>
             <v-list v-else>
-              <v-list-item v-for="repair in repairStore.inProgressRepairs" :key="repair.id" class="mb-2" border>
-                <template v-slot:prepend>
+              <v-list-item
+                v-for="repair in repairStore.inProgressRepairs"
+                :key="repair.id"
+                class="mb-2"
+                border
+              >
+                <template #prepend>
                   <v-avatar color="warning" class="mr-3">
                     <span class="text-h6">{{ repair.id }}</span>
                   </v-avatar>
@@ -79,7 +88,8 @@
                   <div class="d-flex flex-column gap-1">
                     <div>
                       <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Name:</strong> {{ repair.customer?.vorname }} {{ repair.customer?.nachname }}
+                      <strong>Name:</strong> {{ repair.customer?.vorname }}
+                      {{ repair.customer?.nachname }}
                     </div>
                     <div>
                       <v-icon size="small" class="mr-1">mdi-tools</v-icon>
@@ -87,7 +97,8 @@
                     </div>
                     <div v-if="repair.user">
                       <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Reparateur:</strong> {{ repair.user.vorname }} {{ repair.user.nachname }}
+                      <strong>Reparateur:</strong> {{ repair.user.vorname }}
+                      {{ repair.user.nachname }}
                     </div>
                     <div v-if="repairLogsMap[repair.id]?.length > 0" class="mt-2">
                       <v-divider class="mb-2"></v-divider>
@@ -96,18 +107,34 @@
                         Letzter Eintrag:
                       </div>
                       <div class="ml-6">
-                        <div><strong>Von:</strong> {{ repairLogsMap[repair.id][0].user ? `${repairLogsMap[repair.id][0].user!.vorname} ${repairLogsMap[repair.id][0].user!.nachname}` : '' }}</div>
-                        <div><strong>Datum:</strong> {{ formatDateTime(repairLogsMap[repair.id][0].created_at) }}</div>
+                        <div>
+                          <strong>Von:</strong>
+                          {{
+                            repairLogsMap[repair.id][0].user
+                              ? `${repairLogsMap[repair.id][0].user!.vorname} ${repairLogsMap[repair.id][0].user!.nachname}`
+                              : ''
+                          }}
+                        </div>
+                        <div>
+                          <strong>Datum:</strong>
+                          {{ formatDateTime(repairLogsMap[repair.id][0].created_at) }}
+                        </div>
                         <div v-if="repairLogsMap[repair.id][0].reparatur_besch">
-                          {{ repairLogsMap[repair.id][0].reparatur_besch.substring(0, 100) }}{{
-                            repairLogsMap[repair.id][0].reparatur_besch.length > 100 ? '...' : '' }}
+                          {{ repairLogsMap[repair.id][0].reparatur_besch.substring(0, 100)
+                          }}{{
+                            repairLogsMap[repair.id][0].reparatur_besch.length > 100 ? '...' : ''
+                          }}
                         </div>
                       </div>
                     </div>
                   </div>
                 </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-btn color="primary" prepend-icon="mdi-clipboard-edit" @click="goToRepairWork(repair.qr_token)">
+                <template #append>
+                  <v-btn
+                    color="primary"
+                    prepend-icon="mdi-clipboard-edit"
+                    @click="goToRepairWork(repair.qr_token)"
+                  >
                     Weiter bearbeiten
                   </v-btn>
                 </template>
@@ -127,7 +154,7 @@
               <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
               Offene Reparaturen
             </div>
-            <v-btn color="primary" @click="goToCreateRepair" prepend-icon="mdi-plus">
+            <v-btn color="primary" prepend-icon="mdi-plus" @click="goToCreateRepair">
               Neue Reparatur
             </v-btn>
           </v-card-title>
@@ -140,8 +167,13 @@
               <p class="text-h6 mt-4">Keine offenen Reparaturen</p>
             </div>
             <v-list v-else>
-              <v-list-item v-for="repair in repairStore.openRepairs" :key="repair.id" class="mb-2" border>
-                <template v-slot:prepend>
+              <v-list-item
+                v-for="repair in repairStore.openRepairs"
+                :key="repair.id"
+                class="mb-2"
+                border
+              >
+                <template #prepend>
                   <v-avatar color="primary" class="mr-3">
                     <span class="text-h6">{{ repair.id }}</span>
                   </v-avatar>
@@ -153,7 +185,8 @@
                   <div class="d-flex flex-column gap-1">
                     <div>
                       <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Name:</strong> {{ repair.customer?.vorname }} {{ repair.customer?.nachname }}
+                      <strong>Name:</strong> {{ repair.customer?.vorname }}
+                      {{ repair.customer?.nachname }}
                     </div>
                     <div>
                       <v-icon size="small" class="mr-1">mdi-tools</v-icon>
@@ -161,14 +194,17 @@
                     </div>
                     <div v-if="repair.defekt_besch">
                       <v-icon size="small" class="mr-1">mdi-text</v-icon>
-                      <strong>Defekt:</strong> {{ repair.defekt_besch.substring(0, 100) }}{{ repair.defekt_besch.length
-                        > 100 ? '...' :
-                        '' }}
+                      <strong>Defekt:</strong> {{ repair.defekt_besch.substring(0, 100)
+                      }}{{ repair.defekt_besch.length > 100 ? '...' : '' }}
                     </div>
                   </div>
                 </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-btn color="success" prepend-icon="mdi-play-circle" @click="openStartRepairDialog(repair)">
+                <template #append>
+                  <v-btn
+                    color="success"
+                    prepend-icon="mdi-play-circle"
+                    @click="openStartRepairDialog(repair)"
+                  >
                     Reparatur starten
                   </v-btn>
                 </template>
@@ -180,21 +216,28 @@
     </v-row>
 
     <!-- Start Repair Dialog -->
-    <ReparateurRequiredDialog v-model="startRepairDialog" v-model:userId="startRepairUserId"
+    <ReparateurRequiredDialog
+      v-model="startRepairDialog"
+      v-model:user-id="startRepairUserId"
       title="Reparatur starten"
       message="Für den Wechsel von 'Offen' zu 'In Bearbeitung' muss ein Reparateur angegeben werden."
-      confirm-text="Reparatur starten" :loading="startingRepair" @confirm="confirmStartRepair">
+      confirm-text="Reparatur starten"
+      :loading="startingRepair"
+      @confirm="confirmStartRepair"
+    >
       <template #context>
         <div v-if="selectedRepair" class="mb-4">
           <v-alert type="info" variant="tonal" class="mb-4">
             <div><strong>Reparatur ID:</strong> {{ selectedRepair.id }}</div>
             <div><strong>Gerät:</strong> {{ selectedRepair.geraet_art }}</div>
-            <div><strong>Kunde:</strong> {{ selectedRepair.customer?.vorname }} {{ selectedRepair.customer?.nachname }}</div>
+            <div>
+              <strong>Kunde:</strong> {{ selectedRepair.customer?.vorname }}
+              {{ selectedRepair.customer?.nachname }}
+            </div>
           </v-alert>
         </div>
       </template>
     </ReparateurRequiredDialog>
-
   </v-container>
 </template>
 
@@ -209,7 +252,9 @@ import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 const router = useRouter()
 const repairStore = useRepairStore()
 
-const showToast = inject('showToast') as undefined | ((message: string, options?: { color?: string; timeout?: number }) => void)
+const showToast = inject('showToast') as
+  | undefined
+  | ((message: string, options?: { color?: string; timeout?: number }) => void)
 
 // Start repair dialog state
 const startRepairDialog = ref(false)
@@ -254,9 +299,13 @@ async function fetchRepairLogs() {
 }
 
 // Watch for changes in inProgressRepairs and fetch logs
-watch(() => repairStore.inProgressRepairs, async () => {
-  await fetchRepairLogs()
-}, { immediate: false })
+watch(
+  () => repairStore.inProgressRepairs,
+  async () => {
+    await fetchRepairLogs()
+  },
+  { immediate: false }
+)
 
 // Initialize and start auto-refresh on mount
 onMounted(async () => {
