@@ -25,9 +25,8 @@
                 "MYSQL_USER": "root",
                 "MYSQL_PASSWORD": "mariadb",
                 "APP_SECRET": "dev-secret-key",
-                "CUPS_SERVER": "172.19.0.1",
-                "LABEL_PRINTER_NAME": "SII_SLP650",
-                "LABEL_PRINT_METHOD": "cups"
+                "LABEL_PRINTER_ENABLED": "true",
+                "LABEL_PRINTER_NAME": "SLP650"
             },
             "console": "integratedTerminal",
             "justMyCode": false

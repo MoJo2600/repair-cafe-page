@@ -5,7 +5,11 @@
 import type { CancelablePromise } from "../core/CancelablePromise";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
-import type { PruefgeraetResponse } from "../generated/data-contracts";
+import type {
+  AppConfigResponse,
+  FeaturesResponse,
+  PruefgeraetResponse,
+} from "../generated/data-contracts";
 
 export class ConfigService {
   /**
@@ -31,6 +35,46 @@ export class ConfigService {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/config/dropdowns",
+    });
+  }
+
+  /**
+   * Get application-level configuration (org name and website).
+   * @returns AppConfigResponse
+   * @throws ApiError
+   */
+  public static getAppConfig(): CancelablePromise<AppConfigResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/config/app-config",
+    });
+  }
+
+  /**
+   * Update application-level configuration (admin only).
+   * @returns AppConfigResponse Updated configuration
+   * @throws ApiError
+   */
+  public static updateAppConfig(
+    body: Partial<AppConfigResponse>,
+  ): CancelablePromise<AppConfigResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/config/app-config",
+      body,
+      mediaType: "application/json",
+    });
+  }
+
+  /**
+   * Get server-side feature flags (e.g. whether the label printer is enabled).
+   * @returns FeaturesResponse
+   * @throws ApiError
+   */
+  public static getFeatures(): CancelablePromise<FeaturesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/config/features",
     });
   }
 }

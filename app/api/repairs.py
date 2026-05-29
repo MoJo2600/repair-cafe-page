@@ -4,12 +4,14 @@ Repairs API endpoints.
 
 import json
 import secrets
+from datetime import datetime, timezone
 
+import flask_login
 from flask import Blueprint, Response, current_app, request, send_file
 
 from app.extensions import db
 from app.models import Customer, Repair
-from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate
+from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate, RepairsTimelinePoint, RepairsTimelineResponse
 from app.utils import pydantic_to_swagger
 from app.validation import validate_request
 
@@ -24,6 +26,12 @@ def api_list_repairs():
     operationId: listRepairs
     tags:
       - Repairs
+    parameters:
+      - name: customer_id
+        in: query
+        required: false
+        type: integer
+        description: Filter repairs by customer ID
     responses:
       200:
         description: List of all repairs
@@ -31,7 +39,11 @@ def api_list_repairs():
         description: Internal Server Error - database query failed
     """
     try:
-        repairs = Repair.query.all()
+        customer_id = request.args.get("customer_id", type=int)
+        query = Repair.query
+        if customer_id is not None:
+            query = query.filter(Repair.customer_id == customer_id)
+        repairs = query.all()
         # Serialize using Pydantic
         repairs_list = [
             RepairResponse.model_validate(repair).model_dump(mode="json")
@@ -146,13 +158,64 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
     try:
         repair = Repair.query.get_or_404(id)
 
-        # Update fields from validated data (only non-None values,
-        # except user_id=None which explicitly clears the assigned repairer)
+        STATUS_TRANSITIONS: dict[str, list[str]] = {
+            "Offen": ["In Bearbeitung"],
+            "In Bearbeitung": ["Offen", "Repariert", "Nicht Repariert"],
+            "Repariert": ["Offen", "In Bearbeitung", "Nicht Repariert"],
+            "Nicht Repariert": ["Offen", "In Bearbeitung"],
+        }
+
         update_data = validated_data.model_dump(exclude_unset=True)
+        old_status = repair.status
+        new_status = update_data.get("status")
+
+        # 1. Validate that the status transition is allowed
+        if new_status and new_status != old_status:
+            allowed = STATUS_TRANSITIONS.get(old_status, [])
+            if new_status not in allowed:
+                return Response(
+                    json.dumps(
+                        {"error": f"Invalid status transition: '{old_status}' → '{new_status}'"}
+                    ),
+                    status=409,
+                    mimetype="application/json",
+                )
+
+        # 2. Apply field updates
         for field, value in update_data.items():
             if value is None and field != "user_id":
                 continue
             setattr(repair, field, value)
+
+        # 3. Business rule validation on the post-update state
+        if new_status and new_status != old_status:
+            if new_status == "In Bearbeitung" and not repair.user_id:
+                return Response(
+                    json.dumps(
+                        {"error": "Reparateur ist für diesen Statuswechsel erforderlich"}
+                    ),
+                    status=422,
+                    mimetype="application/json",
+                )
+            closed_statuses = {"Repariert", "Nicht Repariert"}
+            if new_status in closed_statuses and not (repair.reparatur_besch or "").strip():
+                return Response(
+                    json.dumps({"error": "Reparaturbeschreibung ist erforderlich"}),
+                    status=422,
+                    mimetype="application/json",
+                )
+
+        # 4. Side-effects: manage closed_at and user_id based on the transition
+        if new_status and new_status != old_status:
+            closed_statuses = {"Repariert", "Nicht Repariert"}
+            if new_status in closed_statuses:
+                if repair.closed_at is None:
+                    repair.closed_at = datetime.now(timezone.utc)
+            else:
+                # Reopening (→ Offen or → In Bearbeitung from closed) clears closed_at
+                repair.closed_at = None
+                if new_status == "Offen":
+                    repair.user_id = None
 
         db.session.commit()
 
@@ -256,6 +319,10 @@ def api_create_repair(validated_data: RepairCreate):
 
         # Generate unique QR token
         data["qr_token"] = secrets.token_hex(16)  # 32 character hex string
+
+        # Record which user created this repair record
+        if flask_login.current_user.is_authenticated:
+            data["created_by_id"] = flask_login.current_user.id
 
         # Create repair record
         repair = Repair.from_dict(data)
@@ -493,3 +560,147 @@ def api_get_disclaimer(id: int):
             status=500,
             mimetype="application/json",
         )
+
+
+@repairs_bp.route("/repairs/<int:id>/print-label", methods=["POST"])
+def api_print_label(id: int):
+    """
+    Print a QR code label for a repair on a label printer.
+    ---
+    operationId: printRepairLabel
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: ID of the repair to print a label for
+      - name: body
+        in: body
+        required: false
+        schema:
+          type: object
+          properties: {}
+    responses:
+      200:
+        description: Label printed successfully
+      404:
+        description: Repair not found
+      503:
+        description: Label printer not enabled
+      500:
+        description: Print error
+    """
+    if not current_app.config.get("LABEL_PRINTER_ENABLED", False):
+        return Response(
+            json.dumps({"reply": "error", "error": "Label printer is not enabled"}),
+            status=503,
+            mimetype="application/json",
+        )
+    try:
+        repair = Repair.query.get_or_404(id)
+        data = repair.to_dict()
+
+        from app.api.config import _get_app_config
+
+        app_cfg = _get_app_config()
+
+        # Use app_url from config; fall back to the incoming request's host URL
+        app_url = app_cfg.app_url or request.host_url.rstrip("/")
+
+        label_service = current_app.label_service  # type: ignore
+
+        result = label_service.print_label(
+            repair_data=data,
+            app_url=app_url,
+            org_name=app_cfg.org_name,
+            org_website=app_cfg.org_website,
+        )
+
+        status_code = 200 if result.get("reply") == "done" else 500
+        return Response(
+            json.dumps(result),
+            status=status_code,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"Error printing label for repair {id}: {e}", exc_info=True
+        )
+        return Response(
+            json.dumps({"reply": "error", "error": str(e)}),
+            status=500,
+            mimetype="application/json",
+        )
+
+
+@repairs_bp.route("/repairs/stats/timeline", methods=["GET"])
+def api_repairs_timeline():
+    """
+    Get repair counts grouped by week and status for the last 12 months.
+    ---
+    operationId: getRepairsTimeline
+    tags:
+      - Repairs
+    responses:
+      200:
+        description: Weekly repair counts per status
+        schema:
+          $ref: '#/definitions/RepairsTimelineResponse'
+    """
+    from datetime import date, timedelta
+
+    from sqlalchemy import func, text
+
+    cutoff = date.today() - timedelta(days=365)
+
+    rows = (
+        db.session.query(
+            func.date_format(Repair.datum, "%Y-%u").label("week"),
+            Repair.status,
+            func.count(Repair.id).label("count"),
+        )
+        .filter(Repair.datum >= cutoff)
+        .group_by(text("week"), Repair.status)
+        .order_by(text("week"))
+        .all()
+    )
+
+    # Collect all distinct weeks in order
+    weeks_ordered: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        if row.week not in seen:
+            weeks_ordered.append(row.week)
+            seen.add(row.week)
+
+    # Build a lookup: week -> status -> count
+    data_map: dict[str, dict[str, int]] = {w: {} for w in weeks_ordered}
+    for row in rows:
+        data_map[row.week][row.status] = row.count
+
+    def _week_label(yw: str) -> str:
+        try:
+            year, week = yw.split("-")
+            return f"KW {int(week)} {year}"
+        except ValueError:
+            return yw
+
+    points = [
+        RepairsTimelinePoint(
+            week=w,
+            label=_week_label(w),
+            offen=data_map[w].get("Offen", 0),
+            in_bearbeitung=data_map[w].get("In Bearbeitung", 0),
+            abgeschlossen=data_map[w].get("Repariert", 0),
+            nicht_repariert=data_map[w].get("Nicht Repariert", 0),
+        )
+        for w in weeks_ordered
+    ]
+
+    return Response(
+        RepairsTimelineResponse(data=points).model_dump_json(),
+        status=200,
+        mimetype="application/json",
+    )

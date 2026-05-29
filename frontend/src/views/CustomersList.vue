@@ -191,9 +191,8 @@ function formatDate(dt: string) {
     return new Date(dt).toLocaleDateString('de-DE')
 }
 
-function goToRepairs(_customer: CustomerResponse) {
-    // Navigate to repairs list – future: filtered by customer. For now just open list.
-    router.push('/repairs')
+function goToRepairs(customer: CustomerResponse) {
+    router.push({ path: '/repairs', query: { customer_id: customer.id, customer_name: `${customer.vorname} ${customer.nachname}`, status: 'all' } })
 }
 
 function openCreateDialog() {

@@ -12,9 +12,16 @@ from flask import Blueprint, Response, current_app, request, send_file
 from PIL import Image, UnidentifiedImageError
 
 from app.auth.decorators import admin_required
+from app.extensions import db
 from app.imports.pdfsigner import FIELD_DATE, FIELD_SIGNATURE
-from app.models import Setting
-from app.schemas import PruefgeraetResponse
+from app.models import AppConfig, Setting
+from app.schemas import (
+    AppConfigResponse,
+    AppConfigUpdate,
+    FeaturesResponse,
+    PruefgeraetResponse,
+)
+from app.validation import parse_request
 
 config_bp = Blueprint("config", __name__)
 
@@ -308,6 +315,148 @@ def upload_logo():
 
     return Response(
         json.dumps({"reply": "done"}),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+# ── App-level configuration (org name, website) ────────────────────────────
+
+
+def _get_app_config() -> AppConfigResponse:
+    """Read org_name, org_website and app_url from the DB, falling back to defaults."""
+    defaults = AppConfigResponse()
+    org_name_row = db.session.get(AppConfig, "org_name")
+    org_website_row = db.session.get(AppConfig, "org_website")
+    app_url_row = db.session.get(AppConfig, "app_url")
+    return AppConfigResponse(
+        org_name=org_name_row.value if org_name_row else defaults.org_name,
+        org_website=org_website_row.value if org_website_row else defaults.org_website,
+        app_url=app_url_row.value if app_url_row else defaults.app_url,
+    )
+
+
+@config_bp.route("/config/app-config", methods=["GET"])
+def get_app_config():
+    """
+    Get application-level configuration (organisation name and website).
+    ---
+    operationId: getAppConfig
+    tags:
+      - Configuration
+    responses:
+      200:
+        description: Current application configuration
+        schema:
+          $ref: '#/definitions/AppConfigResponse'
+    """
+    return Response(
+        json.dumps(_get_app_config().model_dump()),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@config_bp.route("/config/app-config", methods=["PUT"])
+@admin_required
+def update_app_config():
+    """
+    Update application-level configuration (admin only).
+    ---
+    operationId: updateAppConfig
+    tags:
+      - Configuration
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            org_name:
+              type: string
+            org_website:
+              type: string
+            app_url:
+              type: string
+              description: Application base URL for QR code links on printed labels
+    responses:
+      200:
+        description: Updated configuration
+        schema:
+          $ref: '#/definitions/AppConfigResponse'
+      400:
+        description: Invalid request body
+    """
+    body, err = parse_request(AppConfigUpdate)
+    if err:
+        return err
+    assert body is not None
+
+    from datetime import datetime
+
+    now = datetime.utcnow()
+
+    if body.org_name is not None:
+        row = db.session.get(AppConfig, "org_name")
+        if row:
+            row.value = body.org_name
+            row.updated_at = now
+        else:
+            db.session.add(
+                AppConfig(key="org_name", value=body.org_name, updated_at=now)
+            )
+
+    if body.org_website is not None:
+        row = db.session.get(AppConfig, "org_website")
+        if row:
+            row.value = body.org_website
+            row.updated_at = now
+        else:
+            db.session.add(
+                AppConfig(key="org_website", value=body.org_website, updated_at=now)
+            )
+
+    if body.app_url is not None:
+        row = db.session.get(AppConfig, "app_url")
+        if row:
+            row.value = body.app_url
+            row.updated_at = now
+        else:
+            db.session.add(
+                AppConfig(key="app_url", value=body.app_url, updated_at=now)
+            )
+
+    db.session.commit()
+
+    return Response(
+        json.dumps(_get_app_config().model_dump()),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@config_bp.route("/config/features", methods=["GET"])
+def get_features():
+    """
+    Return server-side feature flags derived from environment variables.
+    ---
+    operationId: getFeatures
+    tags:
+      - Configuration
+    responses:
+      200:
+        description: Feature flags
+        schema:
+          $ref: '#/definitions/FeaturesResponse'
+    """
+    return Response(
+        json.dumps(
+            FeaturesResponse(
+                label_printer=bool(
+                    current_app.config.get("LABEL_PRINTER_ENABLED", False)
+                )
+            ).model_dump()
+        ),
         status=200,
         mimetype="application/json",
     )

@@ -9,6 +9,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount USB devices for label printer access
       - /dev/bus/usb:/dev/bus/usb
+      # Mount host CUPS socket for direct printer access (no network needed)
+      - /run/cups/cups.sock:/run/cups/cups.sock
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
@@ -16,9 +18,7 @@ services:
     # Enable privileged mode for USB device access
     privileged: true
 
-    # Environment variables for CUPS host communication
-    environment:
-      - CUPS_SERVER=host.docker.internal:631
+    # Mount host CUPS socket — client.conf points lp/lpstat at /run/cups/cups.sock
 
     # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
     network_mode: service:db
@@ -33,6 +33,8 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: repaircafepage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3306:3306"
     volumes:

@@ -126,6 +126,13 @@ def create_app(config_name=None):
         storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH")
     )
 
+    # Initialize Label service and attach to app
+    from app.services.label_service import LabelService
+
+    app.label_service = LabelService(  # type: ignore
+        printer_name=app.config.get("LABEL_PRINTER_NAME", "SLP650"),
+    )
+
     # Initialize Swagger
     swagger = init_swagger(app)
     app.swagger = swagger  # type: ignore
@@ -185,6 +192,7 @@ def unauthorized_callback():
 def register_blueprints(app):
     """Register Flask blueprints."""
     # Import blueprints here to avoid circular imports
+    from app.api.attachments import attachments_bp
     from app.api.config import config_bp
     from app.api.customers import customers_bp
     from app.api.health import health_bp
@@ -201,6 +209,7 @@ def register_blueprints(app):
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(repairs_bp, url_prefix="/api")
     app.register_blueprint(repair_logs_bp, url_prefix="/api")
+    app.register_blueprint(attachments_bp, url_prefix="/api")
     app.register_blueprint(vde_tests_bp, url_prefix="/api")
     app.register_blueprint(config_bp, url_prefix="/api")
     app.register_blueprint(customers_bp, url_prefix="/api")
