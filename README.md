@@ -43,7 +43,7 @@ compose.yml
 ```yaml
 services:
   frontend:
-    image: ghcr.io/mojo2600/repaircafepage-frontend:latest
+    image: ghcr.io/mojo2600/repair-cafe-page-frontend:latest
     restart: unless-stopped
     ports:
       - "80:80"
@@ -51,7 +51,7 @@ services:
       - backend
 
   backend:
-    image: ghcr.io/mojo2600/repaircafepage-backend:latest
+    image: ghcr.io/mojo2600/repair-cafe-page-backend:latest
     restart: unless-stopped
     environment:
       FLASK_ENV: production

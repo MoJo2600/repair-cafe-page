@@ -67,6 +67,7 @@
         :custom-filter="customerNameFilter"
         :loading="loading"
         :items-per-page="10"
+        @click:row="(item: any) => editRepair(item)"
         hover
       >
         <template #item.status="{ item }">

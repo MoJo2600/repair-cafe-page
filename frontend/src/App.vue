@@ -5,6 +5,9 @@
       <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
       <v-toolbar-title>Repair Cafe</v-toolbar-title>
       <v-spacer></v-spacer>
+      <v-btn icon @click="router.push('/create-repair')">
+        <v-icon>mdi-plus</v-icon>
+      </v-btn>
       <v-btn icon @click="openQrScanner">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>

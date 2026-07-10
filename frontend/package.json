@@ -23,6 +23,7 @@
     "package.json": "^2.0.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.34",
+    "vue-chart.js": "^0.2.0",
     "vue-chartjs": "^5.3.3",
     "vue-router": "^4.6.4",
     "vuetify": "^3.12.5"

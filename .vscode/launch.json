@@ -21,7 +21,7 @@
                 "PORT": "5000",
                 "FLASK_DEBUG": "1",
                 "MYSQL_HOST": "db",
-                "MYSQL_DATABASE": "repairdb",
+                "MYSQL_DATABASE": "repaircafepage",
                 "MYSQL_USER": "root",
                 "MYSQL_PASSWORD": "mariadb",
                 "APP_SECRET": "dev-secret-key",

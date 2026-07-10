@@ -924,6 +924,7 @@ function formatDateTime(dateString: string): string {
 }
 
 function onRepairFieldsUpdated(fields: {
+  datum: string
   reparatur_art: string
   geraet_art: string
   defekt_besch: string

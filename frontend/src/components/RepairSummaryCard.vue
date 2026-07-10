@@ -111,12 +111,20 @@
         Reparatur bearbeiten
       </v-card-title>
       <v-card-text>
+        <v-text-field
+          v-model="editForm.datum"
+          label="Datum"
+          type="date"
+          density="comfortable"
+          variant="outlined"
+        ></v-text-field>
         <v-select
           v-model="editForm.reparatur_art"
           :items="repairTypes"
           label="Kategorie"
           density="comfortable"
           variant="outlined"
+          class="mt-3"
         ></v-select>
         <v-text-field
           v-model="editForm.geraet_art"
@@ -159,7 +167,9 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  updated: [fields: { reparatur_art: string; geraet_art: string; defekt_besch: string }]
+  updated: [
+    fields: { datum: string; reparatur_art: string; geraet_art: string; defekt_besch: string }
+  ]
 }>()
 
 const getStatusColor = getRepairStatusColor
@@ -169,10 +179,11 @@ const getStatusIcon = getRepairStatusIcon
 const editDialog = ref(false)
 const saving = ref(false)
 const repairTypes = ref<string[]>([])
-const editForm = ref({ reparatur_art: '', geraet_art: '', defekt_besch: '' })
+const editForm = ref({ datum: '', reparatur_art: '', geraet_art: '', defekt_besch: '' })
 
 function openEditDialog() {
   editForm.value = {
+    datum: props.repairData.datum ? props.repairData.datum.slice(0, 10) : '',
     reparatur_art: props.repairData.reparatur_art ?? '',
     geraet_art: props.repairData.geraet_art ?? '',
     defekt_besch: props.repairData.defekt_besch ?? '',
@@ -192,6 +203,7 @@ async function saveEdit() {
   saving.value = true
   try {
     await RepairsService.updateRepair(props.repairData.id, {
+      datum: editForm.value.datum,
       reparatur_art: editForm.value.reparatur_art,
       geraet_art: editForm.value.geraet_art,
       defekt_besch: editForm.value.defekt_besch,

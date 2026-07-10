@@ -67,25 +67,25 @@
                 <v-text-field
                   v-model="formData.datum"
                   label="Datum"
-                  type="datetime-local"
+                  type="date"
                   required
                   :rules="[(v) => !!v || 'Datum ist erforderlich']"
                 ></v-text-field>
                 <v-text-field
-                  v-model="formData.vorname"
+                  v-model="formData.customer.vorname"
                   label="Vorname"
                   required
                   :rules="[(v) => !!v || 'Vorname ist erforderlich']"
                 ></v-text-field>
                 <v-text-field
-                  v-model="formData.nachname"
+                  v-model="formData.customer.nachname"
                   label="Nachname"
                   required
                   :rules="[(v) => !!v || 'Nachname ist erforderlich']"
                 ></v-text-field>
-                <v-text-field v-model="formData.telefon" label="Telefon"></v-text-field>
+                <v-text-field v-model="formData.customer.telefon" label="Telefon"></v-text-field>
                 <v-text-field
-                  v-model="formData.email"
+                  v-model="formData.customer.email"
                   label="Email (optional)"
                   type="email"
                   :rules="emailRules"
@@ -249,7 +249,9 @@
                   density="comfortable"
                 >
                   <v-btn value="sign" prepend-icon="mdi-draw"> Unterschreiben </v-btn>
-                  <v-btn value="upload" prepend-icon="mdi-upload"> PDF hochladen </v-btn>
+                  <v-btn value="upload" prepend-icon="mdi-upload" @click="openPdfDialog">
+                    PDF hochladen
+                  </v-btn>
                 </v-btn-toggle>
 
                 <!-- Signature card -->
@@ -298,6 +300,7 @@
                       Laden Sie eine bereits unterschriebene Haftungsausschluss-PDF hoch:
                     </p>
                     <v-file-input
+                      ref="pdfFileInput"
                       v-model="uploadedPdfFile"
                       label="PDF-Datei auswählen"
                       accept=".pdf,application/pdf"
@@ -325,7 +328,7 @@
                   <v-divider class="my-4"></v-divider>
                   <div class="text-h5 mb-2">Reparatur ID:</div>
                   <div class="text-h3 font-weight-bold primary--text mb-4">
-                    {{ createdRepairId }}
+                    <router-link :to="`/edit/${createdRepairQrToken}`">{{ createdRepairId }}</router-link>
                   </div>
                   <p class="text-body-1 mb-4">
                     Die Reparatur wurde erfolgreich im System erfasst. Sie können diese ID
@@ -402,7 +405,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed, onMounted } from 'vue'
+import { ref, inject, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ConfigService } from '@/api/services/ConfigService'
 import { RepairsService } from '@/api/services/RepairsService'
@@ -418,6 +421,7 @@ const step2Form = ref<any>(null)
 const step3Form = ref<any>(null)
 const submitting = ref(false)
 const createdRepairId = ref<number | null>(null)
+const createdRepairQrToken = ref<number | null>(null)
 const printingLabel = ref(false)
 const printLabelError = ref('')
 const labelPrinterEnabled = ref(false)
@@ -440,20 +444,20 @@ const showToast = inject('showToast') as
 
 const categories = ['Elektronik', 'Kleidung', 'Möbel', 'Sonstiges']
 
-// Initialize with current date and time
+// Initialize with current date
 const now = new Date()
 const year = now.getFullYear()
 const month = String(now.getMonth() + 1).padStart(2, '0')
 const day = String(now.getDate()).padStart(2, '0')
-const hours = String(now.getHours()).padStart(2, '0')
-const minutes = String(now.getMinutes()).padStart(2, '0')
 
 const formData = ref({
-  datum: `${year}-${month}-${day}T${hours}:${minutes}`,
-  vorname: '',
-  nachname: '',
-  telefon: '',
-  email: '',
+  datum: `${year}-${month}-${day}`,
+  customer: {
+    vorname: '',
+    nachname: '',
+    telefon: '',
+    email: '',
+  },
   reparatur_art: '',
   geraet_art: '',
   defekt_besch: '',
@@ -466,6 +470,15 @@ const termsAccepted = ref(false)
 const disclaimerMode = ref<'sign' | 'upload'>('sign')
 const uploadedPdfFile = ref<File | null>(null)
 const uploadedPdfError = ref('')
+const pdfFileInput = ref<{ $el: HTMLElement } | null>(null)
+
+// Switch to upload mode and immediately open the native file picker
+function openPdfDialog() {
+  disclaimerMode.value = 'upload'
+  nextTick(() => {
+    pdfFileInput.value?.$el?.querySelector('input')?.click()
+  })
+}
 
 // Signature pad variables
 const signatureCanvas = ref<HTMLCanvasElement | null>(null)
@@ -517,10 +530,10 @@ function selectCustomer(customer: CustomerResponse | null) {
     return
   }
   selectedCustomerId.value = customer.id
-  formData.value.vorname = customer.vorname
-  formData.value.nachname = customer.nachname
-  formData.value.telefon = customer.telefon ?? ''
-  formData.value.email = customer.email ?? ''
+  formData.value.customer.vorname = customer.vorname
+  formData.value.customer.nachname = customer.nachname
+  formData.value.customer.telefon = customer.telefon ?? ''
+  formData.value.customer.email = customer.email ?? ''
 }
 
 const router = useRouter()
@@ -678,10 +691,10 @@ async function submitForm() {
       // Prepare data for API
       const repairData: Record<string, unknown> = {
         datum: formData.value.datum,
-        vorname: formData.value.vorname,
-        nachname: formData.value.nachname,
-        telefon: formData.value.telefon,
-        email: formData.value.email,
+        vorname: formData.value.customer.vorname,
+        nachname: formData.value.customer.nachname,
+        telefon: formData.value.customer.telefon,
+        email: formData.value.customer.email,
         reparatur_art: formData.value.reparatur_art,
         geraet_art: formData.value.geraet_art,
         defekt_besch: formData.value.defekt_besch,
@@ -698,6 +711,7 @@ async function submitForm() {
 
       if (response.reply === 'done') {
         createdRepairId.value = response.id || null
+        createdRepairQrToken.value = response.data.qr_token || null
 
         // Upload pre-signed PDF if applicable
         if (
@@ -741,11 +755,13 @@ function createAnother() {
   createdRepairId.value = null
   printLabelError.value = ''
   formData.value = {
-    datum: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}T${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
-    vorname: '',
-    nachname: '',
-    telefon: '',
-    email: '',
+    datum: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
+    customer: {
+      vorname: '',
+      nachname: '',
+      telefon: '',
+      email: '',
+    },
     reparatur_art: '',
     geraet_art: '',
     defekt_besch: '',
