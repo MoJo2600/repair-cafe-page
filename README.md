@@ -115,6 +115,12 @@ FLASK_SECRET_KEY=change_me_secret
 Database migrations run automatically on first backend startup — no manual
 step is needed.
 
+An **initial admin account** (`admin`) is created automatically on first
+startup if no admin exists. The generated password is printed to the backend
+logs. To reset a forgotten admin password, set `RESET_ADMIN_PASSWORD=true`
+in the backend environment and restart — a new password will be logged.
+Remove the variable afterwards.
+
 ### Update
 
 ```bash

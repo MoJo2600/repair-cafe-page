@@ -237,6 +237,25 @@ def ensure_admin_user(app):
 
         from app.models import User
 
+        if os.environ.get("RESET_ADMIN_PASSWORD", "").lower() in ("true", "1", "yes"):
+            admin = User.query.filter_by(is_admin=True).first()
+            if admin:
+                password = secrets.token_urlsafe(16)
+                admin.password_hash = generate_password_hash(password)
+                db.session.commit()
+
+                border = "=" * 72
+                app.logger.warning(border)
+                app.logger.warning("  ADMIN PASSWORD RESET")
+                app.logger.warning("  Username: %s", admin.username)
+                app.logger.warning("  New Password: %s", password)
+                app.logger.warning(
+                    "  Change this password immediately after first login!")
+                app.logger.warning(
+                    "  Unset RESET_ADMIN_PASSWORD to suppress this on next start.")
+                app.logger.warning(border)
+                return
+
         if User.query.filter_by(is_admin=True).first():
             return  # at least one admin already exists
 
@@ -257,7 +276,8 @@ def ensure_admin_user(app):
         app.logger.warning("  INITIAL ADMIN USER CREATED")
         app.logger.warning("  Username: admin")
         app.logger.warning("  Password: %s", password)
-        app.logger.warning("  Change this password immediately after first login!")
+        app.logger.warning(
+            "  Change this password immediately after first login!")
         app.logger.warning(border)
     except Exception as e:
         app.logger.error(f"Could not ensure admin user: {e}")
