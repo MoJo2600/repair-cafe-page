@@ -72,16 +72,16 @@
                   :rules="[(v) => !!v || 'Datum ist erforderlich']"
                 ></v-text-field>
                 <v-text-field
-                  v-model="formData.customer.vorname"
-                  label="Vorname"
-                  required
-                  :rules="[(v) => !!v || 'Vorname ist erforderlich']"
-                ></v-text-field>
-                <v-text-field
                   v-model="formData.customer.nachname"
                   label="Nachname"
                   required
                   :rules="[(v) => !!v || 'Nachname ist erforderlich']"
+                ></v-text-field>
+                <v-text-field
+                  v-model="formData.customer.vorname"
+                  label="Vorname"
+                  required
+                  :rules="[(v) => !!v || 'Vorname ist erforderlich']"
                 ></v-text-field>
                 <v-text-field v-model="formData.customer.telefon" label="Telefon"></v-text-field>
                 <v-text-field
@@ -97,11 +97,14 @@
             <v-stepper-window-item :value="2">
               <v-form ref="step2Form" v-model="step2Valid">
                 <v-select
-                  v-model="formData.reparatur_art"
+                  v-model="formData.repair_type_id"
                   label="Kategorie"
-                  :items="categories"
+                  :items="repairTypes"
+                  item-value="id"
+                  item-title="name"
                   required
                   :rules="[(v) => !!v || 'Kategorie ist erforderlich']"
+                  @update:model-value="onRepairTypeChange"
                 ></v-select>
                 <v-text-field
                   v-model="formData.geraet_art"
@@ -426,14 +429,6 @@ const printingLabel = ref(false)
 const printLabelError = ref('')
 const labelPrinterEnabled = ref(false)
 
-onMounted(async () => {
-  try {
-    const features = await ConfigService.getFeatures()
-    labelPrinterEnabled.value = features.label_printer
-  } catch {
-    labelPrinterEnabled.value = false
-  }
-})
 const disclaimerUrl = computed(() =>
   createdRepairId.value !== null ? `/api/repairs/${createdRepairId.value}/disclaimer` : null
 )
@@ -442,7 +437,23 @@ const showToast = inject('showToast') as
   | undefined
   | ((message: string, options?: { color?: string; timeout?: number }) => void)
 
-const categories = ['Elektronik', 'Kleidung', 'Möbel', 'Sonstiges']
+// Repair types loaded from settings API
+const repairTypes = ref<Array<{ id: number; name: string }>>([])
+
+onMounted(async () => {
+  try {
+    const features = await ConfigService.getFeatures()
+    labelPrinterEnabled.value = features.label_printer
+  } catch {
+    labelPrinterEnabled.value = false
+  }
+  try {
+    const cfg = await ConfigService.getDropdownConfig()
+    repairTypes.value = cfg.repair_type ?? []
+  } catch {
+    repairTypes.value = []
+  }
+})
 
 // Initialize with current date
 const now = new Date()
@@ -458,7 +469,9 @@ const formData = ref({
     telefon: '',
     email: '',
   },
-  reparatur_art: '',
+  repair_type_id: null as number | null,
+  repair_type: null as { id: number; name: string } | null,
+  reparatur_art: '' as string,
   geraet_art: '',
   defekt_besch: '',
   status: 'Offen',
@@ -530,10 +543,16 @@ function selectCustomer(customer: CustomerResponse | null) {
     return
   }
   selectedCustomerId.value = customer.id
-  formData.value.customer.vorname = customer.vorname
   formData.value.customer.nachname = customer.nachname
+  formData.value.customer.vorname = customer.vorname
   formData.value.customer.telefon = customer.telefon ?? ''
   formData.value.customer.email = customer.email ?? ''
+}
+
+function onRepairTypeChange(id: number | null) {
+  const found = repairTypes.value.find((t) => t.id === id) ?? null
+  formData.value.repair_type = found
+  formData.value.reparatur_art = found?.name ?? ''
 }
 
 const router = useRouter()
@@ -691,11 +710,11 @@ async function submitForm() {
       // Prepare data for API
       const repairData: Record<string, unknown> = {
         datum: formData.value.datum,
-        vorname: formData.value.customer.vorname,
         nachname: formData.value.customer.nachname,
+        vorname: formData.value.customer.vorname,
         telefon: formData.value.customer.telefon,
         email: formData.value.customer.email,
-        reparatur_art: formData.value.reparatur_art,
+        repair_type_id: formData.value.repair_type_id,
         geraet_art: formData.value.geraet_art,
         defekt_besch: formData.value.defekt_besch,
       }
@@ -757,11 +776,13 @@ function createAnother() {
   formData.value = {
     datum: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
     customer: {
-      vorname: '',
       nachname: '',
+      vorname: '',
       telefon: '',
       email: '',
     },
+    repair_type_id: null,
+    repair_type: null,
     reparatur_art: '',
     geraet_art: '',
     defekt_besch: '',

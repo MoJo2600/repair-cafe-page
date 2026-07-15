@@ -25,7 +25,8 @@
 
         <!-- Users table -->
         <v-card>
-            <v-data-table :headers="headers" :items="filteredUsers" :loading="loading" item-value="id" hover>
+            <v-data-table :headers="headers" :items="filteredUsers" :loading="loading" item-value="id" hover
+                @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <!-- Active chip -->
                 <template #item.is_active="{ item }">
                     <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
@@ -49,12 +50,12 @@
                 <!-- Actions -->
                 <template #item.actions="{ item }">
                     <v-btn icon="mdi-pencil" size="small" variant="text" density="compact"
-                        @click="openEditDialog(item)" />
+                        @click.stop="openEditDialog(item)" />
                     <v-btn v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
                         color="warning" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
-                        @click="confirmDeactivate(item)" />
+                        @click.stop="confirmDeactivate(item)" />
                     <v-btn v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
-                        title="Benutzer reaktivieren" @click="reactivate(item)" />
+                        title="Benutzer reaktivieren" @click.stop="reactivate(item)" />
                 </template>
             </v-data-table>
         </v-card>

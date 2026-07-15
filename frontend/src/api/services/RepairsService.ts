@@ -52,9 +52,13 @@ export class RepairsService {
      */
     nachname: string
     /**
-     * Type of repair/category
+     * Type of repair/category (legacy, derived from repair_type_id)
      */
-    reparatur_art: string
+    reparatur_art?: string
+    /**
+     * FK to repair type setting
+     */
+    repair_type_id: number
     /**
      * Phone number
      */

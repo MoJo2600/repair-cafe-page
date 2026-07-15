@@ -173,21 +173,19 @@ export interface RepairCreate {
    */
   nachname: string
   /**
-   * Repair category
-   * @minLength 1
-   * @maxLength 100
+   * Repair category (legacy text field)
+   * @default null
    */
-  reparatur_art: string
+  reparatur_art?: string
+  /**
+   * FK to repair type setting
+   */
+  repair_type_id: number
   /**
    * Other repair category
    * @default null
    */
   reparatur_sonstiges?: string
-  /**
-   * Phone number
-   * @default null
-   */
-  telefon?: string
   /**
    * Signature image as base64
    * @default null
@@ -365,6 +363,16 @@ export interface RepairResponse {
    */
   reparatur_art: string
   /**
+   * FK to repair type setting
+   * @default null
+   */
+  repair_type_id?: number
+  /**
+   * Linked repair type setting
+   * @default null
+   */
+  repair_type?: SettingResponse
+  /**
    * Repair description
    * @default null
    */
@@ -434,6 +442,11 @@ export interface RepairUpdate {
    * @default null
    */
   reparatur_art?: string
+  /**
+   * FK to repair type setting
+   * @default null
+   */
+  repair_type_id?: number
   /**
    * Repair description
    * @default null

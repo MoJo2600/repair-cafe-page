@@ -30,10 +30,10 @@
         <!-- Customers table -->
         <v-card>
             <v-data-table :headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
-                hover>
+                hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <template #item.repair_count="{ item }">
                     <v-chip :color="item.repair_count ? 'primary' : 'grey'" size="small" variant="tonal"
-                        @click="goToRepairs(item)" style="cursor: pointer">
+                        @click.stop="goToRepairs(item)" style="cursor: pointer">
                         {{ item.repair_count ?? 0 }}
                     </v-chip>
                 </template>
@@ -44,9 +44,9 @@
 
                 <template #item.actions="{ item }">
                     <v-btn icon="mdi-pencil" size="small" variant="text" density="compact"
-                        @click="openEditDialog(item)" />
+                        @click.stop="openEditDialog(item)" />
                     <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-                        @click="openDeleteDialog(item.id)" />
+                        @click.stop="openDeleteDialog(item.id)" />
                 </template>
 
                 <template #loading>

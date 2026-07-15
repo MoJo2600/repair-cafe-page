@@ -178,8 +178,8 @@ class RepairBase(BaseModel):
     """Base repair schema with common fields"""
 
     datum: date = Field(..., description="Date of repair intake")
-    reparatur_art: str = Field(
-        ..., min_length=1, max_length=100, description="Repair category"
+    reparatur_art: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="Repair category (legacy text field)"
     )
     reparatur_sonstiges: Optional[str] = Field(
         None, max_length=100, description="Other repair category"
@@ -203,6 +203,7 @@ class RepairBase(BaseModel):
 class RepairCreate(RepairBase):
     """Schema for creating a new repair"""
 
+    repair_type_id: int = Field(..., description="FK to repair type setting")
     vorname: str = Field(..., min_length=1, max_length=100, description="First name")
     nachname: str = Field(..., min_length=1, max_length=100, description="Last name")
     telefon: Optional[str] = Field(None, max_length=40, description="Phone number")
@@ -218,6 +219,7 @@ class RepairCreate(RepairBase):
 class RepairUpdate(BaseModel):
     """Schema for updating an existing repair"""
 
+    repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
     datum: Optional[date] = Field(None, description="Date of repair intake")
     reparatur_art: Optional[str] = Field(
         None, min_length=1, max_length=100, description="Repair category"
@@ -304,6 +306,8 @@ class RepairResponse(RepairBase):
     """Schema for repair response"""
 
     id: int = Field(..., description="Repair ID")
+    repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
+    repair_type: Optional["SettingResponse"] = Field(None, description="Linked repair type setting")
     customer_id: Optional[int] = Field(None, description="Linked customer ID")
     customer: Optional["CustomerResponse"] = Field(
         None, description="Linked customer object"

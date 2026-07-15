@@ -67,7 +67,7 @@
         :custom-filter="customerNameFilter"
         :loading="loading"
         :items-per-page="10"
-        @click:row="(item: any) => editRepair(item)"
+        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
         hover
       >
         <template #item.status="{ item }">
@@ -100,7 +100,7 @@
             size="small"
             variant="text"
             density="compact"
-            @click="editRepair(item)"
+            @click.stop="editRepair(item)"
           />
           <v-btn
             v-if="labelPrinterEnabled"
@@ -109,7 +109,7 @@
             variant="text"
             density="compact"
             :loading="printingLabelId === item.id"
-            @click="printLabel(item.id)"
+            @click.stop="printLabel(item.id)"
           />
           <v-btn
             icon="mdi-delete"
@@ -117,7 +117,7 @@
             variant="text"
             density="compact"
             color="error"
-            @click="deleteRepair(item.id)"
+            @click.stop="deleteRepair(item.id)"
           />
         </template>
 
