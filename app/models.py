@@ -105,6 +105,9 @@ class Repair(db.Model):
     customer_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("customers.id")
     )
+    repair_type_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("settings.id", ondelete="SET NULL"), nullable=True
+    )
     datum: Mapped[date] = mapped_column(db.Date, nullable=False, default=datetime.today)
     reparatur_art: Mapped[str] = mapped_column(db.String(100), nullable=False)
     reparatur_sonstiges: Mapped[Optional[str]] = mapped_column(db.String(100))
@@ -145,6 +148,9 @@ class Repair(db.Model):
     # Relationship to customer
     customer = db.relationship("Customer", back_populates="repairs")
 
+    # Relationship to repair type setting
+    repair_type = db.relationship("Setting", foreign_keys=[repair_type_id])
+
     # Relationship to assigned user (reparateur)
     user = db.relationship("User", foreign_keys=[user_id])
 
@@ -167,6 +173,7 @@ class Repair(db.Model):
         d = {
             "id": self.id,
             "customer_id": self.customer_id,
+            "repair_type_id": self.repair_type_id,
             "datum": self.datum.isoformat() if self.datum else None,
             "reparatur_art": self.reparatur_art,
             "reparatur_sonstiges": self.reparatur_sonstiges,

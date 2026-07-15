@@ -3,7 +3,7 @@ import type { RepairLog, VdeTestResponse, Repair } from '@/api/types'
 
 export interface RepairThreadEntry {
   uniqueKey: string
-  type: 'repair' | 'vde' | 'status_change' | 'created'
+  type: 'repair' | 'vde' | 'status_change' | 'created' | 'assignee_change'
   id: number
   created_at: string
   dateOnly?: boolean
@@ -44,7 +44,7 @@ export function useRepairThread(
   const threadEntries = computed<RepairThreadEntry[]>(() => {
     const repairEntries: RepairThreadEntry[] = repairLogs.value.map((log) => ({
       uniqueKey: `repair-${log.id}`,
-      type: log.log_type === 'status_change' ? 'status_change' : 'repair',
+      type: log.log_type === 'status_change' ? 'status_change' : log.log_type === 'assignee_change' ? 'assignee_change' : 'repair',
       id: log.id,
       created_at: log.created_at,
       person: log.user

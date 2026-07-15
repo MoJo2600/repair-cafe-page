@@ -122,6 +122,7 @@ type CompleteFailedRepairInput = {
   statusDetail?: string;
   user_id?: number;
   repairDescription: string;
+  repairDuration?: number;
 };
 
 export const useRepairStore = defineStore("repair", () => {
@@ -325,7 +326,7 @@ export const useRepairStore = defineStore("repair", () => {
   }
 
   async function completeFailedRepair(input: CompleteFailedRepairInput) {
-    const { repairId, fromStatus, statusDetail, user_id, repairDescription } =
+    const { repairId, fromStatus, statusDetail, user_id, repairDescription, repairDuration } =
       input;
 
     const toStatus: RepairStatus = "Nicht Repariert";
@@ -345,6 +346,7 @@ export const useRepairStore = defineStore("repair", () => {
       status_detail: statusDetail || undefined,
       user_id: user_id || undefined,
       reparatur_besch: repairDescription.trim(),
+      reparatur_dauer: repairDuration ?? undefined,
     });
     await fetchRepairs(false);
   }

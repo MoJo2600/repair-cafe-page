@@ -17,6 +17,7 @@
             <RepairSummaryCard
               :repair-data="repairRecord"
               :vde-tests="summaryVdeTests"
+              :logged-duration="suggestedRepairDuration"
               @updated="onRepairFieldsUpdated"
             />
 
@@ -36,9 +37,11 @@
                         ? 'warning'
                         : entry.type === 'created'
                           ? 'grey'
-                          : entry.vdePassed
-                            ? 'success'
-                            : 'error'
+                          : entry.type === 'assignee_change'
+                            ? 'blue-lighten-1'
+                            : entry.vdePassed
+                              ? 'success'
+                              : 'error'
                   "
                   :icon="
                     entry.type === 'repair'
@@ -47,9 +50,11 @@
                         ? 'mdi-swap-horizontal'
                         : entry.type === 'created'
                           ? 'mdi-clipboard-plus-outline'
-                          : entry.vdePassed
-                            ? 'mdi-flash'
-                            : 'mdi-flash-off'
+                          : entry.type === 'assignee_change'
+                            ? 'mdi-account-arrow-right'
+                            : entry.vdePassed
+                              ? 'mdi-flash'
+                              : 'mdi-flash-off'
                   "
                   @click="entry.type === 'repair' ? openEditLogDialog(entry.id) : undefined"
                 >
@@ -155,6 +160,14 @@
                         >
                           Offen
                         </v-chip>
+                      </template>
+
+                      <!-- Assignee change entry -->
+                      <template v-else-if="entry.type === 'assignee_change'">
+                        <div class="d-flex align-center ga-1 flex-wrap">
+                          <v-icon size="14" color="blue-lighten-1">mdi-account-arrow-right</v-icon>
+                          <span class="text-body-2">{{ entry.description }}</span>
+                        </div>
                       </template>
                     </div>
                     <div class="text-caption text-medium-emphasis">
@@ -549,6 +562,7 @@
 
     <RepairNotRepairableDialog
       v-model="notRepairableDialog"
+      :suggested-duration="suggestedRepairDuration"
       :loading="savingStatus"
       @confirm="confirmNotRepairable"
     />
@@ -852,7 +866,7 @@ async function confirmDeleteLog() {
     if (response.reply === 'done') {
       showSnackbar('Logeintrag gelöscht')
       deleteLogDialog.value = false
-      await loadRepairLogs()
+      await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
       showSnackbar(response.error || 'Fehler beim Löschen', 'error')
     }
@@ -925,12 +939,26 @@ function formatDateTime(dateString: string): string {
 
 function onRepairFieldsUpdated(fields: {
   datum: string
+  repair_type_id: number | null
   reparatur_art: string
   geraet_art: string
   defekt_besch: string
 }) {
   if (repairRecord.value) {
     repairRecord.value = { ...repairRecord.value, ...fields }
+  }
+}
+
+async function loadRepairRecord() {
+  const qrToken = route.params.qrToken as string
+  if (!qrToken) return
+  try {
+    const response = await RepairsService.getRepairByQrToken(qrToken)
+    if (response?.data) {
+      repairRecord.value = response.data as Repair
+    }
+  } catch (err) {
+    console.error('Error reloading repair record:', err)
   }
 }
 
@@ -991,6 +1019,19 @@ async function assignUser(userId: number | null) {
     await RepairsService.updateRepair(repairRecord.value.id, { user_id: userId })
     repairRecord.value.user_id = userId
     repairRecord.value.user = userId ? (userStore.users.find((u) => u.id === userId) ?? null) : null
+
+    const assignee = userId ? userStore.users.find((u) => u.id === userId) : null
+    const description = assignee
+      ? `Zugewiesen an: ${assignee.vorname} ${assignee.nachname}`
+      : 'Zuweisung entfernt'
+    await RepairLogsService.createRepairLog(repairRecord.value.id, {
+      log_type: 'assignee_change',
+      reparatur_besch: description,
+      reparatur_dauer: 0,
+      user_id: authStore.currentUser?.id ?? undefined,
+    })
+    await loadRepairLogs()
+
     showSnackbar(userId ? 'Zuständigkeit aktualisiert' : 'Zuweisung entfernt')
   } catch (err) {
     showSnackbar('Fehler beim Zuweisen: ' + (err as Error).message, 'error')
@@ -1280,7 +1321,7 @@ async function addLogEntry() {
       closeLogDialog()
 
       // Reload logs
-      await loadRepairLogs()
+      await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
       showSnackbar(
         'Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler'),
@@ -1357,7 +1398,7 @@ async function saveEditLog() {
     if (response.reply === 'done') {
       showSnackbar('Logeintrag aktualisiert')
       editLogDialog.value = false
-      await loadRepairLogs()
+      await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
       showSnackbar(response.error || 'Fehler beim Speichern', 'error')
     }
@@ -1464,10 +1505,12 @@ function goBack() {
 <style scoped>
 .repair-entry {
   cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
 }
 
-.repair-entry:hover :deep(.v-timeline-item__body) {
-  background-color: rgba(var(--v-theme-on-surface), 0.06);
-  border-radius: 6px;
+.repair-entry:hover {
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 </style>

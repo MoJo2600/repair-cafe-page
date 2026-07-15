@@ -20,7 +20,7 @@ users_bp = Blueprint("users", __name__)
 def api_list_users():
     """List all users."""
     try:
-        users = User.query.order_by(User.nachname, User.vorname).all()
+        users = User.query.order_by(User.vorname, User.nachname).all()
         data = [UserResponse.model_validate(u).model_dump(mode="json") for u in users]
         return Response(
             json.dumps({"reply": "done", "data": data, "count": len(data)}),

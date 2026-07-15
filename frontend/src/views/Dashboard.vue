@@ -144,6 +144,25 @@
           </v-card-text>
         </v-card>
       </v-col>
+
+      <v-col cols="12" md="3">
+        <v-card color="teal" variant="elevated" class="pa-2">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3">mdi-percent</v-icon>
+            <div>
+              <div class="text-h5">Erfolgsquote</div>
+              <div class="text-caption">Repariert / Abgeschlossen</div>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <div v-if="repairStore.loading" class="text-center">
+              <v-progress-circular indeterminate color="white"></v-progress-circular>
+            </div>
+            <div v-else-if="successRate === null" class="text-h2 font-weight-bold">–</div>
+            <div v-else class="text-h2 font-weight-bold">{{ successRate }} %</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
     </v-row>
 
     <!-- Repaired by user + Timeline Chart -->
@@ -247,6 +266,13 @@ const repairedByUser = computed(() => {
 const repairedCount = computed(
   () => repairStore.repairs.filter((r) => r.status === 'Repariert').length
 )
+
+const successRate = computed<number | null>(() => {
+  const repaired = repairedCount.value
+  const total = repaired + repairStore.notRepairedRepairsCount
+  if (total === 0) return null
+  return Math.round((repaired / total) * 100)
+})
 watch(repairedCount, (newVal) => {
   if (prevRepairedCount.value < 0) return
   if (newVal > prevRepairedCount.value) {

@@ -41,9 +41,9 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     duration: null as number | null,
     needsVdeTest: false,
   })
-  const notRepairableData = ref({ description: '', statusDetail: '' })
+  const notRepairableData = ref({ description: '', statusDetail: '', duration: 0 })
   const abbruchSignatureDialog = ref(false)
-  const pendingAbbruchPayload = ref<{ description: string; statusDetail: string } | null>(null)
+  const pendingAbbruchPayload = ref<{ description: string; statusDetail: string; duration: number } | null>(null)
 
   // ── Status helpers ────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     }
 
     if (requiresFailureDetailsForTransition(fromStatus, toStatus)) {
-      notRepairableData.value = { description: '', statusDetail: '' }
+      notRepairableData.value = { description: '', statusDetail: '', duration: options.suggestedRepairDuration.value }
       notRepairableDialog.value = true
       return
     }
@@ -246,7 +246,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
 
   // ── Not-repairable flow ───────────────────────────────────────────────
 
-  async function confirmNotRepairable(payload: { description: string; statusDetail: string }) {
+  async function confirmNotRepairable(payload: { description: string; statusDetail: string; duration: number }) {
     notRepairableData.value = payload
     notRepairableDialog.value = false
 
@@ -267,7 +267,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     }
   }
 
-  async function saveNotRepairable(payload: { description: string; statusDetail: string }) {
+  async function saveNotRepairable(payload: { description: string; statusDetail: string; duration: number }) {
     if (!options.repairRecord.value) return
     savingStatus.value = true
     try {
@@ -278,10 +278,11 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         statusDetail: payload.statusDetail || undefined,
         user_id: options.repairRecord.value.user_id || undefined,
         repairDescription: payload.description,
+        repairDuration: payload.duration,
       })
       await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
         user_id: options.repairRecord.value.user_id || undefined,
-        reparatur_dauer: 0,
+        reparatur_dauer: payload.duration,
         reparatur_besch: payload.description,
         status_from: fromStatus,
         status_to: 'Nicht Repariert',
@@ -290,6 +291,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       options.repairRecord.value.status = 'Nicht Repariert'
       options.repairRecord.value.status_detail = payload.statusDetail
       options.repairRecord.value.reparatur_besch = payload.description
+      options.repairRecord.value.reparatur_dauer = payload.duration
       options.selectedRepairStatus.value = 'Nicht Repariert'
     } catch (err) {
       console.error('Error closing repair as not repairable:', err)

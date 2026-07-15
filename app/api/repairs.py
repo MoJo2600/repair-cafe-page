@@ -10,7 +10,7 @@ import flask_login
 from flask import Blueprint, Response, current_app, request, send_file
 
 from app.extensions import db
-from app.models import Customer, Repair
+from app.models import Customer, Repair, Setting
 from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate, RepairsTimelinePoint, RepairsTimelineResponse
 from app.utils import pydantic_to_swagger
 from app.validation import validate_request
@@ -169,6 +169,12 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
         old_status = repair.status
         new_status = update_data.get("status")
 
+        # If repair_type_id is being updated, also sync reparatur_art
+        if "repair_type_id" in update_data and update_data["repair_type_id"] is not None:
+            setting = Setting.query.get(update_data["repair_type_id"])
+            if setting:
+                update_data["reparatur_art"] = setting.name
+
         # 1. Validate that the status transition is allowed
         if new_status and new_status != old_status:
             allowed = STATUS_TRANSITIONS.get(old_status, [])
@@ -288,6 +294,27 @@ def api_create_repair(validated_data: RepairCreate):
     try:
         # Convert Pydantic model to dict
         data = validated_data.model_dump()
+
+        # --- Repair type handling ---
+        # Look up the repair type setting and auto-populate reparatur_art for backward compat
+        repair_type_id = data.get("repair_type_id")
+        if repair_type_id:
+            setting = Setting.query.get(repair_type_id)
+            if setting is None:
+                return Response(
+                    json.dumps({"reply": "error", "error": f"repair_type_id {repair_type_id} not found"}),
+                    status=400,
+                    mimetype="application/json",
+                )
+            data["reparatur_art"] = setting.name
+        else:
+            # Fallback: reparatur_art must be provided directly
+            if not data.get("reparatur_art"):
+                return Response(
+                    json.dumps({"reply": "error", "error": "repair_type_id is required"}),
+                    status=400,
+                    mimetype="application/json",
+                )
 
         # --- Customer handling ---
         # Extract contact fields (used for customer creation; not stored on repair)
