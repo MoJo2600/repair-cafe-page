@@ -109,7 +109,6 @@ class Repair(db.Model):
         db.Integer, db.ForeignKey("settings.id", ondelete="SET NULL"), nullable=True
     )
     datum: Mapped[date] = mapped_column(db.Date, nullable=False, default=datetime.today)
-    reparatur_art: Mapped[str] = mapped_column(db.String(100), nullable=False)
     reparatur_sonstiges: Mapped[Optional[str]] = mapped_column(db.String(100))
     geraet_art: Mapped[str] = mapped_column(db.String(100), nullable=False)
     defekt_besch: Mapped[Optional[str]] = mapped_column(db.String(400))
@@ -166,7 +165,7 @@ class Repair(db.Model):
     )
 
     def __repr__(self):
-        return f"<Repair {self.id}: {self.reparatur_art}>"
+        return f"<Repair {self.id}: {self.geraet_art}>"
 
     def to_dict(self):
         """Convert model to dictionary"""
@@ -174,8 +173,8 @@ class Repair(db.Model):
             "id": self.id,
             "customer_id": self.customer_id,
             "repair_type_id": self.repair_type_id,
+            "repair_type_name": self.repair_type.name if self.repair_type else None,
             "datum": self.datum.isoformat() if self.datum else None,
-            "reparatur_art": self.reparatur_art,
             "reparatur_sonstiges": self.reparatur_sonstiges,
             "geraet_art": self.geraet_art,
             "defekt_besch": self.defekt_besch,

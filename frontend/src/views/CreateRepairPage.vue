@@ -471,7 +471,6 @@ const formData = ref({
   },
   repair_type_id: null as number | null,
   repair_type: null as { id: number; name: string } | null,
-  reparatur_art: '' as string,
   geraet_art: '',
   defekt_besch: '',
   status: 'Offen',
@@ -552,7 +551,6 @@ function selectCustomer(customer: CustomerResponse | null) {
 function onRepairTypeChange(id: number | null) {
   const found = repairTypes.value.find((t) => t.id === id) ?? null
   formData.value.repair_type = found
-  formData.value.reparatur_art = found?.name ?? ''
 }
 
 const router = useRouter()
@@ -783,7 +781,6 @@ function createAnother() {
     },
     repair_type_id: null,
     repair_type: null,
-    reparatur_art: '',
     geraet_art: '',
     defekt_besch: '',
     status: 'Offen',

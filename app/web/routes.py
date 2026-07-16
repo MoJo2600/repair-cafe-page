@@ -48,21 +48,21 @@ def stat_data(type):
         return json.dumps(df.to_dict(orient="records"))
 
     if type == "devices":
-        df = df.groupby("reparatur_art").size().reset_index(name="count")
+        df = df.groupby("repair_type_name").size().reset_index(name="count")
         data = [
-            {"name": row["reparatur_art"], "value": row["count"]}
+            {"name": row["repair_type_name"], "value": row["count"]}
             for _, row in df.iterrows()
         ]
         return json.dumps(data)
 
     if type == "time":
         df = (
-            df.groupby(["reparatur_art", "status"])
+            df.groupby(["repair_type_name", "status"])
             .agg({"reparatur_dauer": "sum"})
             .reset_index()
         )
         data = []
-        for device, group in df.groupby("reparatur_art"):
+        for device, group in df.groupby("repair_type_name"):
             device_data = {"name": device, "children": []}
             for status, sub_group in group.groupby("status"):
                 status_name = {"Repariert": "success", "Nicht Repariert": "failed"}.get(

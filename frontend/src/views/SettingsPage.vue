@@ -297,11 +297,20 @@
     </v-dialog>
 
     <!-- Delete confirm dialog -->
-    <v-dialog v-model="deleteDialog" max-width="380">
+    <v-dialog v-model="deleteDialog" max-width="380" @after-leave="deletingItem = null">
       <v-card>
         <v-card-title>Eintrag löschen?</v-card-title>
         <v-card-text>
-          Soll <strong>{{ deletingItem?.name }}</strong> wirklich gelöscht werden?
+          <span v-if="deletingItem?.category === 'repair_type'">
+            Soll <strong>{{ deletingItem?.name }}</strong> wirklich gelöscht werden?<br />
+            <span class="text-caption text-medium-emphasis">
+              Reparaturarten die bereits Reparaturen zugewiesen sind, können nicht gelöscht werden.
+              Deaktivieren Sie diese stattdessen.
+            </span>
+          </span>
+          <span v-else>
+            Soll <strong>{{ deletingItem?.name }}</strong> wirklich gelöscht werden?
+          </span>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -513,11 +522,13 @@ async function doDelete() {
     settings.value = settings.value.filter((s) => s.id !== deletingItem.value!.id)
     showMsg('Eintrag gelöscht')
     deleteDialog.value = false
-  } catch {
-    showMsg('Fehler beim Löschen', 'error')
+  } catch (err: unknown) {
+    const msg =
+      (err as { body?: { error?: string } })?.body?.error ??
+      'Fehler beim Löschen'
+    showMsg(msg, 'error')
   } finally {
     saving.value = false
-    deletingItem.value = null
   }
 }
 

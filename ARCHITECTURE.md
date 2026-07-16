@@ -329,8 +329,7 @@ The dev container is configured to communicate with the host CUPS server:
 
 **docker-compose.yml:**
 - Sets `CUPS_SERVER=host.docker.internal:631` environment variable
-- Mounts USB devices: `/dev/bus/usb:/dev/bus/usb`
-- Runs in privileged mode for USB access
+- No USB device access required — the container talks to the host CUPS server over the network
 
 ### Label Content
 
@@ -345,56 +344,27 @@ Each printed label includes:
   - Contains URL: `http://repaircafe/edit/{id}/{qr_token}`
   - Scannable with camera to access repair details
 
-### Print Methods
+### Print Method
 
-The API endpoint supports multiple printing methods:
+The label service prints via CUPS using the `lp` command. The container connects to the CUPS server running on the Docker host.
 
-1. **CUPS (Recommended)**
-   ```json
-   POST /api/print-label/123
-   {
-     "method": "cups",
-     "printer_name": "SLP650"
-   }
-   ```
-
-2. **Direct USB**
-   ```json
-   POST /api/print-label/123
-   {
-     "method": "file",
-     "printer_device": "/dev/usb/lp0"
-   }
-   ```
-
-3. **Network**
-   ```json
-   POST /api/print-label/123
-   {
-     "method": "network",
-     "printer_ip": "192.168.1.100",
-     "printer_port": 9100
-   }
-   ```
+```
+POST /api/print-label/123  →  lp -d <LABEL_PRINTER_NAME>  →  host CUPS  →  printer
+```
 
 ### Environment Variables
 
-Set these in your `.env` or docker-compose.yml:
+Set these in your `.env` or `docker-compose.yml`:
 
 ```bash
-# CUPS method (default)
-LABEL_PRINT_METHOD=cups
+# Enable the print button and endpoint
+LABEL_PRINTER_ENABLED=true
+
+# Name of the printer queue in host CUPS (must match exactly)
 LABEL_PRINTER_NAME=SLP650
-
-# Or direct USB
-LABEL_PRINT_METHOD=file
-LABEL_PRINTER_DEVICE=/dev/usb/lp0
-
-# Or network
-LABEL_PRINT_METHOD=network
-LABEL_PRINTER_IP=192.168.1.100
-LABEL_PRINTER_PORT=9100
 ```
+
+For network printing (printer connected to another machine on the LAN), configure the host CUPS server to forward jobs to the remote printer. See `docs/CUPS_NETWORK_SETUP.md` for step-by-step instructions.
 
 ### Troubleshooting
 

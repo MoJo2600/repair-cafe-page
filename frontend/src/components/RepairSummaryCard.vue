@@ -20,7 +20,7 @@
         </v-col>
         <v-col cols="6">
           <div class="text-subtitle-2 text-grey-darken-1">Kategorie</div>
-          <div>{{ repairData.repair_type?.name || repairData.reparatur_art }}</div>
+          <div>{{ repairData.repair_type?.name }}</div>
         </v-col>
         <v-col cols="6">
           <div class="text-subtitle-2 text-grey-darken-1">Geräte Art / Bezeichnung</div>
@@ -135,7 +135,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updated: [
-    fields: { datum: string; repair_type_id: number | null; reparatur_art: string; geraet_art: string; defekt_besch: string }
+    fields: { datum: string; repair_type_id: number | undefined; geraet_art: string; defekt_besch: string }
   ]
 }>()
 
@@ -177,11 +177,9 @@ async function saveEdit() {
       geraet_art: editForm.value.geraet_art,
       defekt_besch: editForm.value.defekt_besch,
     })
-    const foundType = repairTypes.value.find((t) => t.id === editForm.value.repair_type_id)
     emit('updated', {
       ...editForm.value,
-      repair_type_id: editForm.value.repair_type_id,
-      reparatur_art: foundType?.name ?? props.repairData.reparatur_art ?? '',
+      repair_type_id: editForm.value.repair_type_id ?? undefined,
     })
     editDialog.value = false
   } finally {

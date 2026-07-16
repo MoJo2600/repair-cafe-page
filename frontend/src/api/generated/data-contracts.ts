@@ -173,11 +173,6 @@ export interface RepairCreate {
    */
   nachname: string
   /**
-   * Repair category (legacy text field)
-   * @default null
-   */
-  reparatur_art?: string
-  /**
    * FK to repair type setting
    */
   repair_type_id: number
@@ -357,12 +352,6 @@ export interface RepairResponse {
    */
   qr_token: string
   /**
-   * Repair category
-   * @minLength 1
-   * @maxLength 100
-   */
-  reparatur_art: string
-  /**
    * FK to repair type setting
    * @default null
    */
@@ -416,6 +405,38 @@ export interface RepairResponse {
   user_id?: number
 }
 
+export interface RepairsTimelinePoint {
+  /**
+   * Repairs with status 'Repariert'
+   * @default 0
+   */
+  abgeschlossen?: number
+  /**
+   * Repairs with status 'In Bearbeitung'
+   * @default 0
+   */
+  in_bearbeitung?: number
+  /** Human-readable label, e.g. 'KW 20 2026' */
+  label: string
+  /**
+   * Repairs with status 'Nicht Repariert'
+   * @default 0
+   */
+  nicht_repariert?: number
+  /**
+   * Repairs with status 'Offen'
+   * @default 0
+   */
+  offen?: number
+  /** ISO year-week, e.g. '2026-20' */
+  week: string
+}
+
+export interface RepairsTimelineResponse {
+  /** @default [] */
+  data?: RepairsTimelinePoint[]
+}
+
 export interface RepairUpdate {
   /**
    * Date of repair intake
@@ -437,11 +458,6 @@ export interface RepairUpdate {
    * @default null
    */
   geraet_art?: string
-  /**
-   * Repair category
-   * @default null
-   */
-  reparatur_art?: string
   /**
    * FK to repair type setting
    * @default null
@@ -487,38 +503,6 @@ export interface RepairUpdate {
    * @default null
    */
   user_id?: number
-}
-
-export interface RepairsTimelinePoint {
-  /**
-   * Repairs with status 'Repariert'
-   * @default 0
-   */
-  abgeschlossen?: number
-  /**
-   * Repairs with status 'In Bearbeitung'
-   * @default 0
-   */
-  in_bearbeitung?: number
-  /** Human-readable label, e.g. 'KW 20 2026' */
-  label: string
-  /**
-   * Repairs with status 'Nicht Repariert'
-   * @default 0
-   */
-  nicht_repariert?: number
-  /**
-   * Repairs with status 'Offen'
-   * @default 0
-   */
-  offen?: number
-  /** ISO year-week, e.g. '2026-20' */
-  week: string
-}
-
-export interface RepairsTimelineResponse {
-  /** @default [] */
-  data?: RepairsTimelinePoint[]
 }
 
 export interface SettingResponse {

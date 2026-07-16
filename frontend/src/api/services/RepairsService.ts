@@ -52,10 +52,6 @@ export class RepairsService {
      */
     nachname: string
     /**
-     * Type of repair/category (legacy, derived from repair_type_id)
-     */
-    reparatur_art?: string
-    /**
      * FK to repair type setting
      */
     repair_type_id: number
@@ -128,7 +124,7 @@ export class RepairsService {
       geraet_art?: string
       nachname?: string
       user_id?: number | null
-      reparatur_art?: string
+      repair_type_id?: number
       reparatur_besch?: string
       reparatur_dauer?: number
       status_detail?: string
