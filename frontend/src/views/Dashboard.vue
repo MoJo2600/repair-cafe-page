@@ -23,7 +23,7 @@
                   <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
                   {{ repairStore.nextRepair.customer?.nachname }}
                 </div>
-                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.reparatur_art }}</div>
+                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}</div>
               </div>
             </div>
             <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
@@ -44,18 +44,12 @@
             <div v-if="repairStore.loading" class="text-center py-4">
               <v-progress-circular indeterminate color="warning"></v-progress-circular>
             </div>
-            <div
-              v-else-if="repairStore.inProgressRepairs.length === 0"
-              class="text-medium-emphasis"
-            >
+            <div v-else-if="repairStore.inProgressRepairs.length === 0" class="text-medium-emphasis">
               Keine aktiven Reparaturen
             </div>
             <v-list v-else density="compact">
-              <v-list-item
-                v-for="r in repairStore.inProgressRepairs"
-                :key="r.id"
-                :subtitle="r.user_id ? userStore.getUserDisplayName(r.user_id) : 'Nicht zugewiesen'"
-              >
+              <v-list-item v-for="r in repairStore.inProgressRepairs" :key="r.id"
+                :subtitle="r.user_id ? userStore.getUserDisplayName(r.user_id) : 'Nicht zugewiesen'">
                 <template #title>
                   <span class="font-weight-bold">#{{ r.id }}</span>
                   &nbsp;{{ r.geraet_art }}
@@ -69,6 +63,43 @@
 
     <!-- Statistics Cards -->
     <v-row class="mt-4">
+      <v-col cols="12" md="3">
+        <v-card color="primary" variant="elevated" class="pa-2">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3">mdi-clipboard-list</v-icon>
+            <div>
+              <div class="text-h5">Gesamt</div>
+              <div class="text-caption">Alle erfassten Reparaturen</div>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <div v-if="repairStore.loading" class="text-center">
+              <v-progress-circular indeterminate color="white"></v-progress-circular>
+            </div>
+            <div v-else class="text-h2 font-weight-bold">{{ repairStore.totalRepairsCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="3">
+        <v-card color="teal" variant="elevated" class="pa-2">
+          <v-card-title class="d-flex align-center">
+            <v-icon size="40" class="mr-3">mdi-percent</v-icon>
+            <div>
+              <div class="text-h5">Erfolgsquote</div>
+              <div class="text-caption">Repariert / Abgeschlossen</div>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <div v-if="repairStore.loading" class="text-center">
+              <v-progress-circular indeterminate color="white"></v-progress-circular>
+            </div>
+            <div v-else-if="successRate === null" class="text-h2 font-weight-bold">–</div>
+            <div v-else class="text-h2 font-weight-bold">{{ successRate }} %</div>
+          </v-card-text>
+        </v-card>
+      </v-col>      
+
       <v-col cols="12" md="3">
         <v-card color="info" variant="elevated" class="pa-2">
           <v-card-title class="d-flex align-center">
@@ -120,7 +151,7 @@
             <div v-if="repairStore.loading" class="text-center">
               <v-progress-circular indeterminate color="white"></v-progress-circular>
             </div>
-            <div v-else class="text-h2 font-weight-bold">{{ repairStore.closedRepairsCount }}</div>
+            <div v-else class="text-h2 font-weight-bold">{{ repairStore.repairedRepairsCount }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -145,54 +176,67 @@
         </v-card>
       </v-col>
 
+    </v-row>
+
+    <!-- Timeline Chart -->
+    <v-row class="mt-4">
+      <v-card class="pa-2" variant="elevated" height="100%">
+        <v-card-title class="d-flex align-center">
+          <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
+          <div>
+            <div class="text-h5">Reparaturen pro Reparateur</div>
+            <div class="text-caption">Erfolgreich repariert</div>
+          </div>
+        </v-card-title>
+        <v-card-text>
+          <div v-if="repairStore.loading" class="text-center py-4">
+            <v-progress-circular indeterminate color="primary" />
+          </div>
+          <div v-else-if="repairedByUser.length === 0" class="text-medium-emphasis py-2">
+            Keine abgeschlossenen Reparaturen
+          </div>
+          <v-list v-else density="compact">
+            <v-list-item v-for="entry in repairedByUser" :key="entry.name" :title="entry.name">
+              <template #append>
+                <v-chip color="success" size="small">{{ entry.count }}</v-chip>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+
       <v-col cols="12" md="3">
-        <v-card color="teal" variant="elevated" class="pa-2">
+        <v-card variant="elevated" class="pa-2">
           <v-card-title class="d-flex align-center">
-            <v-icon size="40" class="mr-3">mdi-percent</v-icon>
+            <v-icon size="40" class="mr-3">mdi-podium</v-icon>
             <div>
-              <div class="text-h5">Erfolgsquote</div>
-              <div class="text-caption">Repariert / Abgeschlossen</div>
+              <div class="text-h5">Top Kategorien</div>
+              <div class="text-caption">Häufigste Reparaturarten</div>
             </div>
           </v-card-title>
           <v-card-text>
             <div v-if="repairStore.loading" class="text-center">
-              <v-progress-circular indeterminate color="white"></v-progress-circular>
+              <v-progress-circular indeterminate color="primary"></v-progress-circular>
             </div>
-            <div v-else-if="successRate === null" class="text-h2 font-weight-bold">–</div>
-            <div v-else class="text-h2 font-weight-bold">{{ successRate }} %</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Repaired by user + Timeline Chart -->
-    <v-row class="mt-4">
-      <v-col cols="12" md="4">
-        <v-card class="pa-2" variant="elevated" height="100%">
-          <v-card-title class="d-flex align-center">
-            <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
-            <div>
-              <div class="text-h5">Reparaturen pro Reparateur</div>
-              <div class="text-caption">Erfolgreich repariert</div>
+            <div v-else-if="topRepairTypes.length === 0" class="text-medium-emphasis">
+              Keine Daten
             </div>
-          </v-card-title>
-          <v-card-text>
-            <div v-if="repairStore.loading" class="text-center py-4">
-              <v-progress-circular indeterminate color="primary" />
-            </div>
-            <div v-else-if="repairedByUser.length === 0" class="text-medium-emphasis py-2">
-              Keine abgeschlossenen Reparaturen
-            </div>
-            <v-list v-else density="compact">
-              <v-list-item v-for="entry in repairedByUser" :key="entry.name" :title="entry.name">
+            <v-list v-else density="compact" class="pa-0">
+              <v-list-item v-for="(entry, i) in topRepairTypes" :key="entry.name" :title="entry.name" class="px-0">
+                <template #prepend>
+                  <span class="text-h6 font-weight-bold mr-3 text-medium-emphasis">{{ i + 1 }}</span>
+                </template>
                 <template #append>
-                  <v-chip color="success" size="small">{{ entry.count }}</v-chip>
+                  <v-chip size="small" color="primary" variant="tonal">{{ entry.count }}</v-chip>
                 </template>
               </v-list-item>
             </v-list>
           </v-card-text>
         </v-card>
       </v-col>
+    </v-row>
+
+    <v-row class="mt-4">
 
       <v-col cols="12" md="8">
         <v-card class="pa-2" variant="elevated">
@@ -207,10 +251,7 @@
             <div v-if="timelineLoading" class="text-center py-8">
               <v-progress-circular indeterminate color="primary"></v-progress-circular>
             </div>
-            <div
-              v-else-if="timelineData.length === 0"
-              class="text-center py-8 text-medium-emphasis"
-            >
+            <div v-else-if="timelineData.length === 0" class="text-center py-8 text-medium-emphasis">
               Keine Daten vorhanden
             </div>
             <Line v-else :data="chartData" :options="chartOptions" style="max-height: 320px" />
@@ -262,6 +303,19 @@ const repairedByUser = computed(() => {
   return Object.entries(counts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
+})
+
+const topRepairTypes = computed(() => {
+  const counts: Record<string, number> = {}
+  for (const r of repairStore.repairs) {
+    const name = r.repair_type?.name
+    if (!name) continue
+    counts[name] = (counts[name] ?? 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
 })
 const repairedCount = computed(
   () => repairStore.repairs.filter((r) => r.status === 'Repariert').length

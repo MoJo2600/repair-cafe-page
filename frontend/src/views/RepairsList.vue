@@ -76,6 +76,10 @@
           </v-chip>
         </template>
 
+        <template #item.repair_type="{ item }">
+          {{ item.repair_type?.name || '-' }}
+        </template>
+
         <template #item.geraet_art="{ item }">
           {{ item.geraet_art }}
         </template>
@@ -193,8 +197,10 @@
               </v-col>
               <v-col cols="12" sm="6">
                 <v-select
-                  v-model="editedItem.reparatur_art"
+                  v-model="editedItem.repair_type_id"
                   :items="repairTypes"
+                  item-value="id"
+                  item-title="name"
                   label="Reparaturart"
                   variant="outlined"
                   density="comfortable"
@@ -387,7 +393,6 @@ const saving = ref(false)
 const editedItem = ref<RepairEditForm>({})
 const defaultItem: RepairEditForm = {
   datum: '',
-  reparatur_art: '',
   reparatur_sonstiges: '',
   geraet_art: '',
   defekt_besch: '',
@@ -411,14 +416,14 @@ const currentStatusDetailOptions = computed(() => {
 })
 
 // Dropdown options from backend
-const repairTypes = ref<string[]>([])
+const repairTypes = ref<Array<{ id: number; name: string }>>([])  
 
 // Load dropdown options from backend
 async function loadDropdownOptions() {
   try {
     const config = await ConfigService.getDropdownConfig()
     if (config.repair_type) {
-      repairTypes.value = config.repair_type.map((item) => item.name)
+      repairTypes.value = config.repair_type
     }
   } catch (err) {
     console.error('Error loading dropdown options:', err)
@@ -442,7 +447,7 @@ const headers = [
   { title: 'Device Type', key: 'geraet_art', sortable: true },
   { title: 'First Name', key: 'customer.vorname', sortable: false },
   { title: 'Last Name', key: 'customer.nachname', sortable: false },
-  { title: 'Repair Type', key: 'reparatur_art', sortable: true },
+  { title: 'Repair Type', key: 'repair_type', sortable: false },
   { title: 'Status Detail', key: 'status_detail', sortable: true },
   { title: 'Duration', key: 'reparatur_dauer', sortable: true },
   { title: 'Date', key: 'datum', sortable: true },

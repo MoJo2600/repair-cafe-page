@@ -178,9 +178,6 @@ class RepairBase(BaseModel):
     """Base repair schema with common fields"""
 
     datum: date = Field(..., description="Date of repair intake")
-    reparatur_art: Optional[str] = Field(
-        None, min_length=1, max_length=100, description="Repair category (legacy text field)"
-    )
     reparatur_sonstiges: Optional[str] = Field(
         None, max_length=100, description="Other repair category"
     )
@@ -221,9 +218,6 @@ class RepairUpdate(BaseModel):
 
     repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
     datum: Optional[date] = Field(None, description="Date of repair intake")
-    reparatur_art: Optional[str] = Field(
-        None, min_length=1, max_length=100, description="Repair category"
-    )
     reparatur_sonstiges: Optional[str] = Field(
         None, max_length=100, description="Other repair category"
     )

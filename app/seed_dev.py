@@ -51,7 +51,7 @@ def seed(reset=False):
     from werkzeug.security import generate_password_hash
 
     from app.extensions import db
-    from app.models import Customer, Repair, RepairLog, User, VdeTest
+    from app.models import Customer, Repair, RepairLog, Setting, User, VdeTest
 
     with app.app_context():
         if reset:
@@ -160,10 +160,15 @@ def seed(reset=False):
         # ------------------------------------------------------------------
         # Repairs
         # ------------------------------------------------------------------
+        def _rt(name: str) -> int | None:
+            """Look up a repair_type setting ID by name."""
+            s = Setting.query.filter_by(category="repair_type", name=name).first()
+            return s.id if s else None
+
         r1 = Repair(
             customer_id=kurt.id,
             datum=date.today() - timedelta(days=14),
-            reparatur_art="Elektro",
+            repair_type_id=_rt("Elektro"),
             geraet_art="Staubsauger",
             defekt_besch="Saugt nicht mehr, Motor läuft aber",
             status="Repariert",
@@ -175,7 +180,7 @@ def seed(reset=False):
         r2 = Repair(
             customer_id=maria.id,
             datum=date.today() - timedelta(days=7),
-            reparatur_art="Elektro",
+            repair_type_id=_rt("Elektro"),
             geraet_art="Tischlampe",
             defekt_besch="Leuchtet nicht mehr",
             status="In Bearbeitung",
@@ -185,7 +190,7 @@ def seed(reset=False):
         r3 = Repair(
             customer_id=peter.id,
             datum=date.today() - timedelta(days=3),
-            reparatur_art="PC",
+            repair_type_id=_rt("PC"),
             geraet_art="Laptop",
             defekt_besch="Startet nicht, Akku defekt",
             status="Offen",
@@ -194,7 +199,7 @@ def seed(reset=False):
         r4 = Repair(
             customer_id=sabine.id,
             datum=date.today() - timedelta(days=21),
-            reparatur_art="Textil",
+            repair_type_id=_rt("Textil"),
             geraet_art="Nähmaschine",
             defekt_besch="Stich unregelmäßig, Faden reißt",
             status="Nicht Repariert",
@@ -206,7 +211,7 @@ def seed(reset=False):
         r5 = Repair(
             customer_id=georg.id,
             datum=date.today(),
-            reparatur_art="Audio",
+            repair_type_id=_rt("Audio"),
             geraet_art="Plattenspieler",
             defekt_besch="Dreht sich zu langsam",
             status="Offen",
@@ -215,7 +220,7 @@ def seed(reset=False):
         r6 = Repair(
             customer_id=lisa.id,
             datum=date.today() - timedelta(days=5),
-            reparatur_art="Elektro",
+            repair_type_id=_rt("Elektro"),
             geraet_art="Wasserkocher",
             defekt_besch="Schaltet nicht ab, Temperatursensor defekt",
             status="Repariert",

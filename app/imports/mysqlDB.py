@@ -132,7 +132,6 @@ class MySQLDB:
         df['nachname'] = df['nachname'].fillna('')
         df['telefon'] = df['telefon'].fillna('')
         df['email'] = df['email'].fillna('')
-        df['reparatur_art'] = df['reparatur_art'].fillna('')
         df['geraet_art'] = df['geraet_art'].fillna('')
         df['defekt_besch'] = df['defekt_besch'].fillna('')
         df['reparatur_erg'] = df['reparatur_erg'].fillna('')

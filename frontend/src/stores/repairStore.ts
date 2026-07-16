@@ -156,12 +156,18 @@ export const useRepairStore = defineStore("repair", () => {
     repairs.value.filter((repair) => repair.status === "Nicht Repariert"),
   );
 
+  const repairedRepairs = computed(() =>
+    repairs.value.filter((repair) => repair.status === "Repariert"),
+  );
+
   const openRepairsCount = computed(() => openRepairs.value.length);
   const inProgressRepairsCount = computed(() => inProgressRepairs.value.length);
   const closedRepairsCount = computed(() => closedRepairs.value.length);
+  const repairedRepairsCount = computed(() => repairedRepairs.value.length);
   const notRepairedRepairsCount = computed(
     () => notRepairedRepairs.value.length,
   );
+  const totalRepairsCount = computed(() => repairs.value.length);
 
   const nextRepair = computed(() => {
     // Return the first open repair (already sorted by ID)
@@ -372,10 +378,13 @@ export const useRepairStore = defineStore("repair", () => {
     inProgressRepairs,
     closedRepairs,
     notRepairedRepairs,
+    repairedRepairs,
     openRepairsCount,
     inProgressRepairsCount,
     closedRepairsCount,
+    repairedRepairsCount,
     notRepairedRepairsCount,
+    totalRepairsCount,
     nextRepair,
 
     // Actions

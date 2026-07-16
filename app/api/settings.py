@@ -14,7 +14,7 @@ from flask import Blueprint, Response
 
 from app.auth.decorators import admin_required
 from app.extensions import db
-from app.models import Setting
+from app.models import Repair, Setting
 from app.schemas import SettingCreate, SettingResponse, SettingUpdate
 from app.validation import parse_request
 
@@ -237,6 +237,20 @@ def api_delete_setting(setting_id):
             status=404,
             mimetype="application/json",
         )
+
+    # Prevent deletion of repair_type settings that are referenced by any repair
+    if setting.category == "repair_type":
+        in_use = Repair.query.filter_by(repair_type_id=setting_id).first()
+        if in_use:
+            return Response(
+                json.dumps({
+                    "reply": "error",
+                    "error": "Diese Reparaturart wird von Reparaturen verwendet und kann nicht gelöscht werden. Bitte deaktivieren Sie sie stattdessen.",
+                }),
+                status=409,
+                mimetype="application/json",
+            )
+
     db.session.delete(setting)
     db.session.commit()
     return Response(

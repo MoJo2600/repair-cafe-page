@@ -36,7 +36,7 @@
                   <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
                   {{ repairStore.nextRepair.customer?.nachname }}
                 </div>
-                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.reparatur_art }}</div>
+                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}</div>
               </div>
             </div>
             <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
@@ -93,7 +93,7 @@
                     </div>
                     <div>
                       <v-icon size="small" class="mr-1">mdi-tools</v-icon>
-                      <strong>Kategorie:</strong> {{ repair.reparatur_art }}
+                      <strong>Kategorie:</strong> {{ repair.repair_type?.name }}
                     </div>
                     <div v-if="repair.user">
                       <v-icon size="small" class="mr-1">mdi-account</v-icon>
@@ -121,7 +121,8 @@
                         </div>
                         <div v-if="repairLogsMap[repair.id][0].reparatur_besch">
                           {{ repairLogsMap[repair.id][0].reparatur_besch.substring(0, 100)
-                          }}{{
+                          }}
+                          {{
                             repairLogsMap[repair.id][0].reparatur_besch.length > 100 ? '...' : ''
                           }}
                         </div>
@@ -190,7 +191,7 @@
                     </div>
                     <div>
                       <v-icon size="small" class="mr-1">mdi-tools</v-icon>
-                      <strong>Kategorie:</strong> {{ repair.reparatur_art }}
+                      <strong>Kategorie:</strong> {{ repair.repair_type?.name }}
                     </div>
                     <div v-if="repair.defekt_besch">
                       <v-icon size="small" class="mr-1">mdi-text</v-icon>
