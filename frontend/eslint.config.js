@@ -6,5 +6,10 @@ export default defineConfigWithVueTs(
   { files: ['**/*.{ts,vue}'] },
   pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
-  prettierConfig
+  prettierConfig,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  }
 )

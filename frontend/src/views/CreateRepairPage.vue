@@ -121,7 +121,7 @@
                 ></v-textarea>
 
                 <!-- Photo Capture Section -->
-                <v-card variant="outlined" class="mt-4">
+                <v-card class="mt-4">
                   <v-card-title class="text-subtitle-1">
                     <v-icon class="mr-2">mdi-camera</v-icon>
                     Fotos des Geräts
@@ -164,7 +164,6 @@
                       <v-btn
                         v-if="cameraActive"
                         color="grey"
-                        variant="outlined"
                         prepend-icon="mdi-close"
                         @click="stopCamera"
                       >
@@ -230,7 +229,7 @@
             <!-- Step 3: Haftungsbegrenzung -->
             <v-stepper-window-item :value="3">
               <v-form ref="step3Form" v-model="step3Valid">
-                <v-card variant="outlined" class="mb-4">
+                <v-card class="mb-4">
                   <v-card-title class="text-h6">Bedingungen</v-card-title>
                   <v-card-text>
                     <iframe
@@ -258,7 +257,7 @@
                 </v-btn-toggle>
 
                 <!-- Signature card -->
-                <v-card v-if="disclaimerMode === 'sign'" variant="outlined" class="mb-4">
+                <v-card v-if="disclaimerMode === 'sign'" class="mb-4">
                   <v-card-title class="text-h6">Unterschrift</v-card-title>
                   <v-card-text>
                     <p class="mb-3">
@@ -286,7 +285,7 @@
                         @touchend="stopDrawing"
                       ></canvas>
                     </div>
-                    <v-btn variant="outlined" size="small" class="mt-2" @click="clearSignature">
+                    <v-btn size="small" class="mt-2" @click="clearSignature">
                       Unterschrift löschen
                     </v-btn>
                     <div v-if="signatureError" class="text-error text-caption mt-1">
@@ -296,7 +295,7 @@
                 </v-card>
 
                 <!-- Upload card -->
-                <v-card v-else variant="outlined" class="mb-4">
+                <v-card v-else class="mb-4">
                   <v-card-title class="text-h6">PDF hochladen</v-card-title>
                   <v-card-text>
                     <p class="mb-3">
@@ -324,7 +323,7 @@
 
             <!-- Step 4: Confirmation -->
             <v-stepper-window-item :value="5">
-              <v-card variant="outlined" class="mb-4">
+              <v-card class="mb-4">
                 <v-card-text class="text-center pa-8">
                   <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>
                   <h2 class="text-h4 mb-4">Reparatur erfolgreich erstellt!</h2>
@@ -337,7 +336,7 @@
                     Die Reparatur wurde erfolgreich im System erfasst. Sie können diese ID
                     verwenden, um den Status der Reparatur zu verfolgen.
                   </p>
-                  <v-card variant="outlined" class="mt-4 pa-4">
+                  <v-card class="mt-4 pa-4">
                     <div class="text-subtitle-1 font-weight-bold mb-2">Nächste Schritte:</div>
                     <v-list density="compact">
                       <v-list-item prepend-icon="mdi-printer">
@@ -361,7 +360,6 @@
                     :href="disclaimerUrl"
                     target="_blank"
                     color="primary"
-                    variant="outlined"
                     prepend-icon="mdi-file-pdf-box"
                     class="mt-6"
                     download
@@ -399,7 +397,7 @@
           >Speichern</v-btn
         >
         <v-btn v-if="step === 5" color="primary" @click="goToRepairsList">Zur Reparaturliste</v-btn>
-        <v-btn v-if="step === 5" color="secondary" variant="outlined" @click="createAnother"
+        <v-btn v-if="step === 5" color="secondary" @click="createAnother"
           >Weitere Reparatur erfassen</v-btn
         >
       </v-card-actions>

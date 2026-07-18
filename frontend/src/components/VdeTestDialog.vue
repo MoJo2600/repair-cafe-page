@@ -43,7 +43,7 @@
 
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-select v-model="form.prufer_user_id" :items="userItems" item-title="label"
+                            <v-autocomplete v-model="form.prufer_user_id" :items="userItems" item-title="label"
                                 item-value="id" label="Durchgeführt von" density="compact" clearable required
                                 :rules="[(v: number | null) => !!v || 'Prüfer ist erforderlich']" />
                         </v-col>

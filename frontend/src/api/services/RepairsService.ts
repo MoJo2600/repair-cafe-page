@@ -128,7 +128,6 @@ export class RepairsService {
       reparatur_besch?: string
       reparatur_dauer?: number
       status_detail?: string
-      reparatur_sonstiges?: string
       status?: string
       telefon?: string
       vorname?: string

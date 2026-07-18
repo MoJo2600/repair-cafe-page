@@ -156,14 +156,6 @@ class MySQLDB:
         else:
             df['qr_token'].fillna('', inplace=True)
             df['qr_token'] = df['qr_token'].astype(str)
-            
-        if 'reparatur_sonstiges' not in df.columns:
-            df['reparatur_sonstiges'] = ''
-            df['reparatur_sonstiges'] = df['reparatur_sonstiges'].astype(str)
-            df['reparatur_sonstiges'].fillna('', inplace=True)
-        else:
-            df['reparatur_sonstiges'] = df['reparatur_sonstiges'].astype(str)
-            df['reparatur_sonstiges'].fillna('', inplace=True)
         return df
 
     def connect(self):
