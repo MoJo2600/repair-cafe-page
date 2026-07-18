@@ -21,6 +21,41 @@ export default createVuetify({
     VFileUploadItem,
     VFileUploadList,
   },
+  defaults: {
+    VAutocomplete: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VCombobox: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VFileInput: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VFileUpload: {
+      rounded: 'lg',
+    },
+    VSelect: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VTextarea: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VTextField: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+  },
   directives,
   icons: {
     defaultSet: 'mdi',

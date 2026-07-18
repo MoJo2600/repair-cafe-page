@@ -18,8 +18,8 @@
         <!-- Filter row -->
         <v-row class="mb-2" align="center">
             <v-col cols="12" sm="4">
-                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" variant="outlined"
-                    density="compact" clearable hide-details />
+                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
+                    clearable hide-details />
             </v-col>
             <v-spacer />
             <v-col cols="auto" class="text-body-2 text-medium-emphasis">
@@ -72,20 +72,18 @@
                     <v-form ref="editForm" v-model="editFormValid">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.vorname" label="Vorname *" variant="outlined"
-                                    density="comfortable" required :rules="[v => !!v || 'Vorname ist erforderlich']" />
+                                <v-text-field v-model="editedCustomer.vorname" label="Vorname *"
+                                    required :rules="[v => !!v || 'Vorname ist erforderlich']" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.nachname" label="Nachname *" variant="outlined"
-                                    density="comfortable" required :rules="[v => !!v || 'Nachname ist erforderlich']" />
+                                <v-text-field v-model="editedCustomer.nachname" label="Nachname *"
+                                    required :rules="[v => !!v || 'Nachname ist erforderlich']" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.telefon" label="Telefon" variant="outlined"
-                                    density="comfortable" />
+                                <v-text-field v-model="editedCustomer.telefon" label="Telefon" />
                             </v-col>
                             <v-col cols="12">
                                 <v-text-field v-model="editedCustomer.email" label="E-Mail (optional)" type="email"
-                                    variant="outlined" density="comfortable"
                                     :rules="[v => !v || /.+@.+\..+/.test(v) || 'E-Mail muss gültig sein']" />
                             </v-col>
                         </v-row>
@@ -129,6 +127,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 
@@ -184,11 +183,6 @@ async function loadCustomers() {
     } finally {
         loading.value = false
     }
-}
-
-function formatDate(dt: string) {
-    if (!dt) return '-'
-    return new Date(dt).toLocaleDateString('de-DE')
 }
 
 function goToRepairs(customer: CustomerResponse) {

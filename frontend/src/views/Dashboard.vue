@@ -180,7 +180,7 @@
 
     <!-- Timeline Chart -->
     <v-row class="mt-4">
-      <v-card class="pa-2" variant="elevated" height="100%">
+      <!-- <v-card class="pa-2" variant="elevated" height="100%">
         <v-card-title class="d-flex align-center">
           <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
           <div>
@@ -203,7 +203,7 @@
             </v-list-item>
           </v-list>
         </v-card-text>
-      </v-card>
+      </v-card> -->
 
       <v-col cols="12" md="3">
         <v-card variant="elevated" class="pa-2">

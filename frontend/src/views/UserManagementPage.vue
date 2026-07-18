@@ -14,12 +14,12 @@
         <!-- Filter bar -->
         <v-row class="mb-2">
             <v-col cols="12" sm="4">
-                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" variant="outlined"
-                    density="compact" clearable hide-details />
+                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
+                    clearable hide-details />
             </v-col>
             <v-col cols="12" sm="4">
-                <v-select v-model="filterActive" :items="activeFilterOptions" label="Status" variant="outlined"
-                    density="compact" hide-details />
+                <v-select v-model="filterActive" :items="activeFilterOptions" label="Status" density="compact"
+                    hide-details />
             </v-col>
         </v-row>
 
@@ -71,26 +71,25 @@
                     <v-form ref="formRef" @submit.prevent="saveUser">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="form.username" label="Benutzername *" variant="outlined"
-                                    density="comfortable" :rules="[required]" autocomplete="off" />
+                                <v-text-field v-model="form.username" label="Benutzername *"
+                                    :rules="[required]" autocomplete="off" />
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.vorname" label="Vorname *" variant="outlined"
-                                    density="comfortable" :rules="[required]" />
+                                <v-text-field v-model="form.vorname" label="Vorname *"
+                                    :rules="[required]" />
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.nachname" label="Nachname *" variant="outlined"
-                                    density="comfortable" :rules="[required]" />
+                                <v-text-field v-model="form.nachname" label="Nachname *"
+                                    :rules="[required]" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="form.email" label="E-Mail *" variant="outlined"
-                                    density="comfortable" :rules="[required, emailRule]" type="email"
-                                    autocomplete="off" />
+                                <v-text-field v-model="form.email" label="E-Mail *"
+                                    :rules="[required, emailRule]" type="email" autocomplete="off" />
                             </v-col>
                             <v-col cols="12">
                                 <v-text-field v-model="form.password"
                                     :label="editingUser ? 'Neues Passwort (leer lassen = unverändert)' : 'Passwort *'"
-                                    variant="outlined" density="comfortable" :type="showPassword ? 'text' : 'password'"
+                                    :type="showPassword ? 'text' : 'password'"
                                     :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
                                     :rules="editingUser ? [minLen8IfSet] : [required, minLen8]"
                                     autocomplete="new-password" @click:append-inner="showPassword = !showPassword" />

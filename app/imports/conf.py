@@ -53,7 +53,6 @@ class DBConfig(object):
         "email": "john.doe@example.com",
         "geraet_art": "Laptop",
         "defekt_besch": "stumpfes Display",
-        "reparatur_sonstiges": "Bärchen",
         "reparatur_ok": 1,
         "din_pruef": 0,
         "reparatur_erg": "ok",

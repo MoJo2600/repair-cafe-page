@@ -134,8 +134,7 @@ export interface AppConfigResponse {
 Add the new field to `orgForm` and the template. The existing `loadOrgConfig` / `saveOrg` functions in `SettingsPage.vue` will pick it up automatically because they spread the full `AppConfigResponse`.
 
 ```vue
-<v-text-field v-model="orgForm.my_new_key" label="My New Setting"
-    variant="outlined" density="comfortable" hide-details="auto" />
+<v-text-field v-model="orgForm.my_new_key" label="My New Setting" density="comfortable" hide-details="auto" />
 ```
 
 ```typescript

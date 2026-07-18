@@ -15,34 +15,16 @@
         </p>
         <v-row class="ga-4">
           <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="orgForm.org_name"
-              label="Name der Organisation"
-              variant="outlined"
-              density="comfortable"
-              hide-details="auto"
-              placeholder="Repair Café"
-            />
+            <v-text-field v-model="orgForm.org_name" label="Name der Organisation"
+              hide-details="auto" placeholder="Repair Café" />
           </v-col>
           <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="orgForm.org_website"
-              label="Website der Organisation"
-              variant="outlined"
-              density="comfortable"
-              hide-details="auto"
-              placeholder="https://example.org"
-            />
+            <v-text-field v-model="orgForm.org_website" label="Website der Organisation"
+              hide-details="auto" placeholder="https://example.org" />
           </v-col>
           <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="orgForm.app_url"
-              label="App-URL (für QR-Codes)"
-              variant="outlined"
-              density="comfortable"
-              hide-details="auto"
-              placeholder="https://repaircafe.example.org"
-            />
+            <v-text-field v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
+              hide-details="auto" placeholder="https://repaircafe.example.org" />
           </v-col>
         </v-row>
         <v-alert v-if="orgError" type="error" variant="tonal" density="compact" class="mt-4">
@@ -72,46 +54,23 @@
         </p>
         <v-row align="center" class="ga-4">
           <v-col cols="12" sm="auto">
-            <v-btn
-              color="primary"
-              variant="outlined"
-              prepend-icon="mdi-file-pdf-box"
-              href="/api/config/disclaimer"
-              target="_blank"
-            >
+            <v-btn color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
+              target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
           </v-col>
           <v-col cols="12" sm>
-            <v-file-input
-              v-model="disclaimerFile"
-              label="Neue PDF-Vorlage hochladen"
-              accept=".pdf,application/pdf"
-              prepend-icon="mdi-upload"
-              :error-messages="disclaimerError"
-              hide-details="auto"
-              density="comfortable"
-              @update:model-value="disclaimerError = ''"
-            />
+            <v-file-input v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
+              prepend-icon="mdi-upload" :error-messages="disclaimerError" hide-details="auto"
+              @update:model-value="disclaimerError = ''" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn
-              color="primary"
-              :loading="disclaimerUploading"
-              :disabled="!disclaimerFile"
-              @click="uploadDisclaimer"
-            >
+            <v-btn color="primary" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
               Hochladen
             </v-btn>
           </v-col>
         </v-row>
-        <v-alert
-          v-if="disclaimerSuccess"
-          type="success"
-          variant="tonal"
-          density="compact"
-          class="mt-4"
-        >
+        <v-alert v-if="disclaimerSuccess" type="success" variant="tonal" density="compact" class="mt-4">
           Vorlage erfolgreich aktualisiert.
         </v-alert>
       </v-card-text>
@@ -127,34 +86,15 @@
         </p>
         <v-row align="center" class="ga-4">
           <v-col cols="auto">
-            <v-img
-              :src="logoPreview ?? '/api/config/logo'"
-              width="64"
-              height="64"
-              cover
-              rounded="lg"
-              class="border"
-            />
+            <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg" class="border" />
           </v-col>
           <v-col cols="12" sm>
-            <v-file-input
-              v-model="logoFile"
-              label="Neues Logo hochladen"
-              accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-              prepend-icon="mdi-image"
-              :error-messages="logoError"
-              hide-details="auto"
-              density="comfortable"
-              @update:model-value="onLogoFileChange"
-            />
+            <v-file-input v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+              prepend-icon="mdi-image" :error-messages="logoError" hide-details="auto"
+              @update:model-value="onLogoFileChange" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn
-              color="primary"
-              :loading="logoUploading"
-              :disabled="!logoFile"
-              @click="uploadLogo"
-            >
+            <v-btn color="primary" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
               Hochladen
             </v-btn>
           </v-col>
@@ -169,43 +109,20 @@
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Reparaturarten</span>
-        <v-btn
-          size="small"
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="openCreate('repair_type')"
-          >Hinzufügen</v-btn
-        >
+        <v-btn size="small" color="primary" prepend-icon="mdi-plus"
+          @click="openCreate('repair_type')">Hinzufügen</v-btn>
       </v-card-title>
-      <v-data-table
-        :headers="headersBasic"
-        :items="byCategory('repair_type')"
-        :loading="loading"
-        item-value="id"
-        hover
-        density="comfortable"
-      >
+      <v-data-table :headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
+        density="comfortable">
         <template #item.is_active="{ item }">
           <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
             {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
           </v-chip>
         </template>
         <template #item.actions="{ item }">
-          <v-btn
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            density="compact"
-            @click="openEdit(item)"
-          />
-          <v-btn
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            density="compact"
-            color="error"
-            @click="confirmDelete(item)"
-          />
+          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
+          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+            @click="confirmDelete(item)" />
         </template>
       </v-data-table>
     </v-card>
@@ -214,43 +131,20 @@
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Prüfgeräte</span>
-        <v-btn
-          size="small"
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="openCreate('test_device')"
-          >Hinzufügen</v-btn
-        >
+        <v-btn size="small" color="primary" prepend-icon="mdi-plus"
+          @click="openCreate('test_device')">Hinzufügen</v-btn>
       </v-card-title>
-      <v-data-table
-        :headers="headersDevice"
-        :items="byCategory('test_device')"
-        :loading="loading"
-        item-value="id"
-        hover
-        density="comfortable"
-      >
+      <v-data-table :headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
+        density="comfortable">
         <template #item.is_active="{ item }">
           <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
             {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
           </v-chip>
         </template>
         <template #item.actions="{ item }">
-          <v-btn
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            density="compact"
-            @click="openEdit(item)"
-          />
-          <v-btn
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            density="compact"
-            color="error"
-            @click="confirmDelete(item)"
-          />
+          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
+          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+            @click="confirmDelete(item)" />
         </template>
       </v-data-table>
     </v-card>
@@ -264,28 +158,10 @@
             {{ formError }}
           </v-alert>
           <v-form ref="formRef" @submit.prevent="saveItem">
-            <v-text-field
-              v-model="form.name"
-              label="Name *"
-              variant="outlined"
-              density="comfortable"
-              :rules="[required]"
-              autofocus
-              class="mb-2"
-            />
-            <v-text-field
-              v-if="formCategory === 'test_device'"
-              v-model="form.serial_number"
-              label="Seriennummer"
-              variant="outlined"
-              density="comfortable"
-            />
-            <v-checkbox
-              v-if="editingItem"
-              v-model="form.is_active"
-              label="Aktiv"
-              density="comfortable"
-            />
+            <v-text-field v-model="form.name" label="Name *"
+              :rules="[required]" autofocus class="mb-2" />
+            <v-text-field v-if="formCategory === 'test_device'" v-model="form.serial_number" label="Seriennummer" />
+            <v-checkbox v-if="editingItem" v-model="form.is_active" label="Aktiv" density="comfortable" />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -321,12 +197,7 @@
     </v-dialog>
 
     <!-- Snackbar -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      timeout="3000"
-      location="bottom right"
-    >
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="bottom right">
       {{ snackbar.text }}
     </v-snackbar>
   </v-container>
