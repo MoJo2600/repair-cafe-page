@@ -18,11 +18,23 @@
     <!-- Filter row -->
     <v-row class="mb-2">
       <v-col cols="12" sm="4">
-        <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact" clearable
-          hide-details />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          label="Suchen…"
+          density="compact"
+          clearable
+          hide-details
+        />
       </v-col>
       <v-col cols="12" sm="4">
-        <v-select v-model="filterStatus" :items="statusFilterOptions" label="Status" density="compact" hide-details />
+        <v-select
+          v-model="filterStatus"
+          :items="statusFilterOptions"
+          label="Status"
+          density="compact"
+          hide-details
+        />
       </v-col>
       <v-spacer />
       <v-col cols="auto" class="text-body-2 text-medium-emphasis align-self-center">
@@ -33,7 +45,12 @@
     <!-- Customer filter indicator -->
     <v-row v-if="customerFilter" class="mb-2">
       <v-col cols="auto">
-        <v-chip closable color="primary" prepend-icon="mdi-account" @click:close="clearCustomerFilter">
+        <v-chip
+          closable
+          color="primary"
+          prepend-icon="mdi-account"
+          @click:close="clearCustomerFilter"
+        >
           {{ customerFilter.name }}
         </v-chip>
       </v-col>
@@ -41,9 +58,16 @@
 
     <!-- Repairs table -->
     <v-card>
-      <v-data-table :headers="headers" :items="filteredRepairs" :search="search" :custom-filter="customerNameFilter"
-        :loading="loading" :items-per-page="10"
-        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)" hover>
+      <v-data-table
+        :headers="headers"
+        :items="filteredRepairs"
+        :search="search"
+        :custom-filter="customerNameFilter"
+        :loading="loading"
+        :items-per-page="10"
+        hover
+        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
+      >
         <template #item.status="{ item }">
           <v-chip :color="getRepairStatusColor(item.status)" size="small">
             {{ item.status }}
@@ -78,11 +102,30 @@
         </template>
 
         <template #item.actions="{ item }">
-          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click.stop="editRepair(item)" />
-          <v-btn v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
-            :loading="printingLabelId === item.id" @click.stop="printLabel(item.id)" />
-          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-            @click.stop="deleteRepair(item.id)" />
+          <v-btn
+            icon="mdi-pencil"
+            size="small"
+            variant="text"
+            density="compact"
+            @click.stop="editRepair(item)"
+          />
+          <v-btn
+            v-if="labelPrinterEnabled"
+            icon="mdi-printer"
+            size="small"
+            variant="text"
+            density="compact"
+            :loading="printingLabelId === item.id"
+            @click.stop="printLabel(item.id)"
+          />
+          <v-btn
+            icon="mdi-delete"
+            size="small"
+            variant="text"
+            density="compact"
+            color="error"
+            @click.stop="deleteRepair(item.id)"
+          />
         </template>
 
         <template #loading>
@@ -109,7 +152,9 @@
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" :disabled="deleting" @click="deleteDialog = false">Abbrechen</v-btn>
-          <v-btn color="error" variant="elevated" :loading="deleting" @click="confirmDelete">Löschen</v-btn>
+          <v-btn color="error" variant="elevated" :loading="deleting" @click="confirmDelete"
+            >Löschen</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -128,32 +173,58 @@
                 <v-text-field v-model="editedItem.datum" label="Datum" type="date" />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.status" :items="statusOptions" label="Status"
-                  required />
+                <v-select
+                  v-model="editedItem.status"
+                  :items="statusOptions"
+                  label="Status"
+                  required
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.status_detail" :items="currentStatusDetailOptions" label="Status Detail"
-                  clearable />
+                <v-select
+                  v-model="editedItem.status_detail"
+                  :items="currentStatusDetailOptions"
+                  label="Status Detail"
+                  clearable
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
-                  label="Reparaturart" />
+                <v-select
+                  v-model="editedItem.repair_type_id"
+                  :items="repairTypes"
+                  item-value="id"
+                  item-title="name"
+                  label="Reparaturart"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.vorname" label="Vorname"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.vorname"
+                  label="Vorname"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.nachname" label="Nachname"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.nachname"
+                  label="Nachname"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.telefon" label="Telefon"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.telefon"
+                  label="Telefon"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.email" label="E-Mail" type="email"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.email"
+                  label="E-Mail"
+                  type="email"
+                  readonly
+                />
               </v-col>
               <v-col cols="12">
                 <v-text-field v-model="editedItem.geraet_art" label="Geräteart" />
@@ -162,19 +233,39 @@
                 <v-textarea v-model="editedItem.defekt_besch" label="Defektbeschreibung" rows="3" />
               </v-col>
               <v-col cols="12">
-                <v-textarea v-model="editedItem.reparatur_besch" label="Reparaturbeschreibung" rows="3" />
+                <v-textarea
+                  v-model="editedItem.reparatur_besch"
+                  label="Reparaturbeschreibung"
+                  rows="3"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-autocomplete v-model="editedItem.user_id" :items="userStore.users" item-value="id"
-                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`" label="Reparateur"
-                  clearable :loading="userStore.loading" />
+                <v-autocomplete
+                  v-model="editedItem.user_id"
+                  :items="userStore.users"
+                  item-value="id"
+                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`"
+                  label="Reparateur"
+                  clearable
+                  :loading="userStore.loading"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field v-model.number="editedItem.reparatur_dauer" label="Dauer (Minuten)" type="number" />
+                <v-text-field
+                  v-model.number="editedItem.reparatur_dauer"
+                  label="Dauer (Minuten)"
+                  type="number"
+                />
               </v-col>
               <v-col cols="12">
-                <v-switch v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value="true"
-                  :false-value="false" hide-details />
+                <v-switch
+                  v-model="editedItem.din_pruef"
+                  label="DIN-Prüfung"
+                  color="primary"
+                  :true-value="true"
+                  :false-value="false"
+                  hide-details
+                />
               </v-col>
             </v-row>
           </v-form>
@@ -182,7 +273,9 @@
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" :disabled="saving" @click="closeEditDialog">Abbrechen</v-btn>
-          <v-btn color="primary" variant="elevated" :loading="saving" @click="saveRepair">Speichern</v-btn>
+          <v-btn color="primary" variant="elevated" :loading="saving" @click="saveRepair"
+            >Speichern</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -278,7 +371,7 @@ const currentStatusDetailOptions = computed(() => {
   if (!editedItem.value.status) return []
   return (
     REPAIR_STATUS_DETAIL_OPTIONS[
-    editedItem.value.status as keyof typeof REPAIR_STATUS_DETAIL_OPTIONS
+      editedItem.value.status as keyof typeof REPAIR_STATUS_DETAIL_OPTIONS
     ] || []
   )
 })
@@ -468,6 +561,6 @@ onMounted(() => {
     .then((f) => {
       labelPrinterEnabled.value = f.label_printer ?? false
     })
-    .catch(() => { })
+    .catch(() => {})
 })
 </script>
