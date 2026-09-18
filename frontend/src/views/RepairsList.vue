@@ -45,12 +45,7 @@
     <!-- Customer filter indicator -->
     <v-row v-if="customerFilter" class="mb-2">
       <v-col cols="auto">
-        <v-chip
-          closable
-          color="primary"
-          prepend-icon="mdi-account"
-          @click:close="clearCustomerFilter"
-        >
+        <v-chip closable color="primary" prepend-icon="mdi-account" @click:close="clearCustomerFilter">
           {{ customerFilter.name }}
         </v-chip>
       </v-col>
@@ -102,30 +97,11 @@
         </template>
 
         <template #item.actions="{ item }">
-          <v-btn
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            density="compact"
-            @click.stop="editRepair(item)"
-          />
-          <v-btn
-            v-if="labelPrinterEnabled"
-            icon="mdi-printer"
-            size="small"
-            variant="text"
-            density="compact"
-            :loading="printingLabelId === item.id"
-            @click.stop="printLabel(item.id)"
-          />
-          <v-btn
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            density="compact"
-            color="error"
-            @click.stop="deleteRepair(item.id)"
-          />
+          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click.stop="editRepair(item)" />
+          <v-btn v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
+            :loading="printingLabelId === item.id" @click.stop="printLabel(item.id)" />
+          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+            @click.stop="deleteRepair(item.id)" />
         </template>
 
         <template #loading>
@@ -152,9 +128,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" :disabled="deleting" @click="deleteDialog = false">Abbrechen</v-btn>
-          <v-btn color="error" variant="elevated" :loading="deleting" @click="confirmDelete"
-            >Löschen</v-btn
-          >
+          <v-btn color="error" variant="elevated" :loading="deleting" @click="confirmDelete">Löschen</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -258,14 +232,8 @@
                 />
               </v-col>
               <v-col cols="12">
-                <v-switch
-                  v-model="editedItem.din_pruef"
-                  label="DIN-Prüfung"
-                  color="primary"
-                  :true-value="true"
-                  :false-value="false"
-                  hide-details
-                />
+                <v-switch v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value="true"
+                  :false-value="false" hide-details />
               </v-col>
             </v-row>
           </v-form>
@@ -273,9 +241,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" :disabled="saving" @click="closeEditDialog">Abbrechen</v-btn>
-          <v-btn color="primary" variant="elevated" :loading="saving" @click="saveRepair"
-            >Speichern</v-btn
-          >
+          <v-btn color="primary" variant="elevated" :loading="saving" @click="saveRepair">Speichern</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -371,7 +337,7 @@ const currentStatusDetailOptions = computed(() => {
   if (!editedItem.value.status) return []
   return (
     REPAIR_STATUS_DETAIL_OPTIONS[
-      editedItem.value.status as keyof typeof REPAIR_STATUS_DETAIL_OPTIONS
+    editedItem.value.status as keyof typeof REPAIR_STATUS_DETAIL_OPTIONS
     ] || []
   )
 })
@@ -561,6 +527,6 @@ onMounted(() => {
     .then((f) => {
       labelPrinterEnabled.value = f.label_printer ?? false
     })
-    .catch(() => {})
+    .catch(() => { })
 })
 </script>
