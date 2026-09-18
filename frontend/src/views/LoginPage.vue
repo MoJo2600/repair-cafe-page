@@ -14,48 +14,19 @@
               </v-card-subtitle>
 
               <v-card-text class="px-6 pt-0">
-                <v-alert
-                  v-if="errorMessage"
-                  type="error"
-                  variant="tonal"
-                  class="mb-4"
-                  density="compact"
-                >
+                <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4" density="compact">
                   {{ errorMessage }}
                 </v-alert>
 
                 <v-form ref="formRef" @submit.prevent="submit">
-                  <v-text-field
-                    v-model="username"
-                    label="Benutzername"
-                    prepend-inner-icon="mdi-account"
-                    autocomplete="username"
-                    :rules="[required]"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-3"
-                    autofocus
-                  />
-                  <v-text-field
-                    v-model="password"
-                    label="Passwort"
-                    prepend-inner-icon="mdi-lock"
+                  <v-text-field v-model="username" label="Benutzername" prepend-inner-icon="mdi-account"
+                    autocomplete="username" :rules="[required]" class="mb-3" autofocus />
+                  <v-text-field v-model="password" label="Passwort" prepend-inner-icon="mdi-lock"
                     :type="showPassword ? 'text' : 'password'"
-                    :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                    autocomplete="current-password"
+                    :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'" autocomplete="current-password"
                     :rules="[required]"
-                    variant="outlined"
-                    density="comfortable"
-                    @click:append-inner="showPassword = !showPassword"
-                  />
-                  <v-btn
-                    type="submit"
-                    color="primary"
-                    block
-                    size="large"
-                    :loading="authStore.loading"
-                    class="mt-2"
-                  >
+                    @click:append-inner="showPassword = !showPassword" />
+                  <v-btn type="submit" color="primary" block size="large" :loading="authStore.loading" class="mt-2">
                     Anmelden
                   </v-btn>
                 </v-form>

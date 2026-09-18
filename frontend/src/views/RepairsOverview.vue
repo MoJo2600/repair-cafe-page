@@ -16,7 +16,6 @@
             <v-btn
               v-if="repairStore.nextRepair"
               color="white"
-              variant="outlined"
               prepend-icon="mdi-account-plus"
               @click="openStartRepairDialog(repairStore.nextRepair)"
             >
@@ -244,6 +243,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, inject, watch } from 'vue'
+import { formatDateTime } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { useRepairStore, normalizeRepairStatus } from '@/stores/repairStore'
 import { RepairLogsService } from '@/api/services/RepairLogsService'
@@ -266,16 +266,6 @@ const startRepairUserId = ref<number | null>(null)
 // Repair logs for in-progress repairs
 const repairLogsMap = ref<Record<number, RepairLog[]>>({})
 
-// Format date time for display
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${day}.${month}.${year} ${hours}:${minutes}`
-}
 
 // Fetch repair logs for in-progress repairs
 async function fetchRepairLogs() {

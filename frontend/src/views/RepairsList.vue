@@ -22,7 +22,6 @@
           v-model="search"
           prepend-inner-icon="mdi-magnify"
           label="Suchen…"
-          variant="outlined"
           density="compact"
           clearable
           hide-details
@@ -33,7 +32,6 @@
           v-model="filterStatus"
           :items="statusFilterOptions"
           label="Status"
-          variant="outlined"
           density="compact"
           hide-details
         />
@@ -67,8 +65,8 @@
         :custom-filter="customerNameFilter"
         :loading="loading"
         :items-per-page="10"
-        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
         hover
+        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
       >
         <template #item.status="{ item }">
           <v-chip :color="getRepairStatusColor(item.status)" size="small">
@@ -96,6 +94,11 @@
 
         <template #item.closed_at="{ item }">
           {{ item.closed_at ? formatDateTime(item.closed_at) : '-' }}
+        </template>
+
+        <template #item.din_pruef="{ item }">
+          <v-icon v-if="item.din_pruef" color="primary" size="small">mdi-check-circle</v-icon>
+          <span v-else class="text-medium-emphasis">—</span>
         </template>
 
         <template #item.actions="{ item }">
@@ -167,21 +170,13 @@
           <v-form ref="editForm">
             <v-row dense>
               <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="editedItem.datum"
-                  label="Datum"
-                  type="date"
-                  variant="outlined"
-                  density="comfortable"
-                />
+                <v-text-field v-model="editedItem.datum" label="Datum" type="date" />
               </v-col>
               <v-col cols="12" sm="6">
                 <v-select
                   v-model="editedItem.status"
                   :items="statusOptions"
                   label="Status"
-                  variant="outlined"
-                  density="comfortable"
                   required
                 />
               </v-col>
@@ -190,8 +185,6 @@
                   v-model="editedItem.status_detail"
                   :items="currentStatusDetailOptions"
                   label="Status Detail"
-                  variant="outlined"
-                  density="comfortable"
                   clearable
                 />
               </v-col>
@@ -202,16 +195,12 @@
                   item-value="id"
                   item-title="name"
                   label="Reparaturart"
-                  variant="outlined"
-                  density="comfortable"
                 />
               </v-col>
               <v-col cols="12" sm="6">
                 <v-text-field
                   :model-value="editedItem.customer?.vorname"
                   label="Vorname"
-                  variant="outlined"
-                  density="comfortable"
                   readonly
                 />
               </v-col>
@@ -219,8 +208,6 @@
                 <v-text-field
                   :model-value="editedItem.customer?.nachname"
                   label="Nachname"
-                  variant="outlined"
-                  density="comfortable"
                   readonly
                 />
               </v-col>
@@ -228,8 +215,6 @@
                 <v-text-field
                   :model-value="editedItem.customer?.telefon"
                   label="Telefon"
-                  variant="outlined"
-                  density="comfortable"
                   readonly
                 />
               </v-col>
@@ -238,54 +223,29 @@
                   :model-value="editedItem.customer?.email"
                   label="E-Mail"
                   type="email"
-                  variant="outlined"
-                  density="comfortable"
                   readonly
                 />
               </v-col>
               <v-col cols="12">
-                <v-text-field
-                  v-model="editedItem.reparatur_sonstiges"
-                  label="Sonstiges"
-                  variant="outlined"
-                  density="comfortable"
-                />
+                <v-text-field v-model="editedItem.geraet_art" label="Geräteart" />
               </v-col>
               <v-col cols="12">
-                <v-text-field
-                  v-model="editedItem.geraet_art"
-                  label="Geräteart"
-                  variant="outlined"
-                  density="comfortable"
-                />
-              </v-col>
-              <v-col cols="12">
-                <v-textarea
-                  v-model="editedItem.defekt_besch"
-                  label="Defektbeschreibung"
-                  rows="3"
-                  variant="outlined"
-                  density="comfortable"
-                />
+                <v-textarea v-model="editedItem.defekt_besch" label="Defektbeschreibung" rows="3" />
               </v-col>
               <v-col cols="12">
                 <v-textarea
                   v-model="editedItem.reparatur_besch"
                   label="Reparaturbeschreibung"
                   rows="3"
-                  variant="outlined"
-                  density="comfortable"
                 />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select
+                <v-autocomplete
                   v-model="editedItem.user_id"
                   :items="userStore.users"
                   item-value="id"
                   :item-title="(u: any) => `${u.vorname} ${u.nachname}`"
                   label="Reparateur"
-                  variant="outlined"
-                  density="comfortable"
                   clearable
                   :loading="userStore.loading"
                 />
@@ -295,8 +255,6 @@
                   v-model.number="editedItem.reparatur_dauer"
                   label="Dauer (Minuten)"
                   type="number"
-                  variant="outlined"
-                  density="comfortable"
                 />
               </v-col>
               <v-col cols="12">
@@ -335,6 +293,7 @@ import { RepairsService } from '@/api/services/RepairsService'
 import { ConfigService } from '@/api/services/ConfigService'
 import { useUserStore } from '@/stores/userStore'
 import type { Repair } from '@/api/types'
+import { formatDate, formatDateTime } from '@/utils/date'
 import {
   REPAIR_STATUSES,
   REPAIR_STATUS_DETAIL_OPTIONS,
@@ -344,7 +303,10 @@ import {
   type RepairStatus,
 } from '@/stores/repairStore'
 
-type RepairEditForm = Partial<Omit<Repair, 'status'>> & { status?: RepairStatus }
+type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
+  status?: RepairStatus
+  user_id?: number | null
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -393,7 +355,6 @@ const saving = ref(false)
 const editedItem = ref<RepairEditForm>({})
 const defaultItem: RepairEditForm = {
   datum: '',
-  reparatur_sonstiges: '',
   geraet_art: '',
   defekt_besch: '',
   status_detail: '',
@@ -416,7 +377,7 @@ const currentStatusDetailOptions = computed(() => {
 })
 
 // Dropdown options from backend
-const repairTypes = ref<Array<{ id: number; name: string }>>([])  
+const repairTypes = ref<Array<{ id: number; name: string }>>([])
 
 // Load dropdown options from backend
 async function loadDropdownOptions() {
@@ -452,6 +413,7 @@ const headers = [
   { title: 'Duration', key: 'reparatur_dauer', sortable: true },
   { title: 'Date', key: 'datum', sortable: true },
   { title: 'Closed', key: 'closed_at', sortable: true },
+  { title: 'DIN', key: 'din_pruef', sortable: true },
   { title: 'Actions', key: 'actions', sortable: false },
 ]
 
@@ -468,16 +430,6 @@ const loadRepairs = async (customerId?: number) => {
   } finally {
     loading.value = false
   }
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString()
-}
-
-const formatDateTime = (dateString?: string | null) => {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 const editRepair = (item: Repair) => {
@@ -607,7 +559,7 @@ onMounted(() => {
   loadRepairs(customerId)
   ConfigService.getFeatures()
     .then((f) => {
-      labelPrinterEnabled.value = f.label_printer
+      labelPrinterEnabled.value = f.label_printer ?? false
     })
     .catch(() => {})
 })

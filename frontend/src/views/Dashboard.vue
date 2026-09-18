@@ -23,7 +23,9 @@
                   <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
                   {{ repairStore.nextRepair.customer?.nachname }}
                 </div>
-                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}</div>
+                <div>
+                  <strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}
+                </div>
               </div>
             </div>
             <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
@@ -44,12 +46,18 @@
             <div v-if="repairStore.loading" class="text-center py-4">
               <v-progress-circular indeterminate color="warning"></v-progress-circular>
             </div>
-            <div v-else-if="repairStore.inProgressRepairs.length === 0" class="text-medium-emphasis">
+            <div
+              v-else-if="repairStore.inProgressRepairs.length === 0"
+              class="text-medium-emphasis"
+            >
               Keine aktiven Reparaturen
             </div>
             <v-list v-else density="compact">
-              <v-list-item v-for="r in repairStore.inProgressRepairs" :key="r.id"
-                :subtitle="r.user_id ? userStore.getUserDisplayName(r.user_id) : 'Nicht zugewiesen'">
+              <v-list-item
+                v-for="r in repairStore.inProgressRepairs"
+                :key="r.id"
+                :subtitle="r.user_id ? userStore.getUserDisplayName(r.user_id) : 'Nicht zugewiesen'"
+              >
                 <template #title>
                   <span class="font-weight-bold">#{{ r.id }}</span>
                   &nbsp;{{ r.geraet_art }}
@@ -98,7 +106,7 @@
             <div v-else class="text-h2 font-weight-bold">{{ successRate }} %</div>
           </v-card-text>
         </v-card>
-      </v-col>      
+      </v-col>
 
       <v-col cols="12" md="3">
         <v-card color="info" variant="elevated" class="pa-2">
@@ -151,7 +159,9 @@
             <div v-if="repairStore.loading" class="text-center">
               <v-progress-circular indeterminate color="white"></v-progress-circular>
             </div>
-            <div v-else class="text-h2 font-weight-bold">{{ repairStore.repairedRepairsCount }}</div>
+            <div v-else class="text-h2 font-weight-bold">
+              {{ repairStore.repairedRepairsCount }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -175,12 +185,11 @@
           </v-card-text>
         </v-card>
       </v-col>
-
     </v-row>
 
     <!-- Timeline Chart -->
     <v-row class="mt-4">
-      <v-card class="pa-2" variant="elevated" height="100%">
+      <!-- <v-card class="pa-2" variant="elevated" height="100%">
         <v-card-title class="d-flex align-center">
           <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
           <div>
@@ -203,7 +212,7 @@
             </v-list-item>
           </v-list>
         </v-card-text>
-      </v-card>
+      </v-card> -->
 
       <v-col cols="12" md="3">
         <v-card variant="elevated" class="pa-2">
@@ -222,9 +231,16 @@
               Keine Daten
             </div>
             <v-list v-else density="compact" class="pa-0">
-              <v-list-item v-for="(entry, i) in topRepairTypes" :key="entry.name" :title="entry.name" class="px-0">
+              <v-list-item
+                v-for="(entry, i) in topRepairTypes"
+                :key="entry.name"
+                :title="entry.name"
+                class="px-0"
+              >
                 <template #prepend>
-                  <span class="text-h6 font-weight-bold mr-3 text-medium-emphasis">{{ i + 1 }}</span>
+                  <span class="text-h6 font-weight-bold mr-3 text-medium-emphasis">{{
+                    i + 1
+                  }}</span>
                 </template>
                 <template #append>
                   <v-chip size="small" color="primary" variant="tonal">{{ entry.count }}</v-chip>
@@ -237,7 +253,6 @@
     </v-row>
 
     <v-row class="mt-4">
-
       <v-col cols="12" md="8">
         <v-card class="pa-2" variant="elevated">
           <v-card-title class="d-flex align-center">
@@ -251,7 +266,10 @@
             <div v-if="timelineLoading" class="text-center py-8">
               <v-progress-circular indeterminate color="primary"></v-progress-circular>
             </div>
-            <div v-else-if="timelineData.length === 0" class="text-center py-8 text-medium-emphasis">
+            <div
+              v-else-if="timelineData.length === 0"
+              class="text-center py-8 text-medium-emphasis"
+            >
               Keine Daten vorhanden
             </div>
             <Line v-else :data="chartData" :options="chartOptions" style="max-height: 320px" />

@@ -177,11 +177,6 @@ export interface RepairCreate {
    */
   repair_type_id: number
   /**
-   * Other repair category
-   * @default null
-   */
-  reparatur_sonstiges?: string
-  /**
    * Signature image as base64
    * @default null
    */
@@ -372,11 +367,6 @@ export interface RepairResponse {
    */
   reparatur_dauer?: number
   /**
-   * Other repair category
-   * @default null
-   */
-  reparatur_sonstiges?: string
-  /**
    * Repair status
    * @default "Offen"
    * @pattern ^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$
@@ -473,11 +463,6 @@ export interface RepairUpdate {
    * @default null
    */
   reparatur_dauer?: number
-  /**
-   * Other repair category
-   * @default null
-   */
-  reparatur_sonstiges?: string
   /**
    * Repair status
    * @default null

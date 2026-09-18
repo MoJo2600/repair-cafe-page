@@ -193,7 +193,7 @@
               <h3 class="text-h6 mb-3">Anhänge</h3>
 
               <!-- Disclaimer PDF – static read-only item -->
-              <v-card variant="outlined" class="mb-3">
+              <v-card class="mb-3">
                 <v-list lines="one" class="py-0">
                   <v-list-item
                     prepend-icon="mdi-file-pdf-box"
@@ -311,7 +311,7 @@
             <div>
               <!-- Status -->
               <div class="d-flex align-center ga-3 flex-wrap mb-6">
-                <v-btn-group v-if="availableNextStatuses.length > 0" variant="outlined" divided>
+                <v-btn-group v-if="availableNextStatuses.length > 0" divided>
                   <v-btn
                     :color="getRepairStatusColor(bestNextStatus ?? '')"
                     :prepend-icon="getRepairStatusIcon(bestNextStatus ?? '')"
@@ -356,19 +356,18 @@
                     Mir zuweisen
                   </v-btn>
                 </div>
-                <v-select
+                <v-autocomplete
                   v-model="selectedAssigneeId"
                   :items="assigneeItems"
                   item-value="value"
                   item-title="title"
                   :loading="assigneeLoading"
-                  variant="outlined"
                   density="compact"
                   clearable
                   hide-details
                   placeholder="Niemand zugewiesen"
                   @update:model-value="assignUser"
-                ></v-select>
+                ></v-autocomplete>
               </div>
 
               <!-- Actions -->
@@ -429,26 +428,16 @@
 
         <v-card-text>
           <v-form ref="logForm" v-model="logFormValid">
-            <v-select
+            <v-autocomplete
               v-model="newLog.user_id"
-              :items="userStore.users"
-              item-value="id"
+              :items="assigneeItems"
+              item-value="value"
+              item-title="title"
               label="Reparateur"
               required
               :loading="userStore.loading"
               :rules="[(v) => !!v || 'Reparateur ist erforderlich']"
-            >
-              <template #item="{ props, item }">
-                <v-list-item
-                  v-bind="props"
-                  :title="`${item.raw.vorname} ${item.raw.nachname}`"
-                  :subtitle="item.raw.email"
-                ></v-list-item>
-              </template>
-              <template #selection="{ item }">
-                {{ item.raw.vorname }} {{ item.raw.nachname }}
-              </template>
-            </v-select>
+            ></v-autocomplete>
 
             <v-textarea
               v-model="newLog.reparatur_besch"
@@ -483,7 +472,6 @@
             <div class="d-flex ga-2 flex-wrap mb-3">
               <v-btn
                 v-if="!logCameraActive"
-                variant="outlined"
                 size="small"
                 prepend-icon="mdi-camera"
                 :disabled="logCameraPermissionDenied"
@@ -502,7 +490,6 @@
               </v-btn>
               <v-btn
                 v-if="logCameraActive"
-                variant="outlined"
                 size="small"
                 prepend-icon="mdi-close"
                 @click="stopLogCamera"
@@ -612,26 +599,16 @@
         <v-card-title class="text-h5">Logeintrag bearbeiten</v-card-title>
         <v-card-text>
           <v-form ref="editLogForm" v-model="editLogFormValid">
-            <v-select
+            <v-autocomplete
               v-model="editLog.user_id"
-              :items="userStore.users"
-              item-value="id"
+              :items="assigneeItems"
+              item-value="value"
+              item-title="title"
               label="Reparateur"
               required
               :loading="userStore.loading"
               :rules="[(v) => !!v || 'Reparateur ist erforderlich']"
-            >
-              <template #item="{ props, item }">
-                <v-list-item
-                  v-bind="props"
-                  :title="`${item.raw.vorname} ${item.raw.nachname}`"
-                  :subtitle="item.raw.email"
-                ></v-list-item>
-              </template>
-              <template #selection="{ item }">
-                {{ item.raw.vorname }} {{ item.raw.nachname }}
-              </template>
-            </v-select>
+            ></v-autocomplete>
             <v-textarea
               v-model="editLog.reparatur_besch"
               label="Was wurde gemacht?"
@@ -729,6 +706,7 @@ import { useRepairThread } from '@/composables/useRepairThread'
 import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
+import { formatDate, formatDateTime } from '@/utils/date'
 
 interface NewLogFormData {
   user_id: number | null
@@ -845,15 +823,9 @@ const vdeDialog = ref(false)
 const vdeDialogMode = ref<'manual' | 'close'>('manual')
 const vdeInitialPruferUserId = ref<number | null>(null)
 
-// Delete log dialog state
 const deleteLogDialog = ref(false)
 const deleteLogLoading = ref(false)
 const deletingLogId = ref<number | null>(null)
-
-function openDeleteLogDialog(logId: number) {
-  deletingLogId.value = logId
-  deleteLogDialog.value = true
-}
 
 async function confirmDeleteLog() {
   if (!repairRecord.value || !deletingLogId.value) return
@@ -919,22 +891,9 @@ function showSnackbar(message: string, color: string = 'success') {
   }
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-  return `${day}.${month}.${year}`
-}
-
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${day}.${month}.${year} ${hours}:${minutes}`
+function getErrorMessage(err: unknown, fallback: string): string {
+  const maybeError = err as { body?: { error?: string }; message?: string }
+  return maybeError.body?.error || maybeError.message || fallback
 }
 
 function onRepairFieldsUpdated(fields: {
@@ -1003,9 +962,8 @@ async function printLabel() {
   try {
     const result = await RepairsService.printLabel(repairRecord.value.id)
     showSnackbar(result.message || 'Label gedruckt')
-  } catch (err: any) {
-    const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
-    showSnackbar(msg, 'error')
+  } catch (err: unknown) {
+    showSnackbar(getErrorMessage(err, 'Fehler beim Drucken'), 'error')
   } finally {
     printingLabel.value = false
   }
@@ -1016,8 +974,8 @@ async function assignUser(userId: number | null) {
   assigneeLoading.value = true
   try {
     await RepairsService.updateRepair(repairRecord.value.id, { user_id: userId })
-    repairRecord.value.user_id = userId
-    repairRecord.value.user = userId ? (userStore.users.find((u) => u.id === userId) ?? null) : null
+    repairRecord.value.user_id = userId ?? undefined
+    repairRecord.value.user = userId ? userStore.users.find((u) => u.id === userId) : undefined
 
     const assignee = userId ? userStore.users.find((u) => u.id === userId) : null
     const description = assignee
@@ -1095,7 +1053,7 @@ onMounted(async () => {
       userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
       ConfigService.getFeatures()
         .then((f) => {
-          labelPrinterEnabled.value = f.label_printer
+          labelPrinterEnabled.value = f.label_printer ?? false
         })
         .catch(() => {}),
     ])
@@ -1346,7 +1304,7 @@ function openEditLogDialog(logId: number) {
   editingLogId.value = logId
   editLog.value = {
     user_id: log.user_id ?? null,
-    reparatur_besch: log.reparatur_besch,
+    reparatur_besch: log.reparatur_besch ?? '',
     reparatur_dauer: log.reparatur_dauer ?? null,
   }
   editLogDialog.value = true
@@ -1366,7 +1324,7 @@ async function downloadVdePdf(testId: number) {
     a.download = `vde_pruefprotokoll_${repairRecord.value.id}_${testId}.pdf`
     a.click()
     URL.revokeObjectURL(url)
-  } catch (e) {
+  } catch {
     showSnackbar('Fehler beim Erzeugen des PDF')
   }
 }

@@ -2,7 +2,7 @@
   <v-card class="mb-4">
     <v-card-title class="text-h5">
       <div class="d-flex justify-space-between align-center">
-        <span>{{ repairData.geraet_art }}</span>
+        <span>{{ repairData.geraet_art }} ({{ repairData.id }})</span>
         <div class="d-flex align-center gap-2">
           <v-btn v-if="repairData.id" icon="mdi-pencil" size="small" variant="text" @click="openEditDialog"></v-btn>
           <v-chip :color="getStatusColor(repairData.status ?? '')" variant="tonal"
@@ -75,7 +75,7 @@
               <div class="flex-grow-1">
                 <strong>{{
                   test.gesamtergebnis === true ? '✓ Bestanden' : '⚠ Nicht bestanden'
-                  }}</strong>
+                }}</strong>
                 <span class="ml-2 text-caption">{{ formatDateTime(test.created_at) }}</span>
                 <div class="text-caption mt-1">
                   Prüfer: {{ test.prufer }} | Gerät: {{ test.pruefgeraet_name || '-' }}
@@ -99,14 +99,13 @@
         Reparatur bearbeiten
       </v-card-title>
       <v-card-text>
-        <v-text-field v-model="editForm.datum" label="Datum" type="date" density="comfortable"
-          variant="outlined"></v-text-field>
+        <v-text-field v-model="editForm.datum" label="Datum" type="date"></v-text-field>
         <v-select v-model="editForm.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
-          label="Kategorie" density="comfortable" variant="outlined" class="mt-3"></v-select>
-        <v-text-field v-model="editForm.geraet_art" label="Geräte Art / Bezeichnung" density="comfortable"
-          variant="outlined" class="mt-3"></v-text-field>
-        <v-textarea v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3" density="comfortable"
-          variant="outlined" class="mt-3"></v-textarea>
+          label="Kategorie" class="mt-3"></v-select>
+        <v-text-field v-model="editForm.geraet_art" label="Geräte Art / Bezeichnung"
+          class="mt-3"></v-text-field>
+        <v-textarea v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
+          class="mt-3"></v-textarea>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -125,6 +124,7 @@ import type { Repair, VdeTestResponse } from '@/api/types'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/stores/repairStore'
 import { RepairsService } from '@/api/services/RepairsService'
 import { ConfigService } from '@/api/services/ConfigService'
+import { formatDate, formatDateTime } from '@/utils/date'
 
 interface Props {
   repairData: Partial<Repair>
@@ -185,23 +185,5 @@ async function saveEdit() {
   } finally {
     saving.value = false
   }
-}
-
-function formatDate(dateString: string | undefined) {
-  if (!dateString) return ''
-  const [year, month, day] = dateString.slice(0, 10).split('-')
-  return `${day}.${month}.${year}`
-}
-
-function formatDateTime(dateTimeString: string | undefined) {
-  if (!dateTimeString) return ''
-  const date = new Date(dateTimeString)
-  return date.toLocaleString('de-DE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 </script>
