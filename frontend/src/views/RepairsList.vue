@@ -18,11 +18,23 @@
     <!-- Filter row -->
     <v-row class="mb-2">
       <v-col cols="12" sm="4">
-        <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact" clearable
-          hide-details />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          label="Suchen…"
+          density="compact"
+          clearable
+          hide-details
+        />
       </v-col>
       <v-col cols="12" sm="4">
-        <v-select v-model="filterStatus" :items="statusFilterOptions" label="Status" density="compact" hide-details />
+        <v-select
+          v-model="filterStatus"
+          :items="statusFilterOptions"
+          label="Status"
+          density="compact"
+          hide-details
+        />
       </v-col>
       <v-spacer />
       <v-col cols="auto" class="text-body-2 text-medium-emphasis align-self-center">
@@ -41,9 +53,16 @@
 
     <!-- Repairs table -->
     <v-card>
-      <v-data-table :headers="headers" :items="filteredRepairs" :search="search" :custom-filter="customerNameFilter"
-        :loading="loading" :items-per-page="10"
-        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)" hover>
+      <v-data-table
+        :headers="headers"
+        :items="filteredRepairs"
+        :search="search"
+        :custom-filter="customerNameFilter"
+        :loading="loading"
+        :items-per-page="10"
+        hover
+        @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
+      >
         <template #item.status="{ item }">
           <v-chip :color="getRepairStatusColor(item.status)" size="small">
             {{ item.status }}
@@ -128,32 +147,58 @@
                 <v-text-field v-model="editedItem.datum" label="Datum" type="date" />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.status" :items="statusOptions" label="Status"
-                  required />
+                <v-select
+                  v-model="editedItem.status"
+                  :items="statusOptions"
+                  label="Status"
+                  required
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.status_detail" :items="currentStatusDetailOptions" label="Status Detail"
-                  clearable />
+                <v-select
+                  v-model="editedItem.status_detail"
+                  :items="currentStatusDetailOptions"
+                  label="Status Detail"
+                  clearable
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select v-model="editedItem.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
-                  label="Reparaturart" />
+                <v-select
+                  v-model="editedItem.repair_type_id"
+                  :items="repairTypes"
+                  item-value="id"
+                  item-title="name"
+                  label="Reparaturart"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.vorname" label="Vorname"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.vorname"
+                  label="Vorname"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.nachname" label="Nachname"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.nachname"
+                  label="Nachname"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.telefon" label="Telefon"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.telefon"
+                  label="Telefon"
+                  readonly
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field :model-value="editedItem.customer?.email" label="E-Mail" type="email"
-                  readonly />
+                <v-text-field
+                  :model-value="editedItem.customer?.email"
+                  label="E-Mail"
+                  type="email"
+                  readonly
+                />
               </v-col>
               <v-col cols="12">
                 <v-text-field v-model="editedItem.geraet_art" label="Geräteart" />
@@ -162,15 +207,29 @@
                 <v-textarea v-model="editedItem.defekt_besch" label="Defektbeschreibung" rows="3" />
               </v-col>
               <v-col cols="12">
-                <v-textarea v-model="editedItem.reparatur_besch" label="Reparaturbeschreibung" rows="3" />
+                <v-textarea
+                  v-model="editedItem.reparatur_besch"
+                  label="Reparaturbeschreibung"
+                  rows="3"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-autocomplete v-model="editedItem.user_id" :items="userStore.users" item-value="id"
-                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`" label="Reparateur"
-                  clearable :loading="userStore.loading" />
+                <v-autocomplete
+                  v-model="editedItem.user_id"
+                  :items="userStore.users"
+                  item-value="id"
+                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`"
+                  label="Reparateur"
+                  clearable
+                  :loading="userStore.loading"
+                />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-text-field v-model.number="editedItem.reparatur_dauer" label="Dauer (Minuten)" type="number" />
+                <v-text-field
+                  v-model.number="editedItem.reparatur_dauer"
+                  label="Dauer (Minuten)"
+                  type="number"
+                />
               </v-col>
               <v-col cols="12">
                 <v-switch v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value="true"
