@@ -441,7 +441,7 @@ const repairTypes = ref<Array<{ id: number; name: string }>>([])
 onMounted(async () => {
   try {
     const features = await ConfigService.getFeatures()
-    labelPrinterEnabled.value = features.label_printer
+    labelPrinterEnabled.value = features.label_printer ?? false
   } catch {
     labelPrinterEnabled.value = false
   }

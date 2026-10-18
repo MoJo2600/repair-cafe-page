@@ -73,6 +73,9 @@ class BaseConfig:
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
+        # Full URL override, e.g. "sqlite://" for the test suite.
+        if os.environ.get("DATABASE_URL"):
+            return os.environ["DATABASE_URL"]
         return f"mysql+pymysql://{self.USERNAME}:{self.PASSWORD}@{self.HOST}:{self.DBPORT}/{self.DB}"
 
 

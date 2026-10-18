@@ -3,6 +3,8 @@ Flask extensions initialization.
 Extensions are initialized here and imported by other modules.
 """
 
+import os
+
 import flask_login
 from apscheduler.schedulers.background import BackgroundScheduler
 from flasgger import Swagger
@@ -18,12 +20,22 @@ scheduler = BackgroundScheduler()
 
 
 def init_cors(app):
-    """Initialize CORS with configuration."""
+    """Enable CORS only for origins listed in CORS_ORIGINS (comma-separated).
+
+    The frontend reaches the API through the Vite dev proxy or nginx (same
+    origin), so CORS is off by default. A wildcard combined with credentials
+    would let any website make authenticated requests on a user's behalf.
+    """
+    origins = [
+        o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
+    ]
+    if not origins:
+        return
     CORS(
         app,
         resources={
             r"/*": {
-                "origins": "*",
+                "origins": origins,
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,

@@ -98,3 +98,4 @@ frontend/dist/
 *.sln
 *.sw?
 
+.venv/

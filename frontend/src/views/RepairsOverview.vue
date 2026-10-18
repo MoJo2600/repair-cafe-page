@@ -119,10 +119,10 @@
                           {{ formatDateTime(repairLogsMap[repair.id][0].created_at) }}
                         </div>
                         <div v-if="repairLogsMap[repair.id][0].reparatur_besch">
-                          {{ repairLogsMap[repair.id][0].reparatur_besch.substring(0, 100)
+                          {{ repairLogsMap[repair.id]?.[0]?.reparatur_besch?.substring(0, 100)
                           }}
                           {{
-                            repairLogsMap[repair.id][0].reparatur_besch.length > 100 ? '...' : ''
+                            (repairLogsMap[repair.id]?.[0]?.reparatur_besch?.length ?? 0) > 100 ? '...' : ''
                           }}
                         </div>
                       </div>

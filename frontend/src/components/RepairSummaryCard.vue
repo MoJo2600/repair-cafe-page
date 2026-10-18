@@ -126,8 +126,15 @@ import { RepairsService } from '@/api/services/RepairsService'
 import { ConfigService } from '@/api/services/ConfigService'
 import { formatDate, formatDateTime } from '@/utils/date'
 
+// A repair being created: no ids yet, and unselected fields are null.
+type RepairDraft = Omit<Partial<Repair>, 'customer' | 'repair_type_id' | 'repair_type'> & {
+  customer?: Partial<NonNullable<Repair['customer']>> | null
+  repair_type_id?: number | null
+  repair_type?: Partial<NonNullable<Repair['repair_type']>> | null
+}
+
 interface Props {
-  repairData: Partial<Repair>
+  repairData: RepairDraft
   vdeTests?: VdeTestResponse[]
   loggedDuration?: number
 }

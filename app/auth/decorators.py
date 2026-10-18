@@ -9,6 +9,12 @@ import flask_login
 from flask import Response
 
 
+def public_endpoint(f):
+    """Exempt an /api endpoint from the global login requirement."""
+    f.is_public = True
+    return f
+
+
 def login_required_api(f):
     """Like @login_required but returns 401 JSON instead of redirecting."""
 

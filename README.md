@@ -11,11 +11,11 @@ Designed for self-hosted deployment on a Raspberry Pi or any Linux server.
 - **Work log** — multiple repairer sessions per repair, each with duration and notes
 - **VDE electrical safety testing** — record DIN VDE 0701/0702 test results
   and download a filled Prüfprotokoll PDF
-- **Status tracking** — Offen → In Arbeit → Repariert / Nicht reparierbar
+- **Status tracking** — Offen → In Bearbeitung → Repariert / Nicht Repariert
 - **User management** — admin and repairer accounts with session-based auth
 - **Settings** — configurable dropdown values (repair types, test devices)
   managed through the UI
-- **Data export** — XLSX export; optional e-mail delivery
+- **Data export** — XLSX download (`/api/export`, admin only); optional CSV e-mail delivery
 
 ## Quick start (Docker)
 

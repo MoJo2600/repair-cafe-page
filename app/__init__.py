@@ -142,6 +142,7 @@ def create_app(config_name=None):
 
     # Register blueprints
     register_blueprints(app)
+    register_auth_guard(app)
 
     # Register error handlers
     register_error_handlers(app)
@@ -215,6 +216,29 @@ def register_blueprints(app):
     app.register_blueprint(customers_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(settings_bp, url_prefix="/api")
+
+
+def register_auth_guard(app):
+    """Require an authenticated session for every /api endpoint not marked @public_endpoint."""
+    import json
+
+    import flask_login
+    from flask import Response, request
+
+    @app.before_request
+    def require_login_for_api():
+        if request.method == "OPTIONS" or not request.path.startswith("/api/"):
+            return None
+        view = app.view_functions.get(request.endpoint) if request.endpoint else None
+        if view is None or getattr(view, "is_public", False):
+            return None  # unknown routes fall through to 404
+        if not flask_login.current_user.is_authenticated:
+            return Response(
+                json.dumps({"reply": "error", "error": "Authentication required"}),
+                status=401,
+                mimetype="application/json",
+            )
+        return None
 
 
 def register_error_handlers(app):

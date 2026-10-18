@@ -2,6 +2,7 @@
 Health check API endpoint.
 """
 from flask import Blueprint, Response
+from app.auth.decorators import public_endpoint
 from app.extensions import db
 
 
@@ -9,6 +10,7 @@ health_bp = Blueprint('health', __name__)
 
 
 @health_bp.route('/healthz', methods=['GET'])
+@public_endpoint
 def healthcheck():
     """
     Health check endpoint

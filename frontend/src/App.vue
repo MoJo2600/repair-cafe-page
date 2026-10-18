@@ -216,15 +216,14 @@ function handleQRCodeDetected(data: string) {
   // Extract token from URL or use data directly
   let token = data
 
-  // Check if it's a URL containing /edit/<id>/<token>
-  const urlMatch = data.match(/\/edit\/(\d+)\/([a-f0-9]+)/)
+  // Labels encode <APP_URL>/edit/<qr_token> (see label_service.py)
+  const urlMatch = data.match(/\/edit\/([a-f0-9]{32})\b/)
   if (urlMatch) {
-    const id = urlMatch[1]
-    token = urlMatch[2]
+    token = urlMatch[1]!
 
     // Navigate to edit page with token
     closeQrScanner()
-    router.push(`/edit/${id}/${token}`)
+    router.push(`/edit/${token}`)
     showToast('QR Code scanned successfully!', { color: 'success' })
     return
   }

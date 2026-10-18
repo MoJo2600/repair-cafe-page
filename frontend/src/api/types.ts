@@ -15,7 +15,6 @@ export type {
   LoginRequest,
   PruefgeraetResponse,
   RepairCreate,
-  RepairUpdate,
   RepairResponse,
   RepairCreateResponse,
   RepairsTimelinePoint,
@@ -30,6 +29,12 @@ export type {
   VdeTestCreateResponse,
   UserResponse,
 } from "./generated/data-contracts";
+
+// The generator drops nullability; user_id: null is how a repairer is unassigned.
+import type { RepairUpdate as GeneratedRepairUpdate } from "./generated/data-contracts";
+export type RepairUpdate = Omit<GeneratedRepairUpdate, "user_id"> & {
+  user_id?: number | null;
+};
 
 // Convenience type aliases
 export type { RepairResponse as Repair } from "./generated/data-contracts";

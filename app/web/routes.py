@@ -3,12 +3,13 @@ Data API routes — statistics, exports, PDF generation, and e-mail delivery.
 Registered with the /api prefix in the application factory.
 """
 
+import io
 import json
-import os
 
 import pandas as pd
-from flask import Blueprint, Response, current_app, send_file, send_from_directory
+from flask import Blueprint, Response, current_app, send_file
 
+from app.auth.decorators import admin_required
 from app.models import Repair
 
 web_bp = Blueprint("web", __name__)
@@ -81,13 +82,19 @@ def stat_data(type):
 
 
 @web_bp.route("/export", methods=["GET"])
+@admin_required
 def export():
     """Export all repairs to an Excel file (XLSX download)."""
     repairs_data = [r.to_dict() for r in Repair.query.all()]
-    df = pd.DataFrame(repairs_data)
-    filename = "export.xlsx"
-    df.to_excel(filename, index=False)
-    return send_from_directory(os.getcwd(), filename, as_attachment=True)
+    buffer = io.BytesIO()
+    pd.DataFrame(repairs_data).to_excel(buffer, index=False)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="export.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @web_bp.route("/createDisclaimer/<id>", methods=["GET"])
@@ -127,6 +134,7 @@ def create_disclaimer(id):
 
 
 @web_bp.route("/mailexport", methods=["GET"])
+@admin_required
 def send_mail_export():
     """Trigger a CSV export e-mail to the configured recipient."""
     from app.services.email_service import EmailService

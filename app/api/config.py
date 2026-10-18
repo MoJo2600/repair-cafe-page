@@ -11,7 +11,7 @@ import fitz
 from flask import Blueprint, Response, current_app, request, send_file
 from PIL import Image, UnidentifiedImageError
 
-from app.auth.decorators import admin_required
+from app.auth.decorators import admin_required, public_endpoint
 from app.extensions import db
 from app.imports.pdfsigner import FIELD_DATE, FIELD_SIGNATURE
 from app.models import AppConfig, Setting
@@ -206,6 +206,7 @@ def upload_disclaimer_template():
 
 
 @config_bp.route("/config/logo", methods=["GET"])
+@public_endpoint
 def get_logo():
     """
     Serve the active logo image.

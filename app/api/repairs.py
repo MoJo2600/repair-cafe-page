@@ -667,36 +667,24 @@ def api_repairs_timeline():
         schema:
           $ref: '#/definitions/RepairsTimelineResponse'
     """
+    from collections import defaultdict
     from datetime import date, timedelta
-
-    from sqlalchemy import func, text
 
     cutoff = date.today() - timedelta(days=365)
 
     rows = (
-        db.session.query(
-            func.date_format(Repair.datum, "%Y-%u").label("week"),
-            Repair.status,
-            func.count(Repair.id).label("count"),
-        )
+        db.session.query(Repair.datum, Repair.status)
         .filter(Repair.datum >= cutoff)
-        .group_by(text("week"), Repair.status)
-        .order_by(text("week"))
         .all()
     )
 
-    # Collect all distinct weeks in order
-    weeks_ordered: list[str] = []
-    seen: set[str] = set()
+    # Group by ISO calendar week (= German "KW") in Python, which keeps the
+    # query database-agnostic and gets year boundaries right.
+    data_map: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for row in rows:
-        if row.week not in seen:
-            weeks_ordered.append(row.week)
-            seen.add(row.week)
-
-    # Build a lookup: week -> status -> count
-    data_map: dict[str, dict[str, int]] = {w: {} for w in weeks_ordered}
-    for row in rows:
-        data_map[row.week][row.status] = row.count
+        iso_year, iso_week, _ = row.datum.isocalendar()
+        data_map[f"{iso_year}-{iso_week:02d}"][row.status] += 1
+    weeks_ordered = sorted(data_map)
 
     def _week_label(yw: str) -> str:
         try:

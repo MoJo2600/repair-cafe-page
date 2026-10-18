@@ -8,7 +8,7 @@ import flask_login
 from flask import Blueprint, Response, current_app
 from werkzeug.security import check_password_hash
 
-from app.auth.decorators import login_required_api
+from app.auth.decorators import login_required_api, public_endpoint
 from app.extensions import db, login_manager
 from app.models import User as DBUser
 from app.schemas import LoginRequest
@@ -28,6 +28,7 @@ def user_loader(user_id: str):
 
 
 @auth_bp.route("/auth/login", methods=["POST"])
+@public_endpoint
 def api_login():
     """
     Authenticate with username and password.
