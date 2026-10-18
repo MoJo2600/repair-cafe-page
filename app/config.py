@@ -65,6 +65,23 @@ class BaseConfig:
         ),
     )
 
+    # Public base URL as seen by the browser, e.g. https://reparaturen.repaircafe-hemau.de
+    # (behind the TLS-terminating proxy the request scheme is not reliable).
+    PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
+
+    # OIDC login (Authentik). Enabled when issuer, client id/secret and PUBLIC_URL are set.
+    # While enabled, password login is restricted to local admin accounts (break-glass).
+    OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "")
+    OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
+    OIDC_CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "")
+    # Members of these groups are refused (comma-separated). Deny-list on purpose:
+    # groups added in easyVerein later get access by default.
+    OIDC_DENIED_GROUPS = [
+        g.strip()
+        for g in os.environ.get("OIDC_DENIED_GROUPS", "Kind").split(",")
+        if g.strip()
+    ]
+
     # Label printer (CUPS via mounted socket /run/cups/cups.sock)
     LABEL_PRINTER_ENABLED = os.environ.get(
         "LABEL_PRINTER_ENABLED", "false"

@@ -48,4 +48,21 @@ export class AuthService {
       },
     });
   }
+
+  /**
+   * Which login methods the server offers (public).
+   */
+  public static config(): CancelablePromise<{ oidc_enabled: boolean }> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/auth/config",
+    });
+  }
+
+  /**
+   * URL that starts the SSO login; a full-page navigation, not an XHR call.
+   */
+  public static oidcLoginUrl(next: string): string {
+    return `/api/auth/oidc/login?next=${encodeURIComponent(next)}`;
+  }
 }

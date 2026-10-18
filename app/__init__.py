@@ -140,6 +140,11 @@ def create_app(config_name=None):
     # Configure login manager
     login_manager.unauthorized_handler(unauthorized_callback)
 
+    # OIDC (Authentik) client
+    from app.auth.oidc import init_oidc
+
+    init_oidc(app)
+
     # Register blueprints
     register_blueprints(app)
     register_auth_guard(app)
@@ -202,10 +207,12 @@ def register_blueprints(app):
     from app.api.settings import settings_bp
     from app.api.users import users_bp
     from app.api.vde_tests import vde_tests_bp
+    from app.auth.oidc import oidc_bp
     from app.auth.routes import auth_bp
     from app.web.routes import web_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(oidc_bp, url_prefix="/api")
     app.register_blueprint(web_bp, url_prefix="/api")
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(repairs_bp, url_prefix="/api")

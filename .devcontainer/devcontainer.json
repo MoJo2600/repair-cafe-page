@@ -27,7 +27,8 @@
 		],
 		"vscode": {
 			"extensions": [
-				"Vue.volar"
+				"Vue.volar",
+				"mtxr.sqltools-driver-mysql"
 			]
 		}
 	},

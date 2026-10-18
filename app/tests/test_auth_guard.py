@@ -12,6 +12,9 @@ PUBLIC = {
     ("health.healthcheck", "GET"),
     ("auth.api_login", "POST"),
     ("config.get_logo", "GET"),
+    ("oidc.auth_config", "GET"),
+    ("oidc.oidc_login", "GET"),
+    ("oidc.oidc_callback", "GET"),
 }
 
 

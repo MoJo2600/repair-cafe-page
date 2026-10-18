@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar color="primary" prominent>
+    <v-app-bar v-if="authStore.isAuthenticated" color="primary" prominent>
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
       <v-toolbar-title>Repair Cafe</v-toolbar-title>
@@ -16,7 +16,7 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" :temporary="false" width="180" app>
+    <v-navigation-drawer v-if="authStore.isAuthenticated" v-model="drawer" :temporary="false" width="180" app>
       <v-list nav>
         <v-list-item :to="'/dashboard'" value="dashboard" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
@@ -55,18 +55,37 @@
           </div>
         </v-list-item>
       </v-list>
+      <template #append>
+        <v-divider />
+        <v-list v-if="authStore.currentUser" aria-label="Benutzerkonto">
+          <v-list-item prepend-icon="mdi-account-circle">
+            <v-list-item-title class="text-body-2 text-wrap">{{ currentUserName }}</v-list-item-title>
+            <v-list-item-subtitle class="text-wrap">{{ authStore.currentUser.username }}</v-list-item-subtitle>
+          </v-list-item>
+          <v-list-item prepend-icon="mdi-logout" title="Abmelden" :disabled="loggingOut" @click="logout">
+            <template v-if="loggingOut" #append>
+              <v-progress-circular indeterminate size="20" width="2" aria-label="Abmeldung laeuft" />
+            </template>
+          </v-list-item>
+        </v-list>
+        <v-list v-else>
+          <v-list-item :to="{ name: 'Login' }" prepend-icon="mdi-login" title="Anmelden" />
+        </v-list>
+      </template>
     </v-navigation-drawer>
 
     <v-main>
-      <v-container fluid>
+      <v-container fluid :class="{ 'pa-0': !authStore.isAuthenticated }">
         <router-view v-slot="{ Component }">
-          <component :is="Component" />
+          <component :is="Component" v-if="authStore.isAuthenticated || route.name === 'Login'" />
         </router-view>
       </v-container>
     </v-main>
 
     <!-- Global snackbar -->
-    <v-snackbar v-model="toastVisible" :timeout="toastTimeout" :color="toastColor" location="bottom right">
+    <v-snackbar
+v-if="authStore.isAuthenticated" v-model="toastVisible" :timeout="toastTimeout" :color="toastColor"
+      location="bottom right">
       {{ toastMessage }}
       <template #actions>
         <v-btn icon="mdi-close" variant="text" @click="toastVisible = false"></v-btn>
@@ -74,7 +93,7 @@
     </v-snackbar>
 
     <!-- QR Scanner Dialog -->
-    <v-dialog v-model="qrScannerDialog" max-width="600px">
+    <v-dialog v-if="authStore.isAuthenticated" v-model="qrScannerDialog" max-width="600px">
       <v-card>
         <v-card-title class="d-flex align-center">
           <v-icon icon="mdi-qrcode-scan" class="mr-2"></v-icon>
@@ -84,7 +103,8 @@
         </v-card-title>
         <v-card-text>
           <div v-if="!cameraPermissionDenied">
-            <video ref="videoElement" autoplay playsinline
+            <video
+ref="videoElement" autoplay playsinline
               style="width: 100%; max-height: 400px; background: #000;"></video>
             <canvas ref="canvasElement" style="display: none;"></canvas>
             <div v-if="scanning" class="text-center mt-3">
@@ -105,7 +125,7 @@
       </v-card>
     </v-dialog>
 
-    <v-footer app>
+    <v-footer v-if="authStore.isAuthenticated" app>
       <v-spacer></v-spacer>
       <div>&copy; {{ new Date().getFullYear() }} Repair Cafe</div>
     </v-footer>
@@ -113,14 +133,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, provide, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import jsQR from 'jsqr'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const drawer = ref(true)
+const loggingOut = ref(false)
+const currentUserName = computed(() => {
+  const user = authStore.currentUser
+  return [user?.vorname, user?.nachname].filter(Boolean).join(' ') || user?.username || ''
+})
+
+async function logout() {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  try {
+    await authStore.logout()
+    await router.replace({ name: 'Login' })
+  } catch {
+    showToast('Abmelden fehlgeschlagen. Bitte erneut versuchen.', { color: 'error' })
+  } finally {
+    loggingOut.value = false
+  }
+}
 
 // Set all favicon / touch-icon links to the dynamic logo endpoint
 onMounted(() => {

@@ -9,6 +9,7 @@ from flask import Blueprint, Response, current_app
 from werkzeug.security import check_password_hash
 
 from app.auth.decorators import login_required_api, public_endpoint
+from app.auth.oidc import oidc_enabled
 from app.extensions import db, login_manager
 from app.models import User as DBUser
 from app.schemas import LoginRequest
@@ -68,6 +69,16 @@ def api_login():
     if not user.is_active:
         return Response(
             json.dumps({"reply": "error", "error": "Account is disabled"}),
+            status=403,
+            mimetype="application/json",
+        )
+
+    # With SSO enabled, password login is only the break-glass path for local admins.
+    if oidc_enabled() and (user.oidc_sub or not user.is_admin):
+        return Response(
+            json.dumps(
+                {"reply": "error", "error": "Bitte mit dem Vereinskonto (SSO) anmelden"}
+            ),
             status=403,
             mimetype="application/json",
         )
