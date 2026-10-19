@@ -58,6 +58,8 @@ def _convert_field_schema(field_schema: dict) -> dict:
     # Handle type
     if "type" in field_schema:
         swagger_field["type"] = field_schema["type"]
+    if "enum" in field_schema:
+        swagger_field["enum"] = field_schema["enum"]
 
     # Handle format (e.g., date, email)
     if "format" in field_schema:

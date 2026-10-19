@@ -58,7 +58,7 @@
       <template #append>
         <v-divider />
         <v-list v-if="authStore.currentUser" aria-label="Benutzerkonto">
-          <v-list-item prepend-icon="mdi-account-circle">
+          <v-list-item :to="{ name: 'Profile' }" prepend-icon="mdi-account-circle" aria-label="Mein Profil">
             <v-list-item-title class="text-body-2 text-wrap">{{ currentUserName }}</v-list-item-title>
             <v-list-item-subtitle class="text-wrap">{{ authStore.currentUser.username }}</v-list-item-subtitle>
           </v-list-item>

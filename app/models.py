@@ -24,16 +24,27 @@ class User(flask_login.UserMixin, db.Model):
     password_hash: Mapped[str] = mapped_column(db.String(255), nullable=False)
     is_admin: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
-    # OIDC subject from Authentik; set for SSO accounts, NULL for local accounts
+    # OIDC subject; set for SSO accounts, NULL for local accounts
     oidc_sub: Mapped[Optional[str]] = mapped_column(db.String(255), unique=True)
-    # Keyed HMAC of the member's door code (quick-unlock PIN), refreshed on SSO login
-    door_code_hash: Mapped[Optional[str]] = mapped_column(db.String(64), index=True)
+    pin_code_hash: Mapped[Optional[str]] = mapped_column(
+        db.String(64), unique=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )
 
     def __repr__(self):
         return f"<User {self.id}: {self.vorname} {self.nachname}>"
+
+
+class PinState(db.Model):
+    """Persisted deployment PIN mode; the only row has id=1."""
+
+    __tablename__ = "pin_state"
+    __table_args__ = (db.CheckConstraint("id = 1", name="ck_pin_state_singleton"),)
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=False)
+    mode: Mapped[str] = mapped_column(db.String(10), nullable=False)
 
 
 class AppConfig(db.Model):

@@ -140,7 +140,7 @@ def create_app(config_name=None):
     # Configure login manager
     login_manager.unauthorized_handler(unauthorized_callback)
 
-    # OIDC (Authentik) client
+    # OIDC client
     from app.auth.oidc import init_oidc
 
     init_oidc(app)
@@ -161,6 +161,9 @@ def create_app(config_name=None):
     # Safe to run repeatedly — is a no-op when an admin already exists.
     with app.app_context():
         ensure_admin_user(app)
+        from app.services.pin_service import reconcile_pin_mode
+
+        reconcile_pin_mode()
 
     return app
 
@@ -254,10 +257,10 @@ def register_error_handlers(app):
     @app.after_request
     def add_header(response):
         """Add cache control headers."""
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        if "Cache-Control" not in response.headers:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
-        response.headers["Cache-Control"] = "public, max-age=0"
         return response
 
 

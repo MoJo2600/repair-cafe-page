@@ -19,7 +19,7 @@
 
               <template v-if="oidcEnabled">
                 <v-btn color="primary" block size="large" prepend-icon="mdi-account-key" :href="ssoUrl">
-                  Mit Vereinskonto anmelden
+                  Mit SSO anmelden
                 </v-btn>
 
                 <v-expansion-panels class="mt-6" variant="accordion">
@@ -84,12 +84,12 @@ const oidcEnabled = ref(false);
 
 // Error codes set by the backend's SSO callback (/login?error=...)
 const SSO_ERRORS: Record<string, string> = {
-  forbidden: "Dein Vereinskonto hat keinen Zugriff auf diese Anwendung.",
+  forbidden: "Dein SSO-Konto hat keinen Zugriff auf diese Anwendung.",
   disabled: "Dein Konto wurde deaktiviert. Bitte wende dich an einen Admin.",
   account_conflict:
     "Deine E-Mail-Adresse ist bereits einem lokalen Admin-Konto zugeordnet. Bitte wende dich an einen Admin.",
-  sso_failed: "Die Anmeldung mit dem Vereinskonto ist fehlgeschlagen. Bitte erneut versuchen.",
-  sso_unavailable: "Die Anmeldung mit dem Vereinskonto ist derzeit nicht verfügbar.",
+  sso_failed: "Die SSO-Anmeldung ist fehlgeschlagen. Bitte erneut versuchen.",
+  sso_unavailable: "Die SSO-Anmeldung ist derzeit nicht verfügbar.",
 };
 const errorCode = route.query.error as string | undefined;
 const errorMessage = ref(errorCode ? (SSO_ERRORS[errorCode] ?? SSO_ERRORS.sso_failed) : "");

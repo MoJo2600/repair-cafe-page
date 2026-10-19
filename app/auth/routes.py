@@ -3,18 +3,20 @@ Authentication routes blueprint — DB-backed Flask-Login with session cookies.
 """
 
 import json
+from urllib.parse import urlsplit
 
 import flask_login
-from flask import Blueprint, Response, current_app
+from flask import Blueprint, Response, current_app, request
 from werkzeug.security import check_password_hash
 
 from app.auth.decorators import login_required_api, public_endpoint
 from app.auth.oidc import oidc_enabled
 from app.extensions import db, login_manager
 from app.models import User as DBUser
-from app.schemas import LoginRequest
+from app.schemas import LoginRequest, PinGeneratedResponse, PinGenerateRequest, PinStatusResponse
 from app.schemas import UserResponse as UserResponseSchema
 from app.validation import parse_request
+from app.services.pin_service import PinError, generate_pin, require_pin_mode
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -77,7 +79,7 @@ def api_login():
     if oidc_enabled() and (user.oidc_sub or not user.is_admin):
         return Response(
             json.dumps(
-                {"reply": "error", "error": "Bitte mit dem Vereinskonto (SSO) anmelden"}
+                {"reply": "error", "error": "Bitte mit SSO anmelden"}
             ),
             status=403,
             mimetype="application/json",
@@ -151,3 +153,109 @@ def api_logout():
         status=200,
         mimetype="application/json",
     )
+
+
+@auth_bp.route("/auth/me/pin", methods=["GET"])
+@login_required_api
+def api_pin_status():
+    """
+    Return the current user's PIN status, never the PIN itself.
+    ---
+    tags:
+      - Auth
+    operationId: pinStatus
+    responses:
+      200:
+        description: PIN mode and availability
+        schema:
+          $ref: '#/definitions/PinStatusResponse'
+      401:
+        description: Not authenticated
+      403:
+        description: Account disabled
+      503:
+        description: Deployment PIN mode mismatch
+    """
+    if not flask_login.current_user.is_active:
+        return _pin_error("Account is disabled", 403)
+    try:
+        mode = require_pin_mode()
+        db.session.refresh(flask_login.current_user._get_current_object())
+        result = PinStatusResponse(
+            mode=mode,
+            has_pin=flask_login.current_user.pin_code_hash is not None,
+            can_generate=mode == "local",
+        )
+        db.session.rollback()
+        return _pin_response(result)
+    except PinError as error:
+        db.session.rollback()
+        return _pin_error(str(error), error.status)
+
+
+@auth_bp.route("/auth/me/pin", methods=["POST"])
+@login_required_api
+def api_generate_pin():
+    """
+    Generate or explicitly replace the current user's local PIN, revealing it once.
+    ---
+    tags:
+      - Auth
+    operationId: generatePin
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PinGenerateRequest'
+    responses:
+      200:
+        description: New PIN, shown only in this response
+        schema:
+          $ref: '#/definitions/PinGeneratedResponse'
+      400:
+        description: Invalid request
+      401:
+        description: Not authenticated
+      403:
+        description: Provider-managed PIN, disabled account or cross-site request
+      409:
+        description: PIN exists and replacement was not confirmed
+      503:
+        description: PIN allocation unavailable
+    """
+    origin = request.headers.get("Origin")
+    if origin:
+        source = urlsplit(origin)
+        allowed = [urlsplit(request.host_url)]
+        if current_app.config.get("PUBLIC_URL"):
+            allowed.append(urlsplit(current_app.config["PUBLIC_URL"]))
+        if not any((source.scheme, source.netloc) == (target.scheme, target.netloc)
+                   for target in allowed):
+            return _pin_error("Cross-site PIN changes are not allowed", 403)
+    if request.headers.get("Sec-Fetch-Site") == "cross-site":
+        return _pin_error("Cross-site PIN changes are not allowed", 403)
+    if not request.is_json:
+        return _pin_error("A JSON request body is required", 400)
+    if not isinstance(request.get_json(silent=True), dict):
+        return _pin_error("A JSON object is required", 400)
+    body, error = parse_request(PinGenerateRequest)
+    if error:
+        return error
+    assert body is not None
+    try:
+        code = generate_pin(flask_login.current_user.id, replace=body.replace)
+        return _pin_response(PinGeneratedResponse(pin_code=code))
+    except PinError as error:
+        db.session.rollback()
+        return _pin_error(str(error), error.status)
+
+
+def _pin_response(result):
+    return Response(result.model_dump_json(), mimetype="application/json",
+                    headers={"Cache-Control": "no-store"})
+
+
+def _pin_error(message, status):
+    return Response(json.dumps({"reply": "error", "error": message}), status=status,
+                    mimetype="application/json", headers={"Cache-Control": "no-store"})

@@ -72,6 +72,27 @@ data or rewriting Alembic's revision history.
 
 ## Database
 
+### PIN Tests
+
+Run backend tests from the repository root:
+
+```bash
+python -m pytest app/tests -v
+```
+
+PIN tests use SQLite by default. MariaDB migration and concurrency checks
+are opt-in and require a disposable database named `pin_tests`:
+
+```bash
+PIN_TEST_DATABASE_URL=mysql+pymysql://user:password@host/pin_tests \
+  python -m pytest app/tests/test_pins.py -v
+```
+
+These integration tests create and drop `users` and `pin_state` tables.
+Never point them at application data; the database name is checked as an
+additional safeguard. Do not run separate test processes against the same
+integration database concurrently.
+
 ### Connection
 
 The app uses SQLAlchemy + PyMySQL. Connection is configured via environment

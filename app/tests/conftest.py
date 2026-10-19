@@ -12,6 +12,15 @@ import pytest
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ.setdefault("FLASK_SECRET_KEY", "test-secret")
 os.environ["CREATE_TABLES_ON_STARTUP"] = "1"
+for key in ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "PUBLIC_URL"):
+    os.environ[key] = ""
+os.environ["PIN_MODE"] = "oidc"
+os.environ["PIN_MODE_RESET_ACK"] = ""
+os.environ["OIDC_SCOPES"] = "openid email profile"
+os.environ["OIDC_PIN_CLAIM"] = "pin_code"
+os.environ["OIDC_ADMIN_CLAIM"] = "repaircafe_admin"
+os.environ["OIDC_GROUPS_CLAIM"] = "groups"
+os.environ["OIDC_DENIED_GROUPS"] = ""
 
 from werkzeug.security import generate_password_hash  # noqa: E402
 

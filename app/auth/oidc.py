@@ -1,15 +1,5 @@
-"""
-OIDC login against Authentik (authorization code flow via Authlib).
+"""Provider-neutral OIDC authorization code flow via Authlib."""
 
-Claims used (scope "repaircafe" is a custom Authentik scope mapping, see the
-infrastructure repo's repaircafe-page-sso.yaml blueprint):
-  sub, email, name, preferred_username, groups  — standard
-  repaircafe_admin                              — admin role, managed in Authentik
-  door_code                                     — member's door code, used as quick-unlock PIN
-"""
-
-import hashlib
-import hmac
 import json
 import re
 from typing import Optional
@@ -21,10 +11,11 @@ from flask import Blueprint, Response, current_app, redirect, request, session
 from app.auth.decorators import public_endpoint
 from app.extensions import db
 from app.models import User
+from app.schemas import AuthConfigResponse
+from app.services.pin_service import PinError, pin_transaction, require_pin_mode, sync_provider_pin
 
 oidc_bp = Blueprint("oidc", __name__)
 
-_DOOR_CODE_RE = re.compile(r"^\d{6}$")
 _UNUSABLE_PASSWORD = "!"  # not a valid werkzeug hash, so check_password_hash always fails
 
 
@@ -37,28 +28,19 @@ def oidc_enabled(app=None) -> bool:
 
 
 def init_oidc(app):
-    """Register the Authentik client on the app (no-op when OIDC is not configured)."""
+    """Register the provider client when OIDC is configured."""
     if not oidc_enabled(app):
         app.logger.info("OIDC login disabled (OIDC_* / PUBLIC_URL not set)")
         return
     oauth = OAuth(app)
     app.extensions["oidc_client"] = oauth.register(
-        "authentik",
+        "oidc",
         client_id=app.config["OIDC_CLIENT_ID"],
         client_secret=app.config["OIDC_CLIENT_SECRET"],
         server_metadata_url=app.config["OIDC_ISSUER"].rstrip("/")
         + "/.well-known/openid-configuration",
-        client_kwargs={"scope": "openid email profile repaircafe"},
+        client_kwargs={"scope": app.config["OIDC_SCOPES"]},
     )
-
-
-def hash_door_code(code: str) -> str:
-    """Keyed hash of a door code. Without the server secret a database dump does
-    not reveal door codes (a plain hash of 6 digits is brute-forced instantly)."""
-    key = hashlib.sha256(
-        b"repaircafe-door-code:" + current_app.config["SECRET_KEY"].encode()
-    ).digest()
-    return hmac.new(key, code.encode(), hashlib.sha256).hexdigest()
 
 
 def _redirect_uri() -> str:
@@ -86,11 +68,10 @@ def auth_config():
       - Auth
     operationId: authConfig
     responses:
-      200:
-        description: Which login methods are available
+            200: {description: Login methods, schema: {$ref: '#/definitions/AuthConfigResponse'}}
     """
     return Response(
-        json.dumps({"oidc_enabled": oidc_enabled()}),
+        AuthConfigResponse(oidc_enabled=oidc_enabled()).model_dump_json(),
         status=200,
         mimetype="application/json",
     )
@@ -100,7 +81,7 @@ def auth_config():
 @public_endpoint
 def oidc_login():
     """
-    Start the SSO login (redirects to Authentik).
+    Start the SSO login (redirects to the identity provider).
     ---
     tags:
       - Auth
@@ -113,7 +94,7 @@ def oidc_login():
         description: Relative path to return to after login
     responses:
       302:
-        description: Redirect to Authentik
+        description: Redirect to the identity provider
       404:
         description: OIDC not configured
     """
@@ -124,8 +105,6 @@ def oidc_login():
             mimetype="application/json",
         )
     session["oidc_next"] = _safe_next(request.args.get("next"))
-    # prompt=login: the café PC is shared, so never silently reuse a previous
-    # helper's Authentik session — always ask for credentials (and 2FA).
     return current_app.extensions["oidc_client"].authorize_redirect(
         _redirect_uri(), prompt="login"
     )
@@ -135,7 +114,7 @@ def oidc_login():
 @public_endpoint
 def oidc_callback():
     """
-    SSO callback from Authentik; logs the user in and redirects into the app.
+    SSO callback; logs the user in and redirects into the app.
     ---
     tags:
       - Auth
@@ -157,12 +136,23 @@ def oidc_callback():
         current_app.logger.warning("OIDC callback without sub claim")
         return _login_error("sso_failed")
 
-    denied = set(current_app.config["OIDC_DENIED_GROUPS"]) & set(claims.get("groups") or [])
+    groups = claims.get(current_app.config["OIDC_GROUPS_CLAIM"]) or []
+    if isinstance(groups, str):
+        groups = [groups]
+    if not isinstance(groups, list):
+        groups = []
+    denied = set(current_app.config["OIDC_DENIED_GROUPS"]) & {
+        group for group in groups if isinstance(group, str)
+    }
     if denied:
         current_app.logger.info(f"OIDC login refused for groups {sorted(denied)}")
         return _login_error("forbidden")
 
-    user = _upsert_user(claims)
+    try:
+        user = _upsert_user(claims)
+    except PinError:
+        db.session.rollback()
+        return _login_error("sso_unavailable")
     if user is None:
         return _login_error("account_conflict")
     if not user.is_active:
@@ -173,8 +163,10 @@ def oidc_callback():
     return redirect(_safe_next(session.pop("oidc_next", None)))
 
 
+@pin_transaction
 def _upsert_user(claims: dict) -> Optional[User]:
     """Find or create the local user for these claims and sync profile data."""
+    require_pin_mode()
     sub = claims["sub"]
     email = (claims.get("email") or "").strip().lower() or None
 
@@ -208,30 +200,12 @@ def _upsert_user(claims: dict) -> Optional[User]:
     if email and email != (user.email or "").lower():
         if not User.query.filter(db.func.lower(User.email) == email, User.id != user.id).first():
             user.email = email
-    # Authentik is the source of truth for the role
-    user.is_admin = bool(claims.get("repaircafe_admin"))
-    _sync_door_code(user, claims.get("door_code"))
+    admin = claims.get(current_app.config["OIDC_ADMIN_CLAIM"])
+    user.is_admin = admin is True or (isinstance(admin, str) and admin.lower() == "true")
+    sync_provider_pin(user, claims.get(current_app.config["OIDC_PIN_CLAIM"]))
 
     db.session.commit()
     return user
-
-
-def _sync_door_code(user: User, raw) -> None:
-    code = str(raw).strip() if raw is not None else ""
-    if not _DOOR_CODE_RE.match(code):
-        if code:
-            current_app.logger.warning(
-                f"Ignoring door_code for '{user.username}': not 6 digits"
-            )
-        user.door_code_hash = None
-        return
-    digest = hash_door_code(code)
-    # Door codes are unique per member; if a code was reassigned, drop it from
-    # the previous holder so a PIN can never unlock two accounts.
-    User.query.filter(User.door_code_hash == digest, User.id != user.id).update(
-        {"door_code_hash": None}
-    )
-    user.door_code_hash = digest
 
 
 def _unique_username(base: str) -> str:

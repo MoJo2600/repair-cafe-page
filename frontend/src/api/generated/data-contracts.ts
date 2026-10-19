@@ -27,6 +27,11 @@ export interface APIResponse {
 
 export interface AppConfigResponse {
   /**
+   * Application base URL used for QR code links on labels
+   * @default ""
+   */
+  app_url?: string
+  /**
    * Organisation display name
    * @default "Repair Café"
    */
@@ -36,11 +41,10 @@ export interface AppConfigResponse {
    * @default ""
    */
   org_website?: string
-  /**
-   * Application base URL used for QR code links on labels
-   * @default ""
-   */
-  app_url?: string
+}
+
+export interface AuthConfigResponse {
+  oidc_enabled: boolean
 }
 
 export interface AuthResponse {
@@ -99,6 +103,22 @@ export interface LoginRequest {
    * @maxLength 100
    */
   username: string
+}
+
+export interface PinGenerateRequest {
+  /** @default false */
+  replace?: boolean
+}
+
+export interface PinGeneratedResponse {
+  /** @pattern ^[0-9]{6}$ */
+  pin_code: string
+}
+
+export interface PinStatusResponse {
+  can_generate: boolean
+  has_pin: boolean
+  mode: 'local' | 'oidc'
 }
 
 export interface PruefgeraetResponse {
@@ -172,10 +192,13 @@ export interface RepairCreate {
    * @maxLength 100
    */
   nachname: string
-  /**
-   * FK to repair type setting
-   */
+  /** FK to repair type setting */
   repair_type_id: number
+  /**
+   * Phone number
+   * @default null
+   */
+  telefon?: string
   /**
    * Signature image as base64
    * @default null
@@ -346,16 +369,12 @@ export interface RepairResponse {
    * @maxLength 32
    */
   qr_token: string
+  repair_type?: SettingResponse
   /**
    * FK to repair type setting
    * @default null
    */
   repair_type_id?: number
-  /**
-   * Linked repair type setting
-   * @default null
-   */
-  repair_type?: SettingResponse
   /**
    * Repair description
    * @default null
@@ -393,38 +412,6 @@ export interface RepairResponse {
    * @default null
    */
   user_id?: number
-}
-
-export interface RepairsTimelinePoint {
-  /**
-   * Repairs with status 'Repariert'
-   * @default 0
-   */
-  abgeschlossen?: number
-  /**
-   * Repairs with status 'In Bearbeitung'
-   * @default 0
-   */
-  in_bearbeitung?: number
-  /** Human-readable label, e.g. 'KW 20 2026' */
-  label: string
-  /**
-   * Repairs with status 'Nicht Repariert'
-   * @default 0
-   */
-  nicht_repariert?: number
-  /**
-   * Repairs with status 'Offen'
-   * @default 0
-   */
-  offen?: number
-  /** ISO year-week, e.g. '2026-20' */
-  week: string
-}
-
-export interface RepairsTimelineResponse {
-  /** @default [] */
-  data?: RepairsTimelinePoint[]
 }
 
 export interface RepairUpdate {
@@ -488,6 +475,38 @@ export interface RepairUpdate {
    * @default null
    */
   user_id?: number
+}
+
+export interface RepairsTimelinePoint {
+  /**
+   * Repairs with status 'Repariert'
+   * @default 0
+   */
+  abgeschlossen?: number
+  /**
+   * Repairs with status 'In Bearbeitung'
+   * @default 0
+   */
+  in_bearbeitung?: number
+  /** Human-readable label, e.g. 'KW 20 2026' */
+  label: string
+  /**
+   * Repairs with status 'Nicht Repariert'
+   * @default 0
+   */
+  nicht_repariert?: number
+  /**
+   * Repairs with status 'Offen'
+   * @default 0
+   */
+  offen?: number
+  /** ISO year-week, e.g. '2026-20' */
+  week: string
+}
+
+export interface RepairsTimelineResponse {
+  /** @default [] */
+  data?: RepairsTimelinePoint[]
 }
 
 export interface SettingResponse {
@@ -721,10 +740,16 @@ export interface VdeTestResponse {
   sichtpruefung_zugentlastung?: boolean
 }
 
+export interface OidcLoginParams {
+  /** Relative path to return to after login */
+  next?: string
+}
+
 export interface UpdateAppConfigPayload {
+  /** Application base URL for QR code links on printed labels */
+  app_url?: string
   org_name?: string
   org_website?: string
-  app_url?: string
 }
 
 export interface UploadDisclaimerTemplatePayload {
@@ -763,13 +788,42 @@ export interface GetRepairDisclaimerParams {
   id: number
 }
 
-export interface PrintRepairLabelPayload {
-  [key: string]: never
-}
+export type PrintRepairLabelPayload = object
 
 export interface PrintRepairLabelParams {
   /** ID of the repair to print a label for */
   id: number
+}
+
+export interface ListRepairAttachmentsParams {
+  attachment_type?: 'log_entry' | 'device_photo' | 'disclaimer' | 'misc'
+  log_id?: number
+  repairId: number
+}
+
+export interface UploadRepairAttachmentsPayload {
+  /** One or more files to upload */
+  files: File[]
+  /** Attachment type: log_entry, device_photo, disclaimer, misc (default: misc) */
+  attachment_type?: string
+  /** Link to a repair log entry */
+  log_id?: number
+  /** User ID of the uploader */
+  uploaded_by_id?: number
+}
+
+export interface UploadRepairAttachmentsParams {
+  repairId: number
+}
+
+export interface DeleteRepairAttachmentParams {
+  repairId: number
+  attachmentId: number
+}
+
+export interface GetRepairAttachmentParams {
+  repairId: number
+  attachmentId: number
 }
 
 export interface ListRepairLogsParams {

@@ -2,7 +2,15 @@
 import type { CancelablePromise } from "../core/CancelablePromise";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
-import type { AuthResponse, LoginRequest } from "../generated/data-contracts";
+import type {
+  APIResponse,
+  AuthConfigResponse,
+  AuthResponse,
+  LoginRequest,
+  PinGeneratedResponse,
+  PinGenerateRequest,
+  PinStatusResponse,
+} from "@/api/types";
 
 export type { AuthResponse, LoginRequest };
 
@@ -39,7 +47,7 @@ export class AuthService {
   /**
    * Invalidate the current session cookie.
    */
-  public static logout(): CancelablePromise<{ reply: string }> {
+  public static logout(): CancelablePromise<APIResponse> {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/auth/logout",
@@ -52,7 +60,7 @@ export class AuthService {
   /**
    * Which login methods the server offers (public).
    */
-  public static config(): CancelablePromise<{ oidc_enabled: boolean }> {
+  public static config(): CancelablePromise<AuthConfigResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/auth/config",
@@ -64,5 +72,21 @@ export class AuthService {
    */
   public static oidcLoginUrl(next: string): string {
     return `/api/auth/oidc/login?next=${encodeURIComponent(next)}`;
+  }
+
+  public static pinStatus(): CancelablePromise<PinStatusResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/auth/me/pin",
+    });
+  }
+
+  public static generatePin(body: PinGenerateRequest): CancelablePromise<PinGeneratedResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/auth/me/pin",
+      body,
+      mediaType: "application/json",
+    });
   }
 }

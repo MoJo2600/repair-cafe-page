@@ -13,25 +13,34 @@
 import {
   APIResponse,
   AppConfigResponse,
+  AuthConfigResponse,
   AuthResponse,
   CreateRepairLogParams,
   CreateVdeTestParams,
   CustomerWithRepairCountResponse,
+  DeleteRepairAttachmentParams,
   DeleteRepairLogParams,
   DeleteSettingParams,
   FeaturesResponse,
+  GetRepairAttachmentParams,
   GetRepairByQrTokenParams,
   GetRepairDisclaimerParams,
   GetRepairLogParams,
   GetStatDataParams,
   GetVdeTestParams,
+  ListRepairAttachmentsParams,
   ListRepairLogsParams,
   ListRepairsParams,
   ListVdeTestsParams,
   LoginRequest,
+  OidcLoginParams,
+  PinGenerateRequest,
+  PinGeneratedResponse,
+  PinStatusResponse,
   PrintRepairLabelParams,
   PrintRepairLabelPayload,
   PruefgeraetResponse,
+  RepairAttachmentListResponse,
   RepairCreate,
   RepairCreateResponse,
   RepairLogCreate,
@@ -45,6 +54,8 @@ import {
   UpdateSettingParams,
   UploadDisclaimerTemplatePayload,
   UploadLogoPayload,
+  UploadRepairAttachmentsParams,
+  UploadRepairAttachmentsPayload,
   VdeTestCreate,
   VdeTestCreateResponse,
   VdeTestListResponse,
@@ -54,6 +65,20 @@ import { ContentType, HttpClient, RequestParams } from "./http-client";
 export class Api<
   SecurityDataType = unknown,
 > extends HttpClient<SecurityDataType> {
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name AuthConfig
+   * @summary Login options for the login page.
+   * @request GET:/api/auth/config
+   */
+  authConfig = (params: RequestParams = {}) =>
+    this.request<AuthConfigResponse, any>({
+      path: `/api/auth/config`,
+      method: "GET",
+      ...params,
+    });
   /**
    * No description
    *
@@ -101,6 +126,65 @@ export class Api<
   /**
    * No description
    *
+   * @tags Auth
+   * @name PinStatus
+   * @summary Return the current user's PIN status, never the PIN itself.
+   * @request GET:/api/auth/me/pin
+   */
+  pinStatus = (params: RequestParams = {}) =>
+    this.request<PinStatusResponse, void>({
+      path: `/api/auth/me/pin`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name GeneratePin
+   * @summary Generate or explicitly replace the current user's local PIN, revealing it once.
+   * @request POST:/api/auth/me/pin
+   */
+  generatePin = (body: PinGenerateRequest, params: RequestParams = {}) =>
+    this.request<PinGeneratedResponse, void>({
+      path: `/api/auth/me/pin`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name OidcCallback
+   * @summary SSO callback; logs the user in and redirects into the app.
+   * @request GET:/api/auth/oidc/callback
+   */
+  oidcCallback = (params: RequestParams = {}) =>
+    this.request<any, void>({
+      path: `/api/auth/oidc/callback`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name OidcLogin
+   * @summary Start the SSO login (redirects to the identity provider).
+   * @request GET:/api/auth/oidc/login
+   */
+  oidcLogin = (query: OidcLoginParams, params: RequestParams = {}) =>
+    this.request<any, void>({
+      path: `/api/auth/oidc/login`,
+      method: "GET",
+      query: query,
+      ...params,
+    });
+  /**
+   * No description
+   *
    * @tags Configuration
    * @name GetAppConfig
    * @summary Get application-level configuration (organisation name and website).
@@ -122,7 +206,7 @@ export class Api<
    */
   updateAppConfig = (
     body: UpdateAppConfigPayload,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<AppConfigResponse, void>({
       path: `/api/config/app-config`,
@@ -155,7 +239,7 @@ export class Api<
    */
   uploadDisclaimerTemplate = (
     data: UploadDisclaimerTemplatePayload,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/config/disclaimer`,
@@ -312,7 +396,7 @@ export class Api<
    */
   getRepairByQrToken = (
     { token }: GetRepairByQrTokenParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/by-token/${token}`,
@@ -344,7 +428,7 @@ export class Api<
   updateRepair = (
     { id }: UpdateRepairParams,
     body: RepairUpdate,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<
       {
@@ -370,7 +454,7 @@ export class Api<
    */
   getRepairDisclaimer = (
     { id }: GetRepairDisclaimerParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${id}/disclaimer`,
@@ -388,13 +472,85 @@ export class Api<
   printRepairLabel = (
     { id }: PrintRepairLabelParams,
     body: PrintRepairLabelPayload,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${id}/print-label`,
       method: "POST",
       body: body,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name ListRepairAttachments
+   * @summary List all attachments for a repair
+   * @request GET:/api/repairs/{repair_id}/attachments
+   */
+  listRepairAttachments = (
+    { repairId, ...query }: ListRepairAttachmentsParams,
+    params: RequestParams = {}
+  ) =>
+    this.request<RepairAttachmentListResponse, void>({
+      path: `/api/repairs/${repairId}/attachments`,
+      method: "GET",
+      query: query,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name UploadRepairAttachments
+   * @summary Upload one or more files to a repair
+   * @request POST:/api/repairs/{repair_id}/attachments
+   */
+  uploadRepairAttachments = (
+    { repairId }: UploadRepairAttachmentsParams,
+    data: UploadRepairAttachmentsPayload,
+    params: RequestParams = {}
+  ) =>
+    this.request<RepairAttachmentListResponse, void>({
+      path: `/api/repairs/${repairId}/attachments`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name DeleteRepairAttachment
+   * @summary Delete a repair attachment (record + file on disk)
+   * @request DELETE:/api/repairs/{repair_id}/attachments/{attachment_id}
+   */
+  deleteRepairAttachment = (
+    { repairId, attachmentId }: DeleteRepairAttachmentParams,
+    params: RequestParams = {}
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
+      method: "DELETE",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name GetRepairAttachment
+   * @summary Download / serve a single attachment file
+   * @request GET:/api/repairs/{repair_id}/attachments/{attachment_id}
+   */
+  getRepairAttachment = (
+    { repairId, attachmentId }: GetRepairAttachmentParams,
+    params: RequestParams = {}
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
+      method: "GET",
       ...params,
     });
   /**
@@ -407,7 +563,7 @@ export class Api<
    */
   listRepairLogs = (
     { repairId }: ListRepairLogsParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<RepairLogListResponse, void>({
       path: `/api/repairs/${repairId}/logs`,
@@ -425,7 +581,7 @@ export class Api<
   createRepairLog = (
     { repairId }: CreateRepairLogParams,
     data: RepairLogCreate,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs`,
@@ -444,7 +600,7 @@ export class Api<
    */
   deleteRepairLog = (
     { repairId, logId }: DeleteRepairLogParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
@@ -461,7 +617,7 @@ export class Api<
    */
   getRepairLog = (
     { repairId, logId }: GetRepairLogParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
@@ -478,7 +634,7 @@ export class Api<
    */
   listVdeTests = (
     { repairId }: ListVdeTestsParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<VdeTestListResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
@@ -496,7 +652,7 @@ export class Api<
   createVdeTest = (
     { repairId }: CreateVdeTestParams,
     data: VdeTestCreate,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<VdeTestCreateResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
@@ -515,7 +671,7 @@ export class Api<
    */
   getVdeTest = (
     { repairId, testId }: GetVdeTestParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/vde-tests/${testId}`,
@@ -580,7 +736,7 @@ export class Api<
    */
   deleteSetting = (
     { settingId }: DeleteSettingParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<void, void>({
       path: `/api/settings/${settingId}`,
@@ -597,7 +753,7 @@ export class Api<
    */
   updateSetting = (
     { settingId }: UpdateSettingParams,
-    params: RequestParams = {},
+    params: RequestParams = {}
   ) =>
     this.request<SettingResponse, void>({
       path: `/api/settings/${settingId}`,

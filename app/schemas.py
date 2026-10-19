@@ -3,7 +3,7 @@ Pydantic schemas for request validation and response serialization
 """
 
 from datetime import date, datetime
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import (
     BaseModel,
@@ -127,6 +127,26 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AuthConfigResponse(BaseModel):
+    oidc_enabled: bool
+
+
+class PinStatusResponse(BaseModel):
+    mode: Literal["local", "oidc"]
+    has_pin: bool
+    can_generate: bool
+
+
+class PinGenerateRequest(BaseModel):
+    replace: bool = False
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class PinGeneratedResponse(BaseModel):
+    pin_code: str = Field(..., pattern=r"^[0-9]{6}$")
 
 
 class AuthResponse(BaseModel):
