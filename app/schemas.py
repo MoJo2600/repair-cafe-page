@@ -153,8 +153,10 @@ class AuthResponse(BaseModel):
     """Response for login and /me endpoints — wraps UserResponse."""
 
     reply: str = Field(..., description="Response status (done, error)")
-    data: Optional[UserResponse] = Field(None, description="Authenticated user data")
-    error: Optional[str] = Field(None, description="Error message if reply is error")
+    data: Optional[UserResponse] = Field(
+        None, description="Authenticated user data")
+    error: Optional[str] = Field(
+        None, description="Error message if reply is error")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -191,7 +193,8 @@ class CustomerResponse(BaseModel):
 class CustomerWithRepairCountResponse(CustomerResponse):
     """Customer response extended with repair count — used by the customer list endpoint."""
 
-    repair_count: int = Field(0, description="Number of repairs for this customer")
+    repair_count: int = Field(
+        0, description="Number of repairs for this customer")
 
 
 class RepairBase(BaseModel):
@@ -204,7 +207,8 @@ class RepairBase(BaseModel):
     defekt_besch: Optional[str] = Field(
         None, max_length=400, description="Defect description"
     )
-    unterschrift: Optional[str] = Field(None, description="Signature image as base64")
+    unterschrift: Optional[str] = Field(
+        None, description="Signature image as base64")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -218,11 +222,16 @@ class RepairCreate(RepairBase):
     """Schema for creating a new repair"""
 
     repair_type_id: int = Field(..., description="FK to repair type setting")
-    vorname: str = Field(..., min_length=1, max_length=100, description="First name")
-    nachname: str = Field(..., min_length=1, max_length=100, description="Last name")
-    telefon: Optional[str] = Field(None, max_length=40, description="Phone number")
-    email: Optional[EmailStr] = Field(None, max_length=100, description="Email address")
-    customer_id: Optional[int] = Field(None, description="Link to existing customer")
+    vorname: str = Field(..., min_length=1, max_length=100,
+                         description="First name")
+    nachname: str = Field(..., min_length=1,
+                          max_length=100, description="Last name")
+    telefon: Optional[str] = Field(
+        None, max_length=40, description="Phone number")
+    email: Optional[EmailStr] = Field(
+        None, max_length=100, description="Email address")
+    customer_id: Optional[int] = Field(
+        None, description="Link to existing customer")
 
     @field_validator("email", mode="before")
     @classmethod
@@ -233,7 +242,8 @@ class RepairCreate(RepairBase):
 class RepairUpdate(BaseModel):
     """Schema for updating an existing repair"""
 
-    repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
+    repair_type_id: Optional[int] = Field(
+        None, description="FK to repair type setting")
     datum: Optional[date] = Field(None, description="Date of repair intake")
     geraet_art: Optional[str] = Field(
         None, min_length=1, max_length=100, description="Device type"
@@ -244,7 +254,8 @@ class RepairUpdate(BaseModel):
     unterschrift_haft: Optional[bool] = Field(
         None, description="Liability disclaimer signed"
     )
-    unterschrift: Optional[str] = Field(None, description="Signature image as base64")
+    unterschrift: Optional[str] = Field(
+        None, description="Signature image as base64")
     din_pruef: Optional[bool] = Field(None, description="DIN test performed")
     status_detail: Optional[str] = Field(
         None, max_length=100, description="Additional detail for repair status"
@@ -252,7 +263,8 @@ class RepairUpdate(BaseModel):
     reparatur_besch: Optional[str] = Field(
         None, max_length=400, description="Repair description"
     )
-    user_id: Optional[int] = Field(None, description="Assigned reparateur (user FK)")
+    user_id: Optional[int] = Field(
+        None, description="Assigned reparateur (user FK)")
     reparatur_dauer: Optional[int] = Field(
         None, ge=0, description="Repair duration in minutes"
     )
@@ -292,7 +304,8 @@ class RepairUpdate(BaseModel):
         """Ensure status_detail follows the status-specific rules."""
         if self.status is None:
             if self.status_detail is not None:
-                raise ValueError("status must be provided when status_detail is set")
+                raise ValueError(
+                    "status must be provided when status_detail is set")
             return self
 
         allowed_details = VALID_STATUS_DETAILS[self.status]
@@ -314,8 +327,10 @@ class RepairResponse(RepairBase):
     """Schema for repair response"""
 
     id: int = Field(..., description="Repair ID")
-    repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
-    repair_type: Optional["SettingResponse"] = Field(None, description="Linked repair type setting")
+    repair_type_id: Optional[int] = Field(
+        None, description="FK to repair type setting")
+    repair_type: Optional["SettingResponse"] = Field(
+        None, description="Linked repair type setting")
     customer_id: Optional[int] = Field(None, description="Linked customer ID")
     customer: Optional["CustomerResponse"] = Field(
         None, description="Linked customer object"
@@ -330,11 +345,13 @@ class RepairResponse(RepairBase):
     reparatur_besch: Optional[str] = Field(
         None, max_length=400, description="Repair description"
     )
-    user_id: Optional[int] = Field(None, description="Assigned reparateur (user FK)")
+    user_id: Optional[int] = Field(
+        None, description="Assigned reparateur (user FK)")
     user: Optional["UserResponse"] = Field(
         None, description="Assigned reparateur user object"
     )
-    created_by_id: Optional[int] = Field(None, description="User who created the repair record")
+    created_by_id: Optional[int] = Field(
+        None, description="User who created the repair record")
     created_by: Optional["UserResponse"] = Field(
         None, description="User who created the repair record"
     )
@@ -346,7 +363,8 @@ class RepairResponse(RepairBase):
         pattern="^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
         description="Repair status",
     )
-    closed_at: Optional[datetime] = Field(None, description="Timestamp when the repair was closed")
+    closed_at: Optional[datetime] = Field(
+        None, description="Timestamp when the repair was closed")
     qr_token: str = Field(..., max_length=32, description="QR code token")
 
     model_config = ConfigDict(from_attributes=True)
@@ -371,7 +389,8 @@ class APIResponse(BaseModel):
 
     reply: str = Field(..., description="Response status (done, error)")
     message: Optional[str] = Field(None, description="Response message")
-    error: Optional[str] = Field(None, description="Error message if reply is error")
+    error: Optional[str] = Field(
+        None, description="Error message if reply is error")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -380,7 +399,8 @@ class RepairCreateResponse(APIResponse):
     """Response for repair creation"""
 
     id: Optional[int] = Field(None, description="Created repair ID")
-    data: Optional[RepairResponse] = Field(None, description="Created repair data")
+    data: Optional[RepairResponse] = Field(
+        None, description="Created repair data")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -388,9 +408,12 @@ class RepairCreateResponse(APIResponse):
 class RepairLogBase(BaseModel):
     """Base repair log schema with common fields"""
 
-    user_id: Optional[int] = Field(None, description="Assigned reparateur (user FK)")
-    reparatur_dauer: int = Field(0, ge=0, description="Repair duration in minutes")
-    reparatur_besch: str = Field("", max_length=400, description="Repair description")
+    user_id: Optional[int] = Field(
+        None, description="Assigned reparateur (user FK)")
+    reparatur_dauer: int = Field(
+        0, ge=0, description="Repair duration in minutes")
+    reparatur_besch: str = Field(
+        "", max_length=400, description="Repair description")
     log_type: str = Field(
         "work",
         max_length=20,
@@ -415,7 +438,8 @@ class RepairLogCreate(RepairLogBase):
 class RepairLogUpdate(BaseModel):
     """Schema for updating an existing repair log entry"""
 
-    user_id: Optional[int] = Field(None, description="Assigned reparateur (user FK)")
+    user_id: Optional[int] = Field(
+        None, description="Assigned reparateur (user FK)")
     reparatur_dauer: Optional[int] = Field(None, ge=0)
     reparatur_besch: Optional[str] = Field(None, min_length=1, max_length=400)
 
@@ -427,7 +451,8 @@ class RepairLogResponse(RepairLogBase):
 
     id: int = Field(..., description="Repair log ID")
     repair_id: int = Field(..., description="Repair ID this log belongs to")
-    created_at: UtcDatetime = Field(..., description="When this log entry was created")
+    created_at: UtcDatetime = Field(...,
+                                    description="When this log entry was created")
     user: Optional["UserResponse"] = Field(
         None, description="Assigned reparateur user object"
     )
@@ -517,7 +542,8 @@ class VdeTestResponse(VdeTestBase):
 
     id: int = Field(..., description="VDE test ID")
     repair_id: int = Field(..., description="Repair ID this test belongs to")
-    created_at: UtcDatetime = Field(..., description="When this test was performed")
+    created_at: UtcDatetime = Field(...,
+                                    description="When this test was performed")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -535,7 +561,8 @@ class VdeTestCreateResponse(APIResponse):
     """Response for VDE test creation"""
 
     id: Optional[int] = Field(None, description="Created VDE test ID")
-    data: Optional[VdeTestResponse] = Field(None, description="Created VDE test data")
+    data: Optional[VdeTestResponse] = Field(
+        None, description="Created VDE test data")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -550,7 +577,8 @@ class PruefgeraetResponse(BaseModel):
 
     id: int = Field(..., description="Setting ID")
     name: str = Field(..., description="Device name")
-    serial_number: Optional[str] = Field(None, description="Device serial number")
+    serial_number: Optional[str] = Field(
+        None, description="Device serial number")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -600,9 +628,12 @@ class SettingResponse(BaseModel):
 class AppConfigResponse(BaseModel):
     """Schema for application-level configuration (org name, website)."""
 
-    org_name: str = Field("Repair Café", description="Organisation display name")
-    org_website: str = Field("", description="Organisation website URL printed on the label")
-    app_url: str = Field("", description="Application base URL used for QR code links on labels")
+    org_name: str = Field(
+        "Repair Café", description="Organisation display name")
+    org_website: str = Field(
+        "", description="Organisation website URL printed on the label")
+    app_url: str = Field(
+        "", description="Application base URL used for QR code links on labels")
 
 
 class AppConfigUpdate(BaseModel):
@@ -630,11 +661,15 @@ class RepairsTimelinePoint(BaseModel):
     """One weekly bucket in the repairs timeline."""
 
     week: str = Field(..., description="ISO year-week, e.g. '2026-20'")
-    label: str = Field(..., description="Human-readable label, e.g. 'KW 20 2026'")
+    label: str = Field(...,
+                       description="Human-readable label, e.g. 'KW 20 2026'")
     offen: int = Field(0, description="Repairs with status 'Offen'")
-    in_bearbeitung: int = Field(0, description="Repairs with status 'In Bearbeitung'")
-    abgeschlossen: int = Field(0, description="Repairs with status 'Repariert'")
-    nicht_repariert: int = Field(0, description="Repairs with status 'Nicht Repariert'")
+    in_bearbeitung: int = Field(
+        0, description="Repairs with status 'In Bearbeitung'")
+    abgeschlossen: int = Field(
+        0, description="Repairs with status 'Repariert'")
+    nicht_repariert: int = Field(
+        0, description="Repairs with status 'Nicht Repariert'")
 
 
 class RepairsTimelineResponse(BaseModel):
@@ -656,7 +691,8 @@ class RepairAttachmentResponse(BaseModel):
     id: int
     repair_id: int
     log_id: Optional[int] = None
-    attachment_type: str = Field(..., description="One of: log_entry, device_photo, disclaimer, misc")
+    attachment_type: str = Field(
+        ..., description="One of: log_entry, device_photo, disclaimer, misc")
     original_filename: str
     stored_filename: str
     content_type: str

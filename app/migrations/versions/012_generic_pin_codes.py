@@ -32,7 +32,8 @@ def upgrade():
         batch.alter_column("door_code_hash", new_column_name="pin_code_hash",
                            existing_type=sa.String(64))
     with op.batch_alter_table("users") as batch:
-        batch.create_unique_constraint("uq_users_pin_code_hash", ["pin_code_hash"])
+        batch.create_unique_constraint(
+            "uq_users_pin_code_hash", ["pin_code_hash"])
     state = op.create_table(
         "pin_state",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=False),

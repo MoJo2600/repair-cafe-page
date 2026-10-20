@@ -14,7 +14,8 @@ class LokiConfig:
     LOKI_TOKEN = os.environ.get("GCLOUD_PROM_API_KEY", False)
     LOKI_URL = os.environ.get("GCLOUD_HOSTED_LOGS_URL", False)
     # if any of LOKI_ID, LOKI_TOKEN, LOKI_URL is False, LOKI_ENABLED will be False
-    LOKI_ENABLED = all([LOKI_ID != False, LOKI_TOKEN != False, LOKI_URL != False])
+    LOKI_ENABLED = all(
+        [LOKI_ID != False, LOKI_TOKEN != False, LOKI_URL != False])
     HTTPS_URL = f"https://{LOKI_ID}:{LOKI_TOKEN}@{LOKI_URL}"
     SOURCE = "repair"
     HOST = "repairCafe"
@@ -130,5 +131,6 @@ def get_config():
     elif flask_env in ("prod", "production"):
         return ProductionConfig()
     else:
-        print(f"Unknown FLASK_ENV value: {flask_env}. Using production config.")
+        print(
+            f"Unknown FLASK_ENV value: {flask_env}. Using production config.")
         return ProductionConfig()

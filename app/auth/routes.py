@@ -146,7 +146,8 @@ def api_logout():
       401:
         description: Not authenticated
     """
-    current_app.logger.info(f"User '{flask_login.current_user.username}' logged out")
+    current_app.logger.info(
+        f"User '{flask_login.current_user.username}' logged out")
     flask_login.logout_user()
     return Response(
         json.dumps({"reply": "done"}),

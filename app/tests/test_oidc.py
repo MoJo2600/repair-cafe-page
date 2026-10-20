@@ -107,7 +107,8 @@ def test_admin_role_follows_claim(client, sso):
     _sso_login(client, sso, repaircafe_admin=True)
     assert User.query.filter_by(oidc_sub="hashed-sub-1").one().is_admin is True
     _sso_login(client, sso, repaircafe_admin=False)
-    assert User.query.filter_by(oidc_sub="hashed-sub-1").one().is_admin is False
+    assert User.query.filter_by(
+        oidc_sub="hashed-sub-1").one().is_admin is False
 
 
 def test_denied_group_is_refused(client, sso):
@@ -119,15 +120,18 @@ def test_denied_group_is_refused(client, sso):
 
 def test_failed_token_exchange(client, sso):
     sso.fail = True
-    assert client.get("/api/auth/oidc/callback").headers["Location"] == "/login?error=sso_failed"
+    assert client.get(
+        "/api/auth/oidc/callback").headers["Location"] == "/login?error=sso_failed"
 
 
 def test_existing_local_repairer_is_adopted_by_email(client, sso):
-    db.session.add(User(username="anna_alt", email="anna@example.org", password_hash="x"))
+    db.session.add(
+        User(username="anna_alt", email="anna@example.org", password_hash="x"))
     db.session.commit()
     _sso_login(client, sso)
     anna = User.query.filter_by(email="anna@example.org").all()
-    assert [(u.username, u.oidc_sub) for u in anna] == [("anna_alt", "hashed-sub-1")]
+    assert [(u.username, u.oidc_sub)
+            for u in anna] == [("anna_alt", "hashed-sub-1")]
 
 
 def test_local_admin_is_never_adopted(client, sso):
@@ -143,32 +147,38 @@ def test_local_admin_is_never_adopted(client, sso):
 
 def test_invalid_provider_pin_is_not_stored(client, sso):
     _sso_login(client, sso, door_code="12ab")
-    assert User.query.filter_by(oidc_sub="hashed-sub-1").one().pin_code_hash is None
+    assert User.query.filter_by(
+        oidc_sub="hashed-sub-1").one().pin_code_hash is None
 
 
 def test_reassigned_provider_pin_moves_to_new_holder(client, sso):
     _sso_login(client, sso)
     client.post("/api/auth/logout")
-    _sso_login(client, sso, sub="hashed-sub-2", email="bernd@example.org", preferred_username="bernd")
+    _sso_login(client, sso, sub="hashed-sub-2",
+               email="bernd@example.org", preferred_username="bernd")
 
-    holders = User.query.filter(User.pin_code_hash == hash_pin_code("123456")).all()
+    holders = User.query.filter(
+        User.pin_code_hash == hash_pin_code("123456")).all()
     assert [u.oidc_sub for u in holders] == ["hashed-sub-2"]
 
 
 def test_custom_claim_names(client, sso, app):
     app.config.update(OIDC_PIN_CLAIM="member_pin", OIDC_ADMIN_CLAIM="staff",
                       OIDC_GROUPS_CLAIM="roles")
-    assert _sso_login(client, sso, member_pin="001234", staff=True).status_code == 302
+    assert _sso_login(client, sso, member_pin="001234",
+                      staff=True).status_code == 302
     user = User.query.filter_by(oidc_sub="hashed-sub-1").one()
     assert user.pin_code_hash == hash_pin_code("001234")
     assert user.is_admin is True
-    assert _sso_login(client, sso, roles=["Kind"]).headers["Location"] == "/login?error=forbidden"
+    assert _sso_login(client, sso, roles=[
+                      "Kind"]).headers["Location"] == "/login?error=forbidden"
 
 
 @pytest.mark.parametrize("value", [False, "false", "0", None, [], {"role": "admin"}])
 def test_admin_claim_is_not_truthiness_based(client, sso, value):
     _sso_login(client, sso, repaircafe_admin=value)
-    assert User.query.filter_by(oidc_sub="hashed-sub-1").one().is_admin is False
+    assert User.query.filter_by(
+        oidc_sub="hashed-sub-1").one().is_admin is False
 
 
 def test_missing_optional_claims_allow_standard_provider(client, sso):
@@ -183,7 +193,8 @@ def test_missing_optional_claims_allow_standard_provider(client, sso):
 def test_invalid_or_removed_provider_pin_clears_old_value(client, sso, value):
     _sso_login(client, sso)
     _sso_login(client, sso, door_code=value)
-    assert User.query.filter_by(oidc_sub="hashed-sub-1").one().pin_code_hash is None
+    assert User.query.filter_by(
+        oidc_sub="hashed-sub-1").one().pin_code_hash is None
 
 
 def test_local_mode_does_not_sync_provider_pin(client, sso, app):
@@ -227,7 +238,8 @@ def test_password_login_only_for_local_admins_when_sso_enabled(client, sso):
     _local_user("helfer", is_admin=False)
     _local_user("sso_admin", is_admin=True, oidc_sub="sub-x")
 
-    login = lambda u: client.post("/api/auth/login", json={"username": u, "password": "secret"})
+    def login(u): return client.post("/api/auth/login",
+                                     json={"username": u, "password": "secret"})
     assert login("chef").status_code == 200
     client.post("/api/auth/logout")
     assert login("helfer").status_code == 403
@@ -236,5 +248,6 @@ def test_password_login_only_for_local_admins_when_sso_enabled(client, sso):
 
 def test_password_login_unrestricted_without_sso(client):
     _local_user("helfer", is_admin=False)
-    resp = client.post("/api/auth/login", json={"username": "helfer", "password": "secret"})
+    resp = client.post("/api/auth/login",
+                       json={"username": "helfer", "password": "secret"})
     assert resp.status_code == 200

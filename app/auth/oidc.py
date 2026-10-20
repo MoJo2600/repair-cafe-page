@@ -16,7 +16,8 @@ from app.services.pin_service import PinError, pin_transaction, require_pin_mode
 
 oidc_bp = Blueprint("oidc", __name__)
 
-_UNUSABLE_PASSWORD = "!"  # not a valid werkzeug hash, so check_password_hash always fails
+# not a valid werkzeug hash, so check_password_hash always fails
+_UNUSABLE_PASSWORD = "!"
 
 
 def oidc_enabled(app=None) -> bool:
@@ -145,7 +146,8 @@ def oidc_callback():
         group for group in groups if isinstance(group, str)
     }
     if denied:
-        current_app.logger.info(f"OIDC login refused for groups {sorted(denied)}")
+        current_app.logger.info(
+            f"OIDC login refused for groups {sorted(denied)}")
         return _login_error("forbidden")
 
     try:
@@ -187,7 +189,8 @@ def _upsert_user(claims: dict) -> Optional[User]:
             )
             return None
         user = User(
-            username=_unique_username(claims.get("preferred_username") or email or sub),
+            username=_unique_username(claims.get(
+                "preferred_username") or email or sub),
             email=email or f"{sub[:40]}@sso.invalid",
             password_hash=_UNUSABLE_PASSWORD,
         )
@@ -201,7 +204,8 @@ def _upsert_user(claims: dict) -> Optional[User]:
         if not User.query.filter(db.func.lower(User.email) == email, User.id != user.id).first():
             user.email = email
     admin = claims.get(current_app.config["OIDC_ADMIN_CLAIM"])
-    user.is_admin = admin is True or (isinstance(admin, str) and admin.lower() == "true")
+    user.is_admin = admin is True or (
+        isinstance(admin, str) and admin.lower() == "true")
     sync_provider_pin(user, claims.get(current_app.config["OIDC_PIN_CLAIM"]))
 
     db.session.commit()

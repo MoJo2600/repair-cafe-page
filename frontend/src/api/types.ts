@@ -32,17 +32,17 @@ export type {
   VdeTestListResponse,
   VdeTestCreateResponse,
   UserResponse,
-} from "./generated/data-contracts";
+} from './generated/data-contracts'
 
 // The generator drops nullability; user_id: null is how a repairer is unassigned.
-import type { RepairUpdate as GeneratedRepairUpdate } from "./generated/data-contracts";
-export type RepairUpdate = Omit<GeneratedRepairUpdate, "user_id"> & {
-  user_id?: number | null;
-};
+import type { RepairUpdate as GeneratedRepairUpdate } from './generated/data-contracts'
+export type RepairUpdate = Omit<GeneratedRepairUpdate, 'user_id'> & {
+  user_id?: number | null
+}
 
 // Convenience type aliases
-export type { RepairResponse as Repair } from "./generated/data-contracts";
-export type { RepairLogResponse as RepairLog } from "./generated/data-contracts";
+export type { RepairResponse as Repair } from './generated/data-contracts'
+export type { RepairLogResponse as RepairLog } from './generated/data-contracts'
 
 // Re-export API client classes
-export { Api } from "./generated/Api";
+export { Api } from './generated/Api'

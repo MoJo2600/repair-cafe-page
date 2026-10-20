@@ -36,7 +36,8 @@ def pin_transaction(operation):
                 if code not in (1020, 1205, 1213, 3572):
                     raise
                 if attempt == 2:
-                    raise PinError("PIN storage is busy; please try again", 503) from error
+                    raise PinError(
+                        "PIN storage is busy; please try again", 503) from error
     return run
 
 
@@ -63,7 +64,8 @@ def reconcile_pin_mode() -> None:
     if db.session.get(PinState, 1) is None:
         try:
             with db.session.begin_nested():
-                legacy = User.query.filter(User.pin_code_hash.is_not(None)).first()
+                legacy = User.query.filter(
+                    User.pin_code_hash.is_not(None)).first()
                 db.session.add(PinState(id=1, mode="oidc" if legacy else mode))
                 db.session.flush()
             db.session.commit()
@@ -94,14 +96,16 @@ def require_pin_mode(expected: str | None = None) -> str:
     state = _lock_state()
     mode = current_app.config["PIN_MODE"]
     if state.mode != mode:
-        raise PinError("PIN deployment mode changed; restart this service", 503)
+        raise PinError(
+            "PIN deployment mode changed; restart this service", 503)
     if expected is not None and mode != expected:
         raise PinError("PINs are managed by your identity provider", 403)
     return mode
 
 
 def _lock_state() -> PinState:
-    db.session.execute(update(PinState).where(PinState.id == 1).values(mode=PinState.mode))
+    db.session.execute(update(PinState).where(
+        PinState.id == 1).values(mode=PinState.mode))
     return PinState.query.filter_by(id=1).populate_existing().with_for_update().one()
 
 
@@ -124,7 +128,8 @@ def sync_provider_pin(user: User, raw) -> None:
 @pin_transaction
 def generate_pin(user_id: int, replace: bool = False) -> str:
     require_pin_mode("local")
-    user = User.query.filter_by(id=user_id).with_for_update().populate_existing().one()
+    user = User.query.filter_by(
+        id=user_id).with_for_update().populate_existing().one()
     if not user.is_active:
         raise PinError("Account is disabled", 403)
     previous = user.pin_code_hash

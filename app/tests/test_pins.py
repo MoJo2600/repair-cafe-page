@@ -34,7 +34,8 @@ def test_local_generation_retries_collision(app, helper_user, monkeypatch):
     admin.pin_code_hash = hash_pin_code("123456")
     db.session.commit()
     values = iter([123456, 42])
-    monkeypatch.setattr("app.services.pin_service.secrets.randbelow", lambda maximum: next(values))
+    monkeypatch.setattr(
+        "app.services.pin_service.secrets.randbelow", lambda maximum: next(values))
     assert generate_pin(helper_user.id) == "000042"
     assert helper_user.pin_code_hash == hash_pin_code("000042")
 
@@ -65,7 +66,8 @@ def local_pins(app):
 
 def test_profile_generation_is_explicit_and_one_time(helper_client, helper_user, local_pins):
     response = helper_client.get("/api/auth/me/pin")
-    assert response.get_json() == {"mode": "local", "has_pin": False, "can_generate": True}
+    assert response.get_json() == {"mode": "local",
+                                   "has_pin": False, "can_generate": True}
     assert helper_user.pin_code_hash is None
     response = helper_client.post("/api/auth/me/pin", json={})
     assert response.status_code == 200
@@ -73,17 +75,21 @@ def test_profile_generation_is_explicit_and_one_time(helper_client, helper_user,
     assert helper_user.pin_code_hash == hash_pin_code(code)
     assert response.headers["Cache-Control"] == "no-store"
     status = helper_client.get("/api/auth/me/pin")
-    assert status.get_json() == {"mode": "local", "has_pin": True, "can_generate": True}
+    assert status.get_json() == {"mode": "local",
+                                 "has_pin": True, "can_generate": True}
     assert code not in status.get_data(as_text=True)
-    assert "pin" not in helper_client.get("/api/auth/me").get_data(as_text=True)
+    assert "pin" not in helper_client.get(
+        "/api/auth/me").get_data(as_text=True)
     assert helper_client.post("/api/auth/me/pin", json={}).status_code == 409
-    replacement = helper_client.post("/api/auth/me/pin", json={"replace": True})
+    replacement = helper_client.post(
+        "/api/auth/me/pin", json={"replace": True})
     assert replacement.status_code == 200
     assert replacement.get_json()["pin_code"] != code
 
 
 def test_provider_mode_disables_generation(helper_client):
-    assert helper_client.get("/api/auth/me/pin").get_json()["can_generate"] is False
+    assert helper_client.get(
+        "/api/auth/me/pin").get_json()["can_generate"] is False
     assert helper_client.post("/api/auth/me/pin", json={}).status_code == 403
 
 
@@ -91,7 +97,8 @@ def test_openapi_registers_pin_contracts(client):
     response = client.get("/apispec_1.json")
     assert response.status_code == 200
     spec = response.get_json()
-    assert spec["definitions"]["PinStatusResponse"]["properties"]["mode"]["enum"] == ["local", "oidc"]
+    assert spec["definitions"]["PinStatusResponse"]["properties"]["mode"]["enum"] == [
+        "local", "oidc"]
     operation = spec["paths"]["/api/auth/me/pin"]["post"]
     assert operation["responses"]["200"]["schema"]["$ref"] == "#/definitions/PinGeneratedResponse"
 
@@ -107,10 +114,13 @@ def test_pin_mutation_rejects_cross_site_and_invalid_requests(helper_client, loc
     assert helper_client.post("/api/auth/me/pin", json={},
                               headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
     assert helper_client.post("/api/auth/me/pin", data={}).status_code == 400
-    assert helper_client.post("/api/auth/me/pin", json={"replace": "false"}).status_code == 400
-    assert helper_client.post("/api/auth/me/pin", json={"user_id": 1}).status_code == 400
+    assert helper_client.post(
+        "/api/auth/me/pin", json={"replace": "false"}).status_code == 400
+    assert helper_client.post(
+        "/api/auth/me/pin", json={"user_id": 1}).status_code == 400
     for body in ([], None, "not-an-object"):
-        assert helper_client.post("/api/auth/me/pin", json=body).status_code == 400
+        assert helper_client.post(
+            "/api/auth/me/pin", json=body).status_code == 400
     assert helper_client.post("/api/auth/me/pin", data="{",
                               content_type="application/json").status_code == 400
 
@@ -125,7 +135,8 @@ def test_disabled_user_cannot_manage_pin(helper_client, helper_user, local_pins)
 def test_failed_allocation_preserves_previous_pin(app, helper_user, local_pins, monkeypatch):
     helper_user.pin_code_hash = hash_pin_code("000042")
     db.session.commit()
-    monkeypatch.setattr("app.services.pin_service.secrets.randbelow", lambda maximum: 42)
+    monkeypatch.setattr(
+        "app.services.pin_service.secrets.randbelow", lambda maximum: 42)
     with pytest.raises(PinError, match="unique PIN"):
         generate_pin(helper_user.id, replace=True)
     db.session.rollback()
@@ -183,25 +194,35 @@ def test_pin_migration_preserves_hashes_and_round_trips(monkeypatch, duplicate, 
     engine = sa.create_engine(url)
     migration = import_module("app.migrations.versions.012_generic_pin_codes")
     with engine.begin() as connection:
-        connection.execute(sa.text("CREATE TABLE users (id INTEGER PRIMARY KEY, door_code_hash VARCHAR(64))"))
-        connection.execute(sa.text("CREATE INDEX ix_users_door_code_hash ON users (door_code_hash)"))
-        connection.execute(sa.text("INSERT INTO users VALUES (1, 'legacy-hash')"))
+        connection.execute(sa.text(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, door_code_hash VARCHAR(64))"))
+        connection.execute(
+            sa.text("CREATE INDEX ix_users_door_code_hash ON users (door_code_hash)"))
+        connection.execute(
+            sa.text("INSERT INTO users VALUES (1, 'legacy-hash')"))
         if duplicate:
-            connection.execute(sa.text("INSERT INTO users VALUES (2, 'legacy-hash')"))
-        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+            connection.execute(
+                sa.text("INSERT INTO users VALUES (2, 'legacy-hash')"))
+        monkeypatch.setattr(migration, "op", Operations(
+            MigrationContext.configure(connection)))
         if duplicate:
             with pytest.raises(RuntimeError, match="Duplicate legacy"):
                 migration.upgrade()
             connection.execute(sa.text("DROP TABLE users"))
             return
         migration.upgrade()
-        assert connection.execute(sa.text("SELECT pin_code_hash FROM users")).scalar() == "legacy-hash"
-        assert connection.execute(sa.text("SELECT mode FROM pin_state")).scalar() == "oidc"
-        assert sa.inspect(connection).get_unique_constraints("users")[0]["column_names"] == ["pin_code_hash"]
+        assert connection.execute(
+            sa.text("SELECT pin_code_hash FROM users")).scalar() == "legacy-hash"
+        assert connection.execute(
+            sa.text("SELECT mode FROM pin_state")).scalar() == "oidc"
+        assert sa.inspect(connection).get_unique_constraints(
+            "users")[0]["column_names"] == ["pin_code_hash"]
         migration.downgrade()
-        assert connection.execute(sa.text("SELECT door_code_hash FROM users")).scalar() == "legacy-hash"
+        assert connection.execute(
+            sa.text("SELECT door_code_hash FROM users")).scalar() == "legacy-hash"
         migration.upgrade()
-        assert connection.execute(sa.text("SELECT pin_code_hash FROM users")).scalar() == "legacy-hash"
+        assert connection.execute(
+            sa.text("SELECT pin_code_hash FROM users")).scalar() == "legacy-hash"
         connection.execute(sa.text("DROP TABLE pin_state"))
         connection.execute(sa.text("DROP TABLE users"))
     engine.dispose()
@@ -210,9 +231,11 @@ def test_pin_migration_preserves_hashes_and_round_trips(monkeypatch, duplicate, 
 def _integration_url():
     url = os.environ.get("PIN_TEST_DATABASE_URL")
     if not url:
-        pytest.skip("Set PIN_TEST_DATABASE_URL to a disposable MariaDB pin_tests database")
+        pytest.skip(
+            "Set PIN_TEST_DATABASE_URL to a disposable MariaDB pin_tests database")
     if sa.engine.make_url(url).database != "pin_tests":
-        raise ValueError("Integration tests require a disposable database named pin_tests")
+        raise ValueError(
+            "Integration tests require a disposable database named pin_tests")
     return url
 
 
@@ -230,7 +253,8 @@ def production_pin_app():
         tables = [User.__table__, PinState.__table__]
         db.metadata.create_all(db.engine, tables=tables)
         reconcile_pin_mode()
-        db.session.add(User(username="concurrent", email="concurrent@example.org", password_hash="!"))
+        db.session.add(User(username="concurrent",
+                       email="concurrent@example.org", password_hash="!"))
         db.session.commit()
     try:
         yield integration
@@ -260,7 +284,8 @@ def test_concurrent_generation_does_not_replace_pin(production_pin_app):
     assert len(codes) == 1
     assert 409 in results
     with production_pin_app.app_context():
-        assert User.query.filter_by(username="concurrent").one().pin_code_hash == hash_pin_code(codes[0])
+        assert User.query.filter_by(username="concurrent").one(
+        ).pin_code_hash == hash_pin_code(codes[0])
 
 
 def test_concurrent_mode_reconciliation_is_atomic(production_pin_app):
@@ -268,7 +293,8 @@ def test_concurrent_mode_reconciliation_is_atomic(production_pin_app):
         user = User.query.filter_by(username="concurrent").one()
         user.pin_code_hash = hash_pin_code("123456")
         db.session.commit()
-    production_pin_app.config.update(PIN_MODE="oidc", PIN_MODE_RESET_ACK="local-to-oidc")
+    production_pin_app.config.update(
+        PIN_MODE="oidc", PIN_MODE_RESET_ACK="local-to-oidc")
     barrier = Barrier(2)
 
     def reconcile():

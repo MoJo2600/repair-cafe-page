@@ -239,12 +239,14 @@ def register_auth_guard(app):
     def require_login_for_api():
         if request.method == "OPTIONS" or not request.path.startswith("/api/"):
             return None
-        view = app.view_functions.get(request.endpoint) if request.endpoint else None
+        view = app.view_functions.get(
+            request.endpoint) if request.endpoint else None
         if view is None or getattr(view, "is_public", False):
             return None  # unknown routes fall through to 404
         if not flask_login.current_user.is_authenticated:
             return Response(
-                json.dumps({"reply": "error", "error": "Authentication required"}),
+                json.dumps(
+                    {"reply": "error", "error": "Authentication required"}),
                 status=401,
                 mimetype="application/json",
             )

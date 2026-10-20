@@ -16,7 +16,13 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer v-if="authStore.isAuthenticated" v-model="drawer" :temporary="false" width="180" app>
+    <v-navigation-drawer
+      v-if="authStore.isAuthenticated"
+      v-model="drawer"
+      :temporary="false"
+      width="180"
+      app
+    >
       <v-list nav>
         <v-list-item :to="'/dashboard'" value="dashboard" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
@@ -42,13 +48,25 @@
             <span class="text-caption">Kunden</span>
           </div>
         </v-list-item>
-        <v-list-item v-if="authStore.isAdmin" :to="'/users'" value="users" class="text-center" min-height="64">
+        <v-list-item
+          v-if="authStore.isAdmin"
+          :to="'/users'"
+          value="users"
+          class="text-center"
+          min-height="64"
+        >
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-account-cog" class="mb-1" />
             <span class="text-caption">Benutzerverwaltung</span>
           </div>
         </v-list-item>
-        <v-list-item v-if="authStore.isAdmin" :to="'/settings'" value="settings" class="text-center" min-height="64">
+        <v-list-item
+          v-if="authStore.isAdmin"
+          :to="'/settings'"
+          value="settings"
+          class="text-center"
+          min-height="64"
+        >
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-cog" class="mb-1" />
             <span class="text-caption">Einstellungen</span>
@@ -58,13 +76,31 @@
       <template #append>
         <v-divider />
         <v-list v-if="authStore.currentUser" aria-label="Benutzerkonto">
-          <v-list-item :to="{ name: 'Profile' }" prepend-icon="mdi-account-circle" aria-label="Mein Profil">
-            <v-list-item-title class="text-body-2 text-wrap">{{ currentUserName }}</v-list-item-title>
-            <v-list-item-subtitle class="text-wrap">{{ authStore.currentUser.username }}</v-list-item-subtitle>
+          <v-list-item
+            :to="{ name: 'Profile' }"
+            prepend-icon="mdi-account-circle"
+            aria-label="Mein Profil"
+          >
+            <v-list-item-title class="text-body-2 text-wrap">{{
+              currentUserName
+            }}</v-list-item-title>
+            <v-list-item-subtitle class="text-wrap">{{
+              authStore.currentUser.username
+            }}</v-list-item-subtitle>
           </v-list-item>
-          <v-list-item prepend-icon="mdi-logout" title="Abmelden" :disabled="loggingOut" @click="logout">
+          <v-list-item
+            prepend-icon="mdi-logout"
+            title="Abmelden"
+            :disabled="loggingOut"
+            @click="logout"
+          >
             <template v-if="loggingOut" #append>
-              <v-progress-circular indeterminate size="20" width="2" aria-label="Abmeldung laeuft" />
+              <v-progress-circular
+                indeterminate
+                size="20"
+                width="2"
+                aria-label="Abmeldung laeuft"
+              />
             </template>
           </v-list-item>
         </v-list>
@@ -84,8 +120,12 @@
 
     <!-- Global snackbar -->
     <v-snackbar
-v-if="authStore.isAuthenticated" v-model="toastVisible" :timeout="toastTimeout" :color="toastColor"
-      location="bottom right">
+      v-if="authStore.isAuthenticated"
+      v-model="toastVisible"
+      :timeout="toastTimeout"
+      :color="toastColor"
+      location="bottom right"
+    >
       {{ toastMessage }}
       <template #actions>
         <v-btn icon="mdi-close" variant="text" @click="toastVisible = false"></v-btn>
@@ -104,9 +144,12 @@ v-if="authStore.isAuthenticated" v-model="toastVisible" :timeout="toastTimeout" 
         <v-card-text>
           <div v-if="!cameraPermissionDenied">
             <video
-ref="videoElement" autoplay playsinline
-              style="width: 100%; max-height: 400px; background: #000;"></video>
-            <canvas ref="canvasElement" style="display: none;"></canvas>
+              ref="videoElement"
+              autoplay
+              playsinline
+              style="width: 100%; max-height: 400px; background: #000"
+            ></video>
+            <canvas ref="canvasElement" style="display: none"></canvas>
             <div v-if="scanning" class="text-center mt-3">
               <v-progress-circular indeterminate color="primary"></v-progress-circular>
               <p class="mt-2">Scanning for QR codes...</p>
@@ -118,9 +161,7 @@ ref="videoElement" autoplay playsinline
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="closeQrScanner">
-            Cancel
-          </v-btn>
+          <v-btn color="grey" variant="text" @click="closeQrScanner"> Cancel </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -164,9 +205,11 @@ async function logout() {
 // Set all favicon / touch-icon links to the dynamic logo endpoint
 onMounted(() => {
   const logoUrl = '/api/config/logo'
-  document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(el => {
-    el.href = logoUrl
-  })
+  document
+    .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .forEach((el) => {
+      el.href = logoUrl
+    })
 })
 
 // Global toast state
@@ -198,7 +241,7 @@ async function openQrScanner() {
   try {
     // Request camera access
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' } // Use back camera on mobile
+      video: { facingMode: 'environment' }, // Use back camera on mobile
     })
 
     if (videoElement.value) {
@@ -284,7 +327,7 @@ function closeQrScanner() {
 
   // Stop media stream
   if (mediaStream) {
-    mediaStream.getTracks().forEach(track => track.stop())
+    mediaStream.getTracks().forEach((track) => track.stop())
     mediaStream = null
   }
 

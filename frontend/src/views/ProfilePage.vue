@@ -20,8 +20,15 @@
     <v-divider class="mb-6" />
     <section aria-labelledby="pin-heading" :aria-busy="loading || generating">
       <h2 id="pin-heading" class="text-h6 mb-4">PIN</h2>
-      <v-progress-linear v-if="loading" indeterminate color="primary" aria-label="PIN-Status laden" />
-      <v-alert v-if="error" type="error" variant="tonal" class="mb-4" role="alert">{{ error }}</v-alert>
+      <v-progress-linear
+        v-if="loading"
+        indeterminate
+        color="primary"
+        aria-label="PIN-Status laden"
+      />
+      <v-alert v-if="error" type="error" variant="tonal" class="mb-4" role="alert">{{
+        error
+      }}</v-alert>
 
       <template v-if="status && !loading">
         <div class="d-flex align-center ga-2 mb-4">
@@ -43,7 +50,13 @@
         </v-btn>
       </template>
 
-      <v-btn v-if="error && !loading" class="mt-4" variant="text" prepend-icon="mdi-refresh" @click="loadStatus">
+      <v-btn
+        v-if="error && !loading"
+        class="mt-4"
+        variant="text"
+        prepend-icon="mdi-refresh"
+        @click="loadStatus"
+      >
         Status erneut laden
       </v-btn>
     </section>
@@ -51,11 +64,20 @@
     <v-dialog v-model="confirmDialog" max-width="440" :persistent="generating">
       <v-card>
         <v-card-title class="text-wrap">PIN ersetzen?</v-card-title>
-        <v-card-text>Die bisherige PIN wird ungueltig. Die neue PIN wird nur einmal angezeigt.</v-card-text>
+        <v-card-text
+          >Die bisherige PIN wird ungueltig. Die neue PIN wird nur einmal angezeigt.</v-card-text
+        >
         <v-card-actions class="flex-wrap">
           <v-spacer />
-          <v-btn variant="text" :disabled="generating" @click="confirmDialog = false">Abbrechen</v-btn>
-          <v-btn color="primary" prepend-icon="mdi-refresh" :loading="generating" @click="generate(true)">
+          <v-btn variant="text" :disabled="generating" @click="confirmDialog = false"
+            >Abbrechen</v-btn
+          >
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-refresh"
+            :loading="generating"
+            @click="generate(true)"
+          >
             PIN ersetzen
           </v-btn>
         </v-card-actions>
@@ -170,9 +192,12 @@ async function generate(replace: boolean) {
   }
 }
 
-watch(() => authStore.isAuthenticated, authenticated => {
-  if (!authenticated) clearPin()
-})
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    if (!authenticated) clearPin()
+  }
+)
 onMounted(loadStatus)
 onBeforeUnmount(() => {
   active = false
