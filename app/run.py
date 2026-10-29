@@ -9,28 +9,23 @@ import time
 from app import create_app
 from app.extensions import scheduler
 from app.tasks.scheduler import setup_scheduler, start_scheduler as start_scheduler_func
-from app.services.pdf_service import PDFService
 
 # Create the Flask application
 app = create_app()
-
-# Initialize services
-pdf_service = PDFService()
 
 
 def init_app_resources():
     """Initialize app resources that should not load during CLI commands."""
     # Initialize PDFSigner (triggers file check and prints message)
-    pdf_service.signer
+    app.pdf_service.signer  # type: ignore[attr-defined]
     app.logger.info("Application resources initialized")
 
 
 def start_scheduler_with_app():
     """Start the background scheduler with app context."""
-    # Import the mail export function
-    from app.web.routes import send_mail_export
-    
-    setup_scheduler(scheduler, app, send_mail_export)
+    from app.web.routes import execute_mail_export
+
+    setup_scheduler(scheduler, app, execute_mail_export)
     start_scheduler_func(scheduler)
 
 

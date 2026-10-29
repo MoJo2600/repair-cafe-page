@@ -176,7 +176,9 @@ class Repair(db.Model):
     user_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("users.id")
     )
-    reparatur_dauer: Mapped[Optional[int]] = mapped_column(db.SmallInteger)
+    reparatur_dauer: Mapped[Optional[int]] = mapped_column(
+        db.SmallInteger, default=0, server_default="0"
+    )
     status: Mapped[str] = mapped_column(
         db.String(20), nullable=False, default="Offen")
     closed_at: Mapped[Optional[datetime]] = mapped_column(

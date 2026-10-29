@@ -7,10 +7,11 @@ where stored_filename is a UUID + original extension (guaranteed unique).
 
 import json
 import mimetypes
-import os
+import shutil
 import uuid
 from pathlib import Path
 
+import flask_login
 from flask import Blueprint, Response, current_app, request
 from flask import send_file as flask_send_file
 from werkzeug.utils import secure_filename
@@ -21,15 +22,27 @@ from app.schemas import RepairAttachmentListResponse, RepairAttachmentResponse
 
 attachments_bp = Blueprint("attachments", __name__)
 
-_ATTACH_ROOT = Path(__file__).parent.parent.parent / "data" / "attachments"
-
-# Allowed MIME types — extend as needed
+# Allowed MIME types — SVG is excluded to prevent stored XSS when served inline
 _ALLOWED_MIME_PREFIXES = ("image/", "application/pdf", "video/")
+_DISALLOWED_MIMES = {"image/svg+xml"}
 _MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB per file
 
 
 def _attachment_dir(repair_id: int) -> Path:
-    return _ATTACH_ROOT / str(repair_id)
+    data_dir = Path(current_app.config["DATA_DIR"])
+    return data_dir / "attachments" / str(repair_id)
+
+
+def cleanup_repair_attachments(repair_id: int) -> None:
+    """Remove all stored attachment files on disk for a repair."""
+    attach_dir = _attachment_dir(repair_id)
+    if attach_dir.exists():
+        try:
+            shutil.rmtree(attach_dir)
+        except OSError as oe:
+            current_app.logger.warning(
+                "Could not remove attachment directory %s: %s", attach_dir, oe
+            )
 
 
 def _make_stored_filename(original: str) -> str:
@@ -39,7 +52,10 @@ def _make_stored_filename(original: str) -> str:
 
 
 def _is_allowed_mime(content_type: str) -> bool:
-    return any(content_type.startswith(p) for p in _ALLOWED_MIME_PREFIXES)
+    normalized = content_type.split(";")[0].strip().lower()
+    if normalized in _DISALLOWED_MIMES:
+        return False
+    return any(normalized.startswith(p) for p in _ALLOWED_MIME_PREFIXES)
 
 
 # ---------------------------------------------------------------------------
@@ -219,10 +235,13 @@ def api_upload_repair_attachments(repair_id):
                     mimetype="application/json",
                 )
 
-        uploaded_by_id_raw = request.form.get("uploaded_by_id")
         uploaded_by_id: int | None = None
-        if uploaded_by_id_raw:
-            uploaded_by_id = int(uploaded_by_id_raw)
+        if flask_login.current_user.is_authenticated:
+            uploaded_by_id = flask_login.current_user.id
+        else:
+            uploaded_by_id_raw = request.form.get("uploaded_by_id")
+            if uploaded_by_id_raw:
+                uploaded_by_id = int(uploaded_by_id_raw)
 
         dest_dir = _attachment_dir(repair_id)
         dest_dir.mkdir(parents=True, exist_ok=True)

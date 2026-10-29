@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 
 import flask_login
 from flask import Blueprint, Response, current_app, request, send_file
+from sqlalchemy.orm import joinedload
 
+from app.api.attachments import cleanup_repair_attachments
 from app.extensions import db
 from app.models import Customer, Repair, Setting
 from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate, RepairsTimelinePoint, RepairsTimelineResponse
@@ -40,13 +42,23 @@ def api_list_repairs():
     """
     try:
         customer_id = request.args.get("customer_id", type=int)
-        query = Repair.query
+        query = Repair.query.options(
+            joinedload(Repair.customer),
+            joinedload(Repair.repair_type),
+            joinedload(Repair.user),
+            joinedload(Repair.created_by),
+        )
         if customer_id is not None:
             query = query.filter(Repair.customer_id == customer_id)
         repairs = query.all()
-        # Serialize using Pydantic
+        # Serialize using Pydantic (omit raw base64 signature payload from list polling)
         repairs_list = [
-            RepairResponse.model_validate(repair).model_dump(mode="json")
+            {
+                **RepairResponse.model_validate(repair).model_dump(
+                    mode="json", exclude={"unterschrift"}
+                ),
+                "unterschrift": None,
+            }
             for repair in repairs
         ]
         return Response(
@@ -240,11 +252,19 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
 
 @repairs_bp.route("/repairs/<int:id>", methods=["DELETE"])
 def api_delete_repair(id: int):
-    """Delete a repair record."""
+    """Delete a repair record and its associated files on disk."""
     try:
         repair = Repair.query.get_or_404(id)
         db.session.delete(repair)
         db.session.commit()
+
+        # Clean up stored files on disk (attachments, signed disclaimer, signed cancellation)
+        cleanup_repair_attachments(id)
+        if hasattr(current_app, "pdf_service"):
+            current_app.pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
+        if hasattr(current_app, "cancellation_pdf_service"):
+            current_app.cancellation_pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
+
         return Response(
             json.dumps({"reply": "done", "id": id}),
             status=200,
@@ -398,66 +418,6 @@ def api_create_repair(validated_data: RepairCreate):
         )
 
 
-@repairs_bp.route("/repairs/<int:id>/update", methods=["POST"])
-def legacy_update_repair(id: int):
-    """Update repair (legacy POST endpoint for templates)."""
-    try:
-        repair = Repair.query.get_or_404(id)
-        data = request.get_json()
-        for key, value in data.items():
-            # Protect qr_token from being overwritten
-            if key == "qr_token":
-                continue
-            if hasattr(repair, key):
-                setattr(repair, key, value)
-        db.session.commit()
-        return Response(
-            json.dumps({"reply": "done", "id": id, "data": repair.to_dict()}),
-            status=200,
-            mimetype="application/json",
-        )
-    except Exception as e:
-        db.session.rollback()
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )
-
-
-@repairs_bp.route("/repairs/<int:id>/<token>/update", methods=["POST"])
-def legacy_update_repair_with_token(id: int, token: str):
-    """Update repair with token (for QR code access)."""
-    try:
-        repair = Repair.query.get_or_404(id)
-        if token != repair.qr_token:
-            return Response(
-                json.dumps({"reply": "error", "error": "invalid token"}),
-                status=403,
-                mimetype="application/json",
-            )
-        data = request.get_json()
-        for key, value in data.items():
-            # Protect qr_token and id from being overwritten
-            if key in ("qr_token", "id"):
-                continue
-            if hasattr(repair, key):
-                setattr(repair, key, value)
-        db.session.commit()
-        return Response(
-            json.dumps({"reply": "done", "id": id, "data": repair.to_dict()}),
-            status=200,
-            mimetype="application/json",
-        )
-    except Exception as e:
-        db.session.rollback()
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )
-
-
 @repairs_bp.route("/repairs/<int:id>/disclaimer", methods=["POST"])
 def api_upload_disclaimer(id: int):
     """Upload a pre-signed disclaimer PDF for a repair."""
@@ -572,6 +532,175 @@ def api_get_disclaimer(id: int):
     except Exception as e:
         current_app.logger.error(
             f"Error serving disclaimer for repair {id}: {e}", exc_info=True
+        )
+        return Response(
+            json.dumps({"reply": "error", "error": str(e)}),
+            status=500,
+            mimetype="application/json",
+        )
+
+
+@repairs_bp.route("/repairs/<int:id>/cancellation", methods=["POST"])
+def api_create_or_upload_cancellation(id: int):
+    """
+    Generate a signed cancellation PDF from a base64 signature or upload a pre-signed PDF.
+    ---
+    operationId: createOrUploadRepairCancellation
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+    responses:
+      201:
+        description: Signed cancellation PDF stored
+      400:
+        description: Missing or invalid signature / file
+      404:
+        description: Repair not found
+      500:
+        description: Internal server error
+    """
+    try:
+        repair = Repair.query.get_or_404(id)
+        cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
+
+        # Case 1: Multipart PDF upload
+        if "file" in request.files:
+            uploaded_file = request.files["file"]
+            if not uploaded_file.filename or not uploaded_file.filename.lower().endswith(
+                ".pdf"
+            ):
+                return Response(
+                    json.dumps({"reply": "error", "error": "Only PDF files are accepted"}),
+                    status=400,
+                    mimetype="application/json",
+                )
+            pdf_bytes = uploaded_file.read()
+            if len(pdf_bytes) < 4 or pdf_bytes[:4] != b"%PDF":
+                return Response(
+                    json.dumps(
+                        {"reply": "error", "error": "Uploaded file is not a valid PDF"}
+                    ),
+                    status=400,
+                    mimetype="application/json",
+                )
+            saved_path = cancellation_service.store_uploaded_pdf(id, pdf_bytes)
+            current_app.logger.info(
+                "Uploaded cancellation PDF stored at %s", saved_path
+            )
+            return Response(
+                json.dumps({"reply": "done"}),
+                status=201,
+                mimetype="application/json",
+            )
+
+        # Case 2: JSON payload with base64 signature string
+        payload = request.get_json(silent=True) or {}
+        signature = payload.get("signature")
+        if not signature or not isinstance(signature, str):
+            return Response(
+                json.dumps(
+                    {"reply": "error", "error": "Signature or PDF file is required"}
+                ),
+                status=400,
+                mimetype="application/json",
+            )
+
+        customer_name = None
+        if repair.customer:
+            customer_name = (
+                f"{repair.customer.vorname or ''} {repair.customer.nachname or ''}".strip()
+                or None
+            )
+
+        saved_path = cancellation_service.save_signed_pdf(
+            repair_id=repair.id,
+            signature_data=signature,
+            date=datetime.now(timezone.utc).date(),
+            name=customer_name,
+        )
+        if saved_path is None:
+            return Response(
+                json.dumps(
+                    {
+                        "reply": "error",
+                        "error": "Could not generate signed cancellation PDF",
+                    }
+                ),
+                status=400,
+                mimetype="application/json",
+            )
+
+        current_app.logger.info("Signed cancellation PDF saved to %s", saved_path)
+        return Response(
+            json.dumps({"reply": "done"}),
+            status=201,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"Error creating/uploading cancellation PDF for repair {id}: {e}",
+            exc_info=True,
+        )
+        return Response(
+            json.dumps({"reply": "error", "error": str(e)}),
+            status=500,
+            mimetype="application/json",
+        )
+
+
+@repairs_bp.route("/repairs/<int:id>/cancellation", methods=["GET"])
+def api_get_cancellation(id: int):
+    """
+    Download the signed cancellation PDF for a repair
+    ---
+    operationId: getRepairCancellation
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+    responses:
+      200:
+        description: Signed cancellation PDF
+      404:
+        description: Repair or cancellation PDF not found
+      500:
+        description: Internal server error
+    """
+    try:
+        Repair.query.get_or_404(id)
+        cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
+        pdf_path = cancellation_service.get_stored_pdf_path(id)
+
+        if pdf_path is not None:
+            return send_file(
+                str(pdf_path),
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=f"cancellation_{id}.pdf",
+            )
+
+        return Response(
+            json.dumps(
+                {
+                    "reply": "error",
+                    "error": "No cancellation PDF available for this repair",
+                }
+            ),
+            status=404,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"Error serving cancellation PDF for repair {id}: {e}", exc_info=True
         )
         return Response(
             json.dumps({"reply": "error", "error": str(e)}),

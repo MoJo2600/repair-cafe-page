@@ -76,6 +76,42 @@
       </v-card-text>
     </v-card>
 
+    <!-- Abbruchbestätigung / Cancellation Template -->
+    <v-card class="mb-6">
+      <v-card-title class="d-flex align-center justify-space-between">
+        <span>Abbruchbestätigung (Vorlage)</span>
+      </v-card-title>
+      <v-card-text>
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          Laden Sie eine eigene PDF-Vorlage für den Reparaturabbruch hoch. Die Datei muss die
+          AcroForm-Felder <strong>date</strong> und <strong>signature</strong> enthalten. Feld
+          <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
+          aktiv.
+        </p>
+        <v-row align="center" class="ga-4">
+          <v-col cols="12" sm="auto">
+            <v-btn color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
+              target="_blank">
+              Aktuelle Vorlage anzeigen
+            </v-btn>
+          </v-col>
+          <v-col cols="12" sm>
+            <v-file-input v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
+              prepend-icon="mdi-upload" :error-messages="cancellationError" hide-details="auto"
+              @update:model-value="cancellationError = ''" />
+          </v-col>
+          <v-col cols="12" sm="auto">
+            <v-btn color="primary" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
+              Hochladen
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-alert v-if="cancellationSuccess" type="success" variant="tonal" density="compact" class="mt-4">
+          Vorlage erfolgreich aktualisiert.
+        </v-alert>
+      </v-card-text>
+    </v-card>
+
     <!-- Logo / Icon -->
     <v-card class="mb-6">
       <v-card-title>Logo / Icon</v-card-title>
@@ -484,6 +520,36 @@ async function uploadDisclaimer() {
     disclaimerError.value = 'Netzwerkfehler beim Hochladen'
   } finally {
     disclaimerUploading.value = false
+  }
+}
+
+// ── Cancellation upload ───────────────────────────────────────────────────────
+
+const cancellationFile = ref<File | null>(null)
+const cancellationUploading = ref(false)
+const cancellationError = ref('')
+const cancellationSuccess = ref(false)
+
+async function uploadCancellation() {
+  if (!cancellationFile.value) return
+  cancellationUploading.value = true
+  cancellationError.value = ''
+  cancellationSuccess.value = false
+  try {
+    const fd = new FormData()
+    fd.append('file', cancellationFile.value)
+    const res = await fetch('/api/config/cancellation', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok || json.reply !== 'done') {
+      cancellationError.value = json.error ?? 'Fehler beim Hochladen'
+    } else {
+      cancellationSuccess.value = true
+      cancellationFile.value = null
+    }
+  } catch {
+    cancellationError.value = 'Netzwerkfehler beim Hochladen'
+  } finally {
+    cancellationUploading.value = false
   }
 }
 </script>

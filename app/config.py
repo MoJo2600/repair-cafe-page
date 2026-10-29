@@ -21,6 +21,9 @@ class LokiConfig:
     HOST = "repairCafe"
 
 
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+
+
 class BaseConfig:
     """Base configuration with common settings."""
 
@@ -48,23 +51,52 @@ class BaseConfig:
     }
 
     # Email
-    EMAIL_ENABLED = bool(os.environ.get("EMAIL_ENABLED", False))
+    @property
+    def EMAIL_ENABLED(self) -> bool:
+        return os.environ.get("EMAIL_ENABLED", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
     MAIL_SENDER = os.environ.get("MAIL_SENDER")
     MAIL_SENDER_NAME = os.environ.get("MAIL_SENDER_NAME", "RepairCafe")
     EXPORT_MAIL_RECEIVER = os.environ.get("EXPORT_MAIL_RECEIVER")
     MAIL_TOKEN = os.environ.get("MAIL_TOKEN")
     ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
 
-    # Paths
-    IMPORT_EXCEL_PATH = "config/import.xlsx"
-    SIGNED_PDF_STORAGE_PATH = os.environ.get(
-        "SIGNED_PDF_STORAGE_PATH",
-        os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "data",
-            "signed_disclaimers",
-        ),
-    )
+    # Configurable storage and config directories
+    # Defaults to <project_root>/data and <project_root>/config for local development;
+    # set DATA_DIR=/data and CONFIG_DIR=/config in Docker.
+    @property
+    def DATA_DIR(self) -> Path:
+        return Path(
+            os.environ.get("DATA_DIR", str(_PROJECT_ROOT / "data"))
+        ).resolve()
+
+    @property
+    def CONFIG_DIR(self) -> Path:
+        return Path(
+            os.environ.get("CONFIG_DIR", str(_PROJECT_ROOT / "config"))
+        ).resolve()
+
+    @property
+    def IMPORT_EXCEL_PATH(self) -> str:
+        return str(self.CONFIG_DIR / "import.xlsx")
+
+    @property
+    def SIGNED_PDF_STORAGE_PATH(self) -> str:
+        return os.environ.get(
+            "SIGNED_PDF_STORAGE_PATH",
+            str(self.DATA_DIR / "signed_disclaimers"),
+        )
+
+    @property
+    def SIGNED_CANCELLATION_STORAGE_PATH(self) -> str:
+        return os.environ.get(
+            "SIGNED_CANCELLATION_STORAGE_PATH",
+            str(self.DATA_DIR / "signed_cancellations"),
+        )
 
     # Public base URL as seen by the browser, e.g. https://reparaturen.repaircafe-hemau.de
     # (behind the TLS-terminating proxy the request scheme is not reliable).
@@ -119,7 +151,6 @@ class ProductionConfig(BaseConfig):
     PORT = "80"
     DELETE_LOG_OLDERTHANDAYS = "14"
     DELETE_AFTER_TRANSACTION = True
-    EMAIL_ENABLED = bool(os.environ.get("EMAIL_ENABLED"))
 
 
 def get_config():

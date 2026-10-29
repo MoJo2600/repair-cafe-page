@@ -25,12 +25,19 @@ from app.validation import parse_request
 
 config_bp = Blueprint("config", __name__)
 
-# Where admin-uploaded disclaimer templates are persisted.
-_DISCLAIMER_STORE = Path(__file__).parent.parent.parent / "data" / "disclaimer.pdf"
-
-# Logo paths: active file lives in data/, default ships with the app in static/.
-_LOGO_STORE = Path(__file__).parent.parent.parent / "data" / "logo.png"
 _LOGO_DEFAULT = Path(__file__).parent.parent / "static" / "logo.jpg"
+
+
+def _get_disclaimer_store() -> Path:
+    return Path(current_app.config["DATA_DIR"]) / "disclaimer.pdf"
+
+
+def _get_cancellation_store() -> Path:
+    return Path(current_app.config["DATA_DIR"]) / "cancellation.pdf"
+
+
+def _get_logo_store() -> Path:
+    return Path(current_app.config["DATA_DIR"]) / "logo.png"
 
 
 @config_bp.route("/config/dropdowns", methods=["GET"])
@@ -108,33 +115,8 @@ def get_disclaimer_template():
     return send_file(str(path), mimetype="application/pdf")
 
 
-@config_bp.route("/config/disclaimer", methods=["POST"])
-@admin_required
-def upload_disclaimer_template():
-    """
-    Upload and activate a new disclaimer PDF template (admin only).
-    The PDF must contain AcroForm fields named 'date' and 'signature'.
-    Takes effect immediately without a server restart.
-    ---
-    operationId: uploadDisclaimerTemplate
-    tags:
-      - Configuration
-    consumes:
-      - multipart/form-data
-    parameters:
-      - name: file
-        in: formData
-        type: file
-        required: true
-        description: PDF file with required AcroForm fields
-    responses:
-      200:
-        description: Template replaced successfully
-      400:
-        description: Invalid file
-      422:
-        description: PDF is missing required AcroForm fields
-    """
+def _handle_pdf_template_upload(store_path: Path, pdf_service, label: str) -> Response:
+    """Validate an uploaded PDF template for AcroForm fields, persist it, and reload the PDFService."""
     if "file" not in request.files:
         return Response(
             json.dumps({"reply": "error", "error": "No file provided"}),
@@ -191,17 +173,109 @@ def upload_disclaimer_template():
         )
 
     # Persist and hot-reload
-    _DISCLAIMER_STORE.parent.mkdir(parents=True, exist_ok=True)
-    _DISCLAIMER_STORE.write_bytes(pdf_bytes)
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    store_path.write_bytes(pdf_bytes)
 
-    pdf_service = current_app.pdf_service  # type: ignore
-    pdf_service.reload(str(_DISCLAIMER_STORE))
-    current_app.logger.info("Disclaimer template replaced via admin upload")
+    pdf_service.reload(str(store_path))
+    current_app.logger.info("%s template replaced via admin upload", label)
 
     return Response(
         json.dumps({"reply": "done"}),
         status=200,
         mimetype="application/json",
+    )
+
+
+@config_bp.route("/config/disclaimer", methods=["POST"])
+@admin_required
+def upload_disclaimer_template():
+    """
+    Upload and activate a new disclaimer PDF template (admin only).
+    The PDF must contain AcroForm fields named 'date' and 'signature'.
+    Takes effect immediately without a server restart.
+    ---
+    operationId: uploadDisclaimerTemplate
+    tags:
+      - Configuration
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: PDF file with required AcroForm fields
+    responses:
+      200:
+        description: Template replaced successfully
+      400:
+        description: Invalid file
+      422:
+        description: PDF is missing required AcroForm fields
+    """
+    return _handle_pdf_template_upload(
+        _get_disclaimer_store(),
+        current_app.pdf_service,  # type: ignore[attr-defined]
+        "Disclaimer",
+    )
+
+
+@config_bp.route("/config/cancellation", methods=["GET"])
+def get_cancellation_template():
+    """
+    Serve the active cancellation PDF template for inline display.
+    ---
+    operationId: getCancellationTemplate
+    tags:
+      - Configuration
+    responses:
+      200:
+        description: Active cancellation PDF
+      404:
+        description: No cancellation template configured
+    """
+    cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
+    path = Path(cancellation_service.pdf_path)
+    if not path.exists():
+        return Response(
+            json.dumps({"reply": "error", "error": "No cancellation PDF configured"}),
+            status=404,
+            mimetype="application/json",
+        )
+    return send_file(str(path), mimetype="application/pdf")
+
+
+@config_bp.route("/config/cancellation", methods=["POST"])
+@admin_required
+def upload_cancellation_template():
+    """
+    Upload and activate a new cancellation PDF template (admin only).
+    The PDF must contain AcroForm fields named 'date' and 'signature'.
+    Takes effect immediately without a server restart.
+    ---
+    operationId: uploadCancellationTemplate
+    tags:
+      - Configuration
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: PDF file with required AcroForm fields
+    responses:
+      200:
+        description: Template replaced successfully
+      400:
+        description: Invalid file
+      422:
+        description: PDF is missing required AcroForm fields
+    """
+    return _handle_pdf_template_upload(
+        _get_cancellation_store(),
+        current_app.cancellation_pdf_service,  # type: ignore[attr-defined]
+        "Cancellation",
     )
 
 
@@ -224,8 +298,9 @@ def get_logo():
       404:
         description: No logo available
     """
-    if _LOGO_STORE.exists():
-        return send_file(str(_LOGO_STORE), mimetype="image/png")
+    logo_store = _get_logo_store()
+    if logo_store.exists():
+        return send_file(str(logo_store), mimetype="image/png")
     if _LOGO_DEFAULT.exists():
         return send_file(str(_LOGO_DEFAULT), mimetype="image/jpeg")
     return Response(
@@ -310,8 +385,9 @@ def upload_logo():
     out = io.BytesIO()
     img.save(out, format="PNG")
 
-    _LOGO_STORE.parent.mkdir(parents=True, exist_ok=True)
-    _LOGO_STORE.write_bytes(out.getvalue())
+    logo_store = _get_logo_store()
+    logo_store.parent.mkdir(parents=True, exist_ok=True)
+    logo_store.write_bytes(out.getvalue())
     current_app.logger.info("Logo replaced via admin upload")
 
     return Response(

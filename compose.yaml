@@ -16,10 +16,10 @@ services:
       dockerfile: Dockerfile.backend
     image: ghcr.io/mojo2600/repaircafepage-backend:latest
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     environment:
       FLASK_ENV: production
+      DATA_DIR: ${DATA_DIR:-/data}
+      CONFIG_DIR: ${CONFIG_DIR:-/config}
       MYSQL_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}

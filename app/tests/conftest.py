@@ -30,7 +30,8 @@ from app.models import User  # noqa: E402
 
 
 @pytest.fixture
-def app():
+def app(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     app = create_app("development")
     app.config.update(TESTING=True, SESSION_COOKIE_SECURE=False)
     with app.app_context():

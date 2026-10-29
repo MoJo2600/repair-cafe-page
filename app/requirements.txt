@@ -16,7 +16,6 @@ pyyaml
 pyjson
 pillow
 PyMuPDF
-mysql-connector-python
 pymysql
 flasgger
 qrcode
