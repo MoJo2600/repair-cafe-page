@@ -149,6 +149,22 @@ class PinGeneratedResponse(BaseModel):
     pin_code: str = Field(..., pattern=r"^[0-9]{6}$")
 
 
+class PinSessionStatusResponse(BaseModel):
+    eligible: bool
+    locked: bool
+    user: Optional[UserResponse] = None
+
+
+class PinUnlockRequest(BaseModel):
+    pin_code: str = Field(..., pattern=r"^[0-9]{6}$")
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class PinSessionActionResponse(BaseModel):
+    locked: bool
+
+
 class AuthResponse(BaseModel):
     """Response for login and /me endpoints — wraps UserResponse."""
 
@@ -676,6 +692,16 @@ class RepairsTimelineResponse(BaseModel):
     """Timeline of repair counts grouped by week."""
 
     data: list[RepairsTimelinePoint] = []
+
+
+class PinDashboardSummaryResponse(BaseModel):
+    total_repairs: int
+    open_repairs: int
+    in_progress_repairs: int
+    repaired_repairs: int
+    not_repaired_repairs: int
+    success_rate: Optional[int] = None
+    timeline: list[RepairsTimelinePoint] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash
 
 from app.services.pin_service import hash_pin_code
 from app.extensions import db
-from app.models import User
+from app.models import PinUnlockSession, User
 
 
 class FakeOidcProvider:
@@ -95,6 +95,11 @@ def test_callback_creates_user_and_logs_in(client, sso):
     assert user.pin_code_hash == hash_pin_code("123456")
     assert "123456" not in (user.pin_code_hash or "")
     assert client.get("/api/auth/me").status_code == 200
+    with client.session_transaction() as browser_session:
+        session_id = browser_session.get("pin_unlock_session_id")
+    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    assert grant.active_user_id == user.id
+    assert grant.is_locked is False
 
 
 @pytest.mark.parametrize("next_param", ["//evil.example", "https://evil.example", "/\\evil"])

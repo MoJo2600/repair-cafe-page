@@ -10,6 +10,10 @@ import type {
   PinGeneratedResponse,
   PinGenerateRequest,
   PinStatusResponse,
+  PinDashboardSummaryResponse,
+  PinSessionActionResponse,
+  PinSessionStatusResponse,
+  PinUnlockRequest,
 } from '@/api/types'
 
 export type { AuthResponse, LoginRequest }
@@ -87,6 +91,50 @@ export class AuthService {
       url: '/api/auth/me/pin',
       body,
       mediaType: 'application/json',
+    })
+  }
+
+  public static pinSessionStatus(): CancelablePromise<PinSessionStatusResponse> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/auth/pin-session',
+    })
+  }
+
+  public static lockPinSession(): CancelablePromise<PinSessionActionResponse> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/auth/pin-session/lock',
+      mediaType: 'application/json',
+    })
+  }
+
+  public static recordPinActivity(): CancelablePromise<PinSessionActionResponse> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/auth/pin-session/activity',
+      mediaType: 'application/json',
+    })
+  }
+
+  public static unlockPinSession(body: PinUnlockRequest): CancelablePromise<AuthResponse> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/auth/pin-session/unlock',
+      body,
+      mediaType: 'application/json',
+      errors: {
+        401: 'PIN is incorrect',
+        423: 'Session is not locked',
+        429: 'PIN attempts temporarily limited',
+      },
+    })
+  }
+
+  public static pinDashboardSummary(): CancelablePromise<PinDashboardSummaryResponse> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/auth/pin-session/dashboard',
     })
   }
 }

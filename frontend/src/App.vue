@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar v-if="authStore.isAuthenticated" color="primary" prominent>
+    <v-app-bar v-if="canUseApp" color="primary" prominent>
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
       <v-toolbar-title>Repair Cafe</v-toolbar-title>
@@ -11,13 +11,16 @@
       <v-btn icon @click="openQrScanner">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>
+      <v-btn icon aria-label="Bildschirm sperren" @click="lockNow">
+        <v-icon>mdi-lock-outline</v-icon>
+      </v-btn>
       <v-btn icon>
         <v-icon>mdi-magnify</v-icon>
       </v-btn>
     </v-app-bar>
 
     <v-navigation-drawer
-      v-if="authStore.isAuthenticated"
+      v-if="canUseApp"
       v-model="drawer"
       :temporary="false"
       width="180"
@@ -111,16 +114,19 @@
     </v-navigation-drawer>
 
     <v-main>
-      <v-container fluid :class="{ 'pa-0': !authStore.isAuthenticated }">
+      <v-container fluid :class="{ 'pa-0': !canUseApp }">
         <router-view v-slot="{ Component }">
-          <component :is="Component" v-if="authStore.isAuthenticated || route.name === 'Login'" />
+          <component
+            :is="Component"
+            v-if="canUseApp || route.name === 'Login' || route.name === 'PinLock'"
+          />
         </router-view>
       </v-container>
     </v-main>
 
     <!-- Global snackbar -->
     <v-snackbar
-      v-if="authStore.isAuthenticated"
+      v-if="canUseApp"
       v-model="toastVisible"
       :timeout="toastTimeout"
       :color="toastColor"
@@ -133,7 +139,7 @@
     </v-snackbar>
 
     <!-- QR Scanner Dialog -->
-    <v-dialog v-if="authStore.isAuthenticated" v-model="qrScannerDialog" max-width="600px">
+    <v-dialog v-if="canUseApp" v-model="qrScannerDialog" max-width="600px">
       <v-card>
         <v-card-title class="d-flex align-center">
           <v-icon icon="mdi-qrcode-scan" class="mr-2"></v-icon>
@@ -166,7 +172,7 @@
       </v-card>
     </v-dialog>
 
-    <v-footer v-if="authStore.isAuthenticated" app>
+    <v-footer v-if="canUseApp" app>
       <v-spacer></v-spacer>
       <div>&copy; {{ new Date().getFullYear() }} Repair Cafe</div>
     </v-footer>
@@ -174,14 +180,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, provide, onMounted, onUnmounted } from 'vue'
+import { computed, ref, provide, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useRepairStore } from '@/stores/repairStore'
+import { useUserStore } from '@/stores/userStore'
 import jsQR from 'jsqr'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const repairStore = useRepairStore()
+const userStore = useUserStore()
+const canUseApp = computed(() => authStore.isAuthenticated && !authStore.isLocked)
 const drawer = ref(true)
 const loggingOut = ref(false)
 const currentUserName = computed(() => {
@@ -210,6 +221,13 @@ onMounted(() => {
     .forEach((el) => {
       el.href = logoUrl
     })
+  document.addEventListener('pointerdown', handleUserActivity, { passive: true })
+  document.addEventListener('pointermove', handleUserActivity, { passive: true })
+  document.addEventListener('keydown', handleUserActivity)
+  document.addEventListener('touchstart', handleUserActivity, { passive: true })
+  document.addEventListener('scroll', handleUserActivity, { passive: true })
+  document.addEventListener('visibilitychange', revalidatePinSession)
+  scheduleIdleLock()
 })
 
 // Global toast state
@@ -217,6 +235,120 @@ const toastVisible = ref(false)
 const toastMessage = ref('')
 const toastColor = ref<'success' | 'error' | 'warning' | 'info' | string>('info')
 const toastTimeout = ref(4000)
+let idleTimer: number | null = null
+let lastActivityRequest = 0
+let lastActivityBroadcast = 0
+const IDLE_TIMEOUT_MS = 60_000
+const lockChannel = typeof BroadcastChannel !== 'undefined'
+  ? new BroadcastChannel('repaircafe-pin-session')
+  : null
+
+function clearIdleTimer() {
+  if (idleTimer !== null) {
+    window.clearTimeout(idleTimer)
+    idleTimer = null
+  }
+}
+
+function scheduleIdleLock() {
+  clearIdleTimer()
+  if (!canUseApp.value) return
+  idleTimer = window.setTimeout(() => void lockNow(), IDLE_TIMEOUT_MS)
+}
+
+function handleUserActivity() {
+  if (!canUseApp.value || document.visibilityState !== 'visible') return
+  scheduleIdleLock()
+  const now = Date.now()
+  if (now - lastActivityBroadcast >= 1_000) {
+    lastActivityBroadcast = now
+    lockChannel?.postMessage('activity')
+  }
+  if (now - lastActivityRequest < 5_000) return
+  lastActivityRequest = now
+  void authStore.recordActivity().then((active) => {
+    if (!active && authStore.isLocked) {
+      void router.replace({ name: 'PinLock' })
+    }
+  })
+}
+
+async function lockNow() {
+  clearIdleTimer()
+  if (!authStore.pinSessionEligible || authStore.isLocked) return
+  const locked = await authStore.lockSession()
+  if (locked) {
+    closeQrScanner()
+    lockChannel?.postMessage('session-changed')
+    await router.replace({ name: 'PinLock' })
+  } else {
+    scheduleIdleLock()
+  }
+}
+
+async function revalidatePinSession() {
+  if (document.visibilityState !== 'visible') return
+  const eligible = await authStore.fetchMe()
+  if (!eligible) {
+    await router.replace({ name: 'Login' })
+  } else if (authStore.isLocked) {
+    await router.replace({ name: 'PinLock' })
+  } else {
+    handleUserActivity()
+    if (route.name === 'PinLock') {
+      await router.replace({ name: 'Home' })
+    }
+  }
+}
+
+watch(
+  () => authStore.isLocked,
+  (locked) => {
+    if (locked) {
+      repairStore.clear()
+      userStore.clear()
+      closeQrScanner()
+      lockChannel?.postMessage('session-changed')
+      if (authStore.pinSessionEligible && route.name !== 'PinLock') {
+        void router.replace({ name: 'PinLock' })
+      }
+    } else if (canUseApp.value) {
+      scheduleIdleLock()
+    }
+  }
+)
+
+watch(canUseApp, (active) => {
+  if (active) {
+    scheduleIdleLock()
+  } else {
+    clearIdleTimer()
+  }
+})
+
+watch(
+  () => authStore.currentUser?.id,
+  (nextId, previousId) => {
+    if (nextId !== previousId) {
+      repairStore.clear()
+      userStore.clear()
+      if (nextId && previousId) {
+        void router.replace({ name: 'Home' })
+      }
+      if (nextId || previousId) {
+        lockChannel?.postMessage('session-changed')
+      }
+    }
+  }
+)
+
+lockChannel?.addEventListener('message', (event: MessageEvent<string>) => {
+  if (event.data === 'activity') {
+    scheduleIdleLock()
+    return
+  }
+  void revalidatePinSession()
+})
 
 // QR Scanner state
 const qrScannerDialog = ref(false)
@@ -340,6 +472,14 @@ function closeQrScanner() {
 // Cleanup on component unmount
 onUnmounted(() => {
   closeQrScanner()
+  clearIdleTimer()
+  document.removeEventListener('pointerdown', handleUserActivity)
+  document.removeEventListener('pointermove', handleUserActivity)
+  document.removeEventListener('keydown', handleUserActivity)
+  document.removeEventListener('touchstart', handleUserActivity)
+  document.removeEventListener('scroll', handleUserActivity)
+  document.removeEventListener('visibilitychange', revalidatePinSession)
+  lockChannel?.close()
 })
 
 // Expose globally via provide/inject

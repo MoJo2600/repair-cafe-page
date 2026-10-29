@@ -9,6 +9,11 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
   {
+    path: '/lock',
+    name: 'PinLock',
+    component: () => import('../components/PinLockScreen.vue'),
+  },
+  {
     path: '/',
     name: 'Home',
     component: () => import('../views/RepairsOverview.vue'),
@@ -64,25 +69,24 @@ const router = createRouter({
 
 // Navigation guard — requires auth for all non-public routes
 router.beforeEach(async (to) => {
-  if (to.meta.public) return true
-
   // Lazy-import store to avoid circular dependency during module init
   const { useAuthStore } = await import('../stores/authStore')
   const authStore = useAuthStore()
 
-  if (authStore.isAuthenticated) {
+  if (!authStore.sessionChecked) {
+    await authStore.fetchMe()
+  }
+
+  if (authStore.pinSessionEligible) {
+    if (authStore.isLocked) {
+      return to.name === 'PinLock' ? true : { name: 'PinLock' }
+    }
+    if (to.name === 'PinLock' || to.name === 'Login') return { name: 'Home' }
     if (to.meta.adminOnly && !authStore.isAdmin) return { name: 'Home' }
     return true
   }
 
-  // Try to restore session from cookie before deciding
-  const ok = await authStore.fetchMe()
-  if (ok) {
-    // Block non-admins from admin-only routes
-    if (to.meta.adminOnly && !authStore.isAdmin) return { name: 'Home' }
-    return true
-  }
-
+  if (to.meta.public && to.name === 'Login') return true
   return { name: 'Login', query: { redirect: to.fullPath } }
 })
 

@@ -133,6 +133,7 @@ export const useRepairStore = defineStore("repair", () => {
   const autoRefreshInterval = ref<number | null>(null);
   const autoRefreshEnabled = ref(true);
   const refreshIntervalMs = ref(10000); // 10 seconds default
+  let fetchRevision = 0;
 
   // Computed properties
   const openRepairs = computed(() => {
@@ -176,6 +177,7 @@ export const useRepairStore = defineStore("repair", () => {
 
   // Actions
   async function fetchRepairs(showLoading = true) {
+    const revision = fetchRevision;
     if (showLoading) {
       loading.value = true;
     }
@@ -183,14 +185,16 @@ export const useRepairStore = defineStore("repair", () => {
 
     try {
       const response = await RepairsService.listRepairs();
-      if (response.data) {
+      if (response.data && revision === fetchRevision) {
         repairs.value = response.data;
       }
     } catch (err) {
       console.error("Error fetching repairs:", err);
-      error.value = "Failed to fetch repairs";
+      if (revision === fetchRevision) {
+        error.value = "Failed to fetch repairs";
+      }
     } finally {
-      if (showLoading) {
+      if (showLoading && revision === fetchRevision) {
         loading.value = false;
       }
     }
@@ -216,6 +220,14 @@ export const useRepairStore = defineStore("repair", () => {
       clearInterval(autoRefreshInterval.value);
       autoRefreshInterval.value = null;
     }
+  }
+
+  function clear() {
+    fetchRevision += 1;
+    stopAutoRefresh()
+    repairs.value = []
+    loading.value = false
+    error.value = null
   }
 
   function pauseAutoRefresh() {
@@ -391,6 +403,7 @@ export const useRepairStore = defineStore("repair", () => {
     fetchRepairs,
     startAutoRefresh,
     stopAutoRefresh,
+    clear,
     pauseAutoRefresh,
     resumeAutoRefresh,
     setRefreshInterval,

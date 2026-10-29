@@ -13,6 +13,7 @@ from app.extensions import db
 from app.models import User
 from app.schemas import AuthConfigResponse
 from app.services.pin_service import PinError, pin_transaction, require_pin_mode, sync_provider_pin
+from app.services.pin_unlock_service import arm_pin_unlock_session
 
 oidc_bp = Blueprint("oidc", __name__)
 
@@ -161,6 +162,13 @@ def oidc_callback():
         return _login_error("disabled")
 
     flask_login.login_user(user, remember=False)
+    try:
+        arm_pin_unlock_session(user.id)
+    except Exception:
+        db.session.rollback()
+        flask_login.logout_user()
+        current_app.logger.exception("Could not establish PIN session after SSO login")
+        return _login_error("sso_unavailable")
     current_app.logger.info(f"User '{user.username}' logged in via SSO")
     return redirect(_safe_next(session.pop("oidc_next", None)))
 

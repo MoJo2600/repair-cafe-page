@@ -234,6 +234,19 @@ def register_auth_guard(app):
 
     import flask_login
     from flask import Response, request
+    from app.services.pin_unlock_service import (
+        current_pin_session,
+        expire_pin_session_if_idle,
+    )
+
+    lock_screen_endpoints = {
+        "auth.api_pin_session_status",
+        "auth.api_pin_lock",
+        "auth.api_pin_unlock",
+        "auth.api_pin_activity",
+        "auth.api_pin_dashboard_summary",
+        "auth.api_logout",
+    }
 
     @app.before_request
     def require_login_for_api():
@@ -243,11 +256,26 @@ def register_auth_guard(app):
             request.endpoint) if request.endpoint else None
         if view is None or getattr(view, "is_public", False):
             return None  # unknown routes fall through to 404
+        if request.endpoint in lock_screen_endpoints:
+            return None
         if not flask_login.current_user.is_authenticated:
             return Response(
                 json.dumps(
                     {"reply": "error", "error": "Authentication required"}),
                 status=401,
+                mimetype="application/json",
+            )
+        grant = current_pin_session()
+        if not grant or grant.active_user_id != flask_login.current_user.id:
+            return Response(
+                json.dumps({"reply": "error", "error": "Primary login required"}),
+                status=401,
+                mimetype="application/json",
+            )
+        if expire_pin_session_if_idle(grant):
+            return Response(
+                json.dumps({"reply": "error", "error": "Session locked"}),
+                status=423,
                 mimetype="application/json",
             )
         return None

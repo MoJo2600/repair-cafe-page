@@ -55,6 +55,33 @@ class PinState(db.Model):
     mode: Mapped[str] = mapped_column(db.String(10), nullable=False)
 
 
+class PinUnlockSession(db.Model):
+    """Server-side PIN-switch eligibility for one authenticated browser session."""
+
+    __tablename__ = "pin_unlock_sessions"
+
+    session_id: Mapped[str] = mapped_column(db.String(64), primary_key=True)
+    active_user_id: Mapped[int] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    is_locked: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+    failed_attempts: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0, server_default="0"
+    )
+    cooldown_level: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0, server_default="0"
+    )
+    locked_until: Mapped[Optional[datetime]] = mapped_column(db.DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+
+
 class AppConfig(db.Model):
     """Key-value store for application configuration (org name, website, etc.)."""
 

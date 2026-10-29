@@ -2,6 +2,7 @@
 
 from importlib import import_module
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 import os
 from threading import Barrier
 
@@ -13,8 +14,9 @@ from alembic.operations import Operations
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import PinState, User
+from app.models import Customer, PinState, PinUnlockSession, Repair, User
 from app.services.pin_service import PinError, generate_pin, hash_pin_code, reconcile_pin_mode
+from app.services.pin_unlock_service import utc_now
 
 
 def test_database_rejects_duplicate_pins(app, helper_user):
@@ -93,6 +95,195 @@ def test_provider_mode_disables_generation(helper_client):
     assert helper_client.post("/api/auth/me/pin", json={}).status_code == 403
 
 
+def test_primary_password_login_arms_browser_pin_session(client, helper_user):
+    response = client.post(
+        "/api/auth/login", json={"username": "helfer", "password": "secret"}
+    )
+    assert response.status_code == 200
+    with client.session_transaction() as browser_session:
+        session_id = browser_session.get("pin_unlock_session_id")
+    assert session_id
+    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    assert grant.active_user_id == helper_user.id
+    assert grant.is_locked is False
+
+
+def test_locked_session_blocks_repairs_and_pin_switches_helper(
+    app, helper_client, helper_user, local_pins
+):
+    from werkzeug.security import generate_password_hash
+
+    second_user = User(
+        username="second-helper",
+        vorname="Second",
+        nachname="Helper",
+        email="second@example.org",
+        password_hash=generate_password_hash("secret"),
+        pin_code_hash=hash_pin_code("123456"),
+    )
+    db.session.add(second_user)
+    db.session.commit()
+
+    locked = helper_client.post("/api/auth/pin-session/lock", json={})
+    assert locked.status_code == 200
+    assert locked.get_json() == {"locked": True}
+    assert helper_client.get("/api/list").status_code == 423
+    assert helper_client.get("/api/auth/pin-session").get_json()["locked"] is True
+
+    unlocked = helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    )
+    assert unlocked.status_code == 200
+    assert unlocked.get_json()["data"]["username"] == "second-helper"
+    assert helper_client.get("/api/list").status_code == 200
+
+    with helper_client.session_transaction() as browser_session:
+        session_id = browser_session["pin_unlock_session_id"]
+    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    assert grant.active_user_id == second_user.id
+
+
+def test_pin_unlock_cannot_bootstrap_anonymous_browser(client):
+    assert client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    ).status_code == 401
+
+
+def test_pin_grant_is_isolated_to_the_primary_login_browser(app, helper_user):
+    first_browser = app.test_client()
+    second_browser = app.test_client()
+    response = first_browser.post(
+        "/api/auth/login", json={"username": "helfer", "password": "secret"}
+    )
+    assert response.status_code == 200
+    assert first_browser.get("/api/auth/pin-session").status_code == 200
+    assert second_browser.get("/api/auth/pin-session").status_code == 401
+    assert second_browser.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    ).status_code == 401
+
+
+def test_locked_pin_session_expires_after_sixty_seconds(
+    helper_client, helper_user
+):
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    with helper_client.session_transaction() as browser_session:
+        session_id = browser_session["pin_unlock_session_id"]
+    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    grant.is_locked = False
+    grant.last_activity_at = utc_now() - timedelta(seconds=61)
+    db.session.commit()
+
+    response = helper_client.get("/api/list")
+    assert response.status_code == 423
+    db.session.refresh(grant)
+    assert grant.is_locked is True
+
+
+def test_pin_unlock_attempts_enter_server_side_cooldown(
+    helper_client, helper_user, local_pins
+):
+    helper_user.pin_code_hash = hash_pin_code("123456")
+    db.session.commit()
+    helper_client.post("/api/auth/pin-session/lock", json={})
+
+    responses = [
+        helper_client.post(
+            "/api/auth/pin-session/unlock", json={"pin_code": "000000"}
+        )
+        for _ in range(5)
+    ]
+    assert all(response.status_code == 401 for response in responses)
+    assert helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "000000"}
+    ).status_code == 429
+    with helper_client.session_transaction() as browser_session:
+        session_id = browser_session["pin_unlock_session_id"]
+    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    assert grant.cooldown_level == 1
+    assert grant.locked_until is not None
+
+
+def test_pin_unlock_fails_closed_on_runtime_mode_mismatch(
+    app, helper_client, helper_user, local_pins
+):
+    generate_pin(helper_user.id)
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    app.config["PIN_MODE"] = "oidc"
+    response = helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    )
+    assert response.status_code == 503
+
+
+def test_full_logout_revokes_pin_session(helper_client):
+    with helper_client.session_transaction() as browser_session:
+        session_id = browser_session["pin_unlock_session_id"]
+    response = helper_client.post("/api/auth/logout")
+    assert response.status_code == 200
+    assert PinUnlockSession.query.filter_by(session_id=session_id).first() is None
+    assert helper_client.get("/api/auth/pin-session").status_code == 401
+
+
+def test_locked_logout_rejects_cross_site_request(helper_client):
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    response = helper_client.post(
+        "/api/auth/logout",
+        headers={"Origin": "https://attacker.example"},
+    )
+    assert response.status_code == 403
+    assert helper_client.get("/api/auth/pin-session").get_json()["locked"] is True
+
+
+def test_pin_unlock_session_migration_round_trips():
+    engine = sa.create_engine("sqlite://")
+    migration = import_module("app.migrations.versions.013_pin_unlock_sessions")
+    with engine.begin() as connection:
+        connection.execute(sa.text(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY)"))
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(migration, "op", Operations(
+            MigrationContext.configure(connection)))
+        try:
+            migration.upgrade()
+            assert "pin_unlock_sessions" in sa.inspect(connection).get_table_names()
+            migration.downgrade()
+            assert "pin_unlock_sessions" not in sa.inspect(connection).get_table_names()
+        finally:
+            monkeypatch.undo()
+    engine.dispose()
+
+
+def test_locked_dashboard_summary_excludes_private_repair_data(
+    app, helper_client, helper_user
+):
+    from datetime import date
+
+    customer = Customer(vorname="Private", nachname="Customer")
+    db.session.add(customer)
+    db.session.flush()
+    db.session.add(Repair(
+        customer_id=customer.id,
+        datum=date.today(),
+        geraet_art="Private Device",
+        status="Offen",
+        qr_token="a" * 32,
+    ))
+    db.session.commit()
+    assert helper_client.post("/api/auth/pin-session/lock", json={}).status_code == 200
+
+    response = helper_client.get("/api/auth/pin-session/dashboard")
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["total_repairs"] == 1
+    assert payload["open_repairs"] == 1
+    serialized = response.get_data(as_text=True)
+    assert "Private" not in serialized
+    assert "Device" not in serialized
+    assert "customer" not in serialized
+    assert helper_client.get("/api/list").status_code == 423
+
+
 def test_openapi_registers_pin_contracts(client):
     response = client.get("/apispec_1.json")
     assert response.status_code == 200
@@ -123,6 +314,16 @@ def test_pin_mutation_rejects_cross_site_and_invalid_requests(helper_client, loc
             "/api/auth/me/pin", json=body).status_code == 400
     assert helper_client.post("/api/auth/me/pin", data="{",
                               content_type="application/json").status_code == 400
+
+
+def test_pin_mutation_accepts_vite_localhost_origin(helper_client, local_pins, app):
+    app.config["DEBUG"] = True
+    response = helper_client.post(
+        "/api/auth/me/pin",
+        json={},
+        headers={"Origin": "http://localhost:5173"},
+    )
+    assert response.status_code == 200
 
 
 def test_disabled_user_cannot_manage_pin(helper_client, helper_user, local_pins):

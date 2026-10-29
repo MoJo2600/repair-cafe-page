@@ -34,9 +34,13 @@ import {
   ListVdeTestsParams,
   LoginRequest,
   OidcLoginParams,
+  PinDashboardSummaryResponse,
   PinGenerateRequest,
   PinGeneratedResponse,
+  PinSessionActionResponse,
+  PinSessionStatusResponse,
   PinStatusResponse,
+  PinUnlockRequest,
   PrintRepairLabelParams,
   PrintRepairLabelPayload,
   PruefgeraetResponse,
@@ -185,6 +189,78 @@ export class Api<
   /**
    * No description
    *
+   * @tags Auth
+   * @name PinSessionStatus
+   * @summary Return whether the current authenticated browser session is unlocked.
+   * @request GET:/api/auth/pin-session
+   */
+  pinSessionStatus = (params: RequestParams = {}) =>
+    this.request<PinSessionStatusResponse, void>({
+      path: `/api/auth/pin-session`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name RecordPinSessionActivity
+   * @summary Record real user activity for the session idle timeout.
+   * @request POST:/api/auth/pin-session/activity
+   */
+  recordPinSessionActivity = (params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/activity`,
+      method: "POST",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name PinDashboardSummary
+   * @summary Return aggregate dashboard metrics allowed on the PIN lock screen.
+   * @request GET:/api/auth/pin-session/dashboard
+   */
+  pinDashboardSummary = (params: RequestParams = {}) =>
+    this.request<PinDashboardSummaryResponse, void>({
+      path: `/api/auth/pin-session/dashboard`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name LockPinSession
+   * @summary Lock the current authenticated browser session.
+   * @request POST:/api/auth/pin-session/lock
+   */
+  lockPinSession = (params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/lock`,
+      method: "POST",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name UnlockPinSession
+   * @summary Switch to the active helper who owns the submitted PIN.
+   * @request POST:/api/auth/pin-session/unlock
+   */
+  unlockPinSession = (body: PinUnlockRequest, params: RequestParams = {}) =>
+    this.request<AuthResponse, void>({
+      path: `/api/auth/pin-session/unlock`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
    * @tags Configuration
    * @name GetAppConfig
    * @summary Get application-level configuration (organisation name and website).
@@ -206,7 +282,7 @@ export class Api<
    */
   updateAppConfig = (
     body: UpdateAppConfigPayload,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<AppConfigResponse, void>({
       path: `/api/config/app-config`,
@@ -239,7 +315,7 @@ export class Api<
    */
   uploadDisclaimerTemplate = (
     data: UploadDisclaimerTemplatePayload,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/config/disclaimer`,
@@ -396,7 +472,7 @@ export class Api<
    */
   getRepairByQrToken = (
     { token }: GetRepairByQrTokenParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/by-token/${token}`,
@@ -428,7 +504,7 @@ export class Api<
   updateRepair = (
     { id }: UpdateRepairParams,
     body: RepairUpdate,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<
       {
@@ -454,7 +530,7 @@ export class Api<
    */
   getRepairDisclaimer = (
     { id }: GetRepairDisclaimerParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${id}/disclaimer`,
@@ -472,7 +548,7 @@ export class Api<
   printRepairLabel = (
     { id }: PrintRepairLabelParams,
     body: PrintRepairLabelPayload,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${id}/print-label`,
@@ -491,7 +567,7 @@ export class Api<
    */
   listRepairAttachments = (
     { repairId, ...query }: ListRepairAttachmentsParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<RepairAttachmentListResponse, void>({
       path: `/api/repairs/${repairId}/attachments`,
@@ -510,7 +586,7 @@ export class Api<
   uploadRepairAttachments = (
     { repairId }: UploadRepairAttachmentsParams,
     data: UploadRepairAttachmentsPayload,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<RepairAttachmentListResponse, void>({
       path: `/api/repairs/${repairId}/attachments`,
@@ -529,7 +605,7 @@ export class Api<
    */
   deleteRepairAttachment = (
     { repairId, attachmentId }: DeleteRepairAttachmentParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
@@ -546,7 +622,7 @@ export class Api<
    */
   getRepairAttachment = (
     { repairId, attachmentId }: GetRepairAttachmentParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
@@ -563,7 +639,7 @@ export class Api<
    */
   listRepairLogs = (
     { repairId }: ListRepairLogsParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<RepairLogListResponse, void>({
       path: `/api/repairs/${repairId}/logs`,
@@ -581,7 +657,7 @@ export class Api<
   createRepairLog = (
     { repairId }: CreateRepairLogParams,
     data: RepairLogCreate,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs`,
@@ -600,7 +676,7 @@ export class Api<
    */
   deleteRepairLog = (
     { repairId, logId }: DeleteRepairLogParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
@@ -617,7 +693,7 @@ export class Api<
    */
   getRepairLog = (
     { repairId, logId }: GetRepairLogParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
@@ -634,7 +710,7 @@ export class Api<
    */
   listVdeTests = (
     { repairId }: ListVdeTestsParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<VdeTestListResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
@@ -652,7 +728,7 @@ export class Api<
   createVdeTest = (
     { repairId }: CreateVdeTestParams,
     data: VdeTestCreate,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<VdeTestCreateResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
@@ -671,7 +747,7 @@ export class Api<
    */
   getVdeTest = (
     { repairId, testId }: GetVdeTestParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/repairs/${repairId}/vde-tests/${testId}`,
@@ -736,7 +812,7 @@ export class Api<
    */
   deleteSetting = (
     { settingId }: DeleteSettingParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<void, void>({
       path: `/api/settings/${settingId}`,
@@ -753,7 +829,7 @@ export class Api<
    */
   updateSetting = (
     { settingId }: UpdateSettingParams,
-    params: RequestParams = {}
+    params: RequestParams = {},
   ) =>
     this.request<SettingResponse, void>({
       path: `/api/settings/${settingId}`,
