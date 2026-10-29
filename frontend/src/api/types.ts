@@ -13,6 +13,8 @@ export type {
   PinStatusResponse,
   PinGenerateRequest,
   PinGeneratedResponse,
+  PinDashboardCategoryCount,
+  PinDashboardRepairItem,
   PinDashboardSummaryResponse,
   PinSessionActionResponse,
   PinSessionStatusResponse,

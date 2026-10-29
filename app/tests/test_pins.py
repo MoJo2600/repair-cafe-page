@@ -14,7 +14,7 @@ from flask import Flask
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Customer, PinState, PinUnlockSession, Repair, User
+from app.models import Customer, PinState, PinUnlockSession, Repair, Setting, User
 from app.services.pin_service import (
     PinError,
     generate_pin,
@@ -268,30 +268,59 @@ def test_locked_dashboard_summary_excludes_private_repair_data(
 ):
     from datetime import date
 
+    elektro = Setting(category="repair_type", name="Elektro", sort_order=1)
+    textil = Setting(category="repair_type", name="Textil", sort_order=2)
+    db.session.add_all([elektro, textil])
     customer = Customer(vorname="Private", nachname="Customer")
     db.session.add(customer)
     db.session.flush()
     next_repair = Repair(
         customer_id=customer.id,
+        repair_type_id=elektro.id,
         datum=date.today(),
         geraet_art="Private Device",
         status="Offen",
         qr_token="a" * 32,
     )
-    db.session.add(next_repair)
+    active_repair = Repair(
+        customer_id=customer.id,
+        repair_type_id=textil.id,
+        datum=date.today(),
+        geraet_art="Another Private Device",
+        status="In Bearbeitung",
+        user_id=helper_user.id,
+        qr_token="b" * 32,
+    )
+    db.session.add_all([next_repair, active_repair])
     db.session.commit()
+
+    # Dashboard summary works while unlocked (menu access)
+    unlocked_response = helper_client.get("/api/auth/pin-session/dashboard")
+    assert unlocked_response.status_code == 200
+
+    # And works while locked (wall projection)
     assert helper_client.post("/api/auth/pin-session/lock", json={}).status_code == 200
 
     response = helper_client.get("/api/auth/pin-session/dashboard")
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload["total_repairs"] == 1
+    assert payload["total_repairs"] == 2
     assert payload["open_repairs"] == 1
     assert payload["next_repair_id"] == next_repair.id
+    assert payload["next_repair_category"] == "Elektro"
+    assert payload["in_progress_repairs"] == 1
+    assert payload["in_progress_items"] == [
+        {"id": active_repair.id, "category": "Textil"}
+    ]
+    assert payload["top_categories"] == [
+        {"name": "Elektro", "count": 1},
+        {"name": "Textil", "count": 1},
+    ]
     serialized = response.get_data(as_text=True)
     assert "Private" not in serialized
     assert "Device" not in serialized
     assert "customer" not in serialized
+    assert helper_user.username not in serialized
     assert helper_client.get("/api/list").status_code == 423
 
 
@@ -310,6 +339,11 @@ def test_openapi_registers_pin_contracts(client):
     )
     dashboard_schema = spec["definitions"]["PinDashboardSummaryResponse"]
     assert "next_repair_id" in dashboard_schema["properties"]
+    assert "next_repair_category" in dashboard_schema["properties"]
+    assert "in_progress_items" in dashboard_schema["properties"]
+    assert "top_categories" in dashboard_schema["properties"]
+    assert "PinDashboardRepairItem" in spec["definitions"]
+    assert "PinDashboardCategoryCount" in spec["definitions"]
     dashboard_operation = spec["paths"]["/api/auth/pin-session/dashboard"]["get"]
     assert (
         dashboard_operation["responses"]["200"]["schema"]["$ref"]

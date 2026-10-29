@@ -669,14 +669,33 @@ class RepairsTimelineResponse(BaseModel):
     data: list[RepairsTimelinePoint] = []
 
 
+class PinDashboardRepairItem(BaseModel):
+    """Non-sensitive summary of a single repair for wall projection."""
+
+    id: int = Field(..., description="Repair ID")
+    category: Optional[str] = Field(
+        None, description="Predefined repair category name"
+    )
+
+
+class PinDashboardCategoryCount(BaseModel):
+    """Aggregated repair count for a predefined repair category."""
+
+    name: str = Field(..., description="Predefined repair category name")
+    count: int = Field(..., description="Total repairs in this category")
+
+
 class PinDashboardSummaryResponse(BaseModel):
     total_repairs: int
     open_repairs: int
     next_repair_id: Optional[int] = None
+    next_repair_category: Optional[str] = None
     in_progress_repairs: int
+    in_progress_items: list[PinDashboardRepairItem] = Field(default_factory=list)
     repaired_repairs: int
     not_repaired_repairs: int
     success_rate: Optional[int] = None
+    top_categories: list[PinDashboardCategoryCount] = Field(default_factory=list)
     timeline: list[RepairsTimelinePoint] = Field(default_factory=list)
 
 
