@@ -14,7 +14,8 @@ class LokiConfig:
     LOKI_TOKEN = os.environ.get("GCLOUD_PROM_API_KEY", False)
     LOKI_URL = os.environ.get("GCLOUD_HOSTED_LOGS_URL", False)
     # if any of LOKI_ID, LOKI_TOKEN, LOKI_URL is False, LOKI_ENABLED will be False
-    LOKI_ENABLED = all([LOKI_ID != False, LOKI_TOKEN != False, LOKI_URL != False])
+    LOKI_ENABLED = all(
+        [LOKI_ID != False, LOKI_TOKEN != False, LOKI_URL != False])
     HTTPS_URL = f"https://{LOKI_ID}:{LOKI_TOKEN}@{LOKI_URL}"
     SOURCE = "repair"
     HOST = "repairCafe"
@@ -65,6 +66,27 @@ class BaseConfig:
         ),
     )
 
+    # Public base URL as seen by the browser, e.g. https://reparaturen.repaircafe-hemau.de
+    # (behind the TLS-terminating proxy the request scheme is not reliable).
+    PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
+
+    # OIDC login. Enabled when issuer, client id/secret and PUBLIC_URL are set.
+    # While enabled, password login is restricted to local admin accounts (break-glass).
+    OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "")
+    OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
+    OIDC_CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "")
+    OIDC_SCOPES = os.environ.get("OIDC_SCOPES", "openid email profile")
+    OIDC_PIN_CLAIM = os.environ.get("OIDC_PIN_CLAIM", "pin_code")
+    OIDC_ADMIN_CLAIM = os.environ.get("OIDC_ADMIN_CLAIM", "repaircafe_admin")
+    OIDC_GROUPS_CLAIM = os.environ.get("OIDC_GROUPS_CLAIM", "groups")
+    PIN_MODE = os.environ.get("PIN_MODE", "oidc")
+    PIN_MODE_RESET_ACK = os.environ.get("PIN_MODE_RESET_ACK", "")
+    OIDC_DENIED_GROUPS = [
+        g.strip()
+        for g in os.environ.get("OIDC_DENIED_GROUPS", "").split(",")
+        if g.strip()
+    ]
+
     # Label printer (CUPS via mounted socket /run/cups/cups.sock)
     LABEL_PRINTER_ENABLED = os.environ.get(
         "LABEL_PRINTER_ENABLED", "false"
@@ -73,6 +95,9 @@ class BaseConfig:
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
+        # Full URL override, e.g. "sqlite://" for the test suite.
+        if os.environ.get("DATABASE_URL"):
+            return os.environ["DATABASE_URL"]
         return f"mysql+pymysql://{self.USERNAME}:{self.PASSWORD}@{self.HOST}:{self.DBPORT}/{self.DB}"
 
 
@@ -106,5 +131,6 @@ def get_config():
     elif flask_env in ("prod", "production"):
         return ProductionConfig()
     else:
-        print(f"Unknown FLASK_ENV value: {flask_env}. Using production config.")
+        print(
+            f"Unknown FLASK_ENV value: {flask_env}. Using production config.")
         return ProductionConfig()

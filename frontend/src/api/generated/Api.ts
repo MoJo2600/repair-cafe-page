@@ -13,25 +13,38 @@
 import {
   APIResponse,
   AppConfigResponse,
+  AuthConfigResponse,
   AuthResponse,
   CreateRepairLogParams,
   CreateVdeTestParams,
   CustomerWithRepairCountResponse,
+  DeleteRepairAttachmentParams,
   DeleteRepairLogParams,
   DeleteSettingParams,
   FeaturesResponse,
+  GetRepairAttachmentParams,
   GetRepairByQrTokenParams,
   GetRepairDisclaimerParams,
   GetRepairLogParams,
   GetStatDataParams,
   GetVdeTestParams,
+  ListRepairAttachmentsParams,
   ListRepairLogsParams,
   ListRepairsParams,
   ListVdeTestsParams,
   LoginRequest,
+  OidcLoginParams,
+  PinDashboardSummaryResponse,
+  PinGenerateRequest,
+  PinGeneratedResponse,
+  PinSessionActionResponse,
+  PinSessionStatusResponse,
+  PinStatusResponse,
+  PinUnlockRequest,
   PrintRepairLabelParams,
   PrintRepairLabelPayload,
   PruefgeraetResponse,
+  RepairAttachmentListResponse,
   RepairCreate,
   RepairCreateResponse,
   RepairLogCreate,
@@ -45,6 +58,8 @@ import {
   UpdateSettingParams,
   UploadDisclaimerTemplatePayload,
   UploadLogoPayload,
+  UploadRepairAttachmentsParams,
+  UploadRepairAttachmentsPayload,
   VdeTestCreate,
   VdeTestCreateResponse,
   VdeTestListResponse,
@@ -54,6 +69,20 @@ import { ContentType, HttpClient, RequestParams } from "./http-client";
 export class Api<
   SecurityDataType = unknown,
 > extends HttpClient<SecurityDataType> {
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name AuthConfig
+   * @summary Login options for the login page.
+   * @request GET:/api/auth/config
+   */
+  authConfig = (params: RequestParams = {}) =>
+    this.request<AuthConfigResponse, any>({
+      path: `/api/auth/config`,
+      method: "GET",
+      ...params,
+    });
   /**
    * No description
    *
@@ -96,6 +125,137 @@ export class Api<
     this.request<AuthResponse, void>({
       path: `/api/auth/me`,
       method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name PinStatus
+   * @summary Return the current user's PIN status, never the PIN itself.
+   * @request GET:/api/auth/me/pin
+   */
+  pinStatus = (params: RequestParams = {}) =>
+    this.request<PinStatusResponse, void>({
+      path: `/api/auth/me/pin`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name GeneratePin
+   * @summary Generate or explicitly replace the current user's local PIN, revealing it once.
+   * @request POST:/api/auth/me/pin
+   */
+  generatePin = (body: PinGenerateRequest, params: RequestParams = {}) =>
+    this.request<PinGeneratedResponse, void>({
+      path: `/api/auth/me/pin`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name OidcCallback
+   * @summary SSO callback; logs the user in and redirects into the app.
+   * @request GET:/api/auth/oidc/callback
+   */
+  oidcCallback = (params: RequestParams = {}) =>
+    this.request<any, void>({
+      path: `/api/auth/oidc/callback`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name OidcLogin
+   * @summary Start the SSO login (redirects to the identity provider).
+   * @request GET:/api/auth/oidc/login
+   */
+  oidcLogin = (query: OidcLoginParams, params: RequestParams = {}) =>
+    this.request<any, void>({
+      path: `/api/auth/oidc/login`,
+      method: "GET",
+      query: query,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name PinSessionStatus
+   * @summary Return whether the current authenticated browser session is unlocked.
+   * @request GET:/api/auth/pin-session
+   */
+  pinSessionStatus = (params: RequestParams = {}) =>
+    this.request<PinSessionStatusResponse, void>({
+      path: `/api/auth/pin-session`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name RecordPinSessionActivity
+   * @summary Record real user activity for the session idle timeout.
+   * @request POST:/api/auth/pin-session/activity
+   */
+  recordPinSessionActivity = (params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/activity`,
+      method: "POST",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name PinDashboardSummary
+   * @summary Return aggregate dashboard metrics allowed on the PIN lock screen.
+   * @request GET:/api/auth/pin-session/dashboard
+   */
+  pinDashboardSummary = (params: RequestParams = {}) =>
+    this.request<PinDashboardSummaryResponse, void>({
+      path: `/api/auth/pin-session/dashboard`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name LockPinSession
+   * @summary Lock the current authenticated browser session.
+   * @request POST:/api/auth/pin-session/lock
+   */
+  lockPinSession = (params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/lock`,
+      method: "POST",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name UnlockPinSession
+   * @summary Switch to the active helper who owns the submitted PIN.
+   * @request POST:/api/auth/pin-session/unlock
+   */
+  unlockPinSession = (body: PinUnlockRequest, params: RequestParams = {}) =>
+    this.request<AuthResponse, void>({
+      path: `/api/auth/pin-session/unlock`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
       ...params,
     });
   /**
@@ -395,6 +555,78 @@ export class Api<
       method: "POST",
       body: body,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name ListRepairAttachments
+   * @summary List all attachments for a repair
+   * @request GET:/api/repairs/{repair_id}/attachments
+   */
+  listRepairAttachments = (
+    { repairId, ...query }: ListRepairAttachmentsParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<RepairAttachmentListResponse, void>({
+      path: `/api/repairs/${repairId}/attachments`,
+      method: "GET",
+      query: query,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name UploadRepairAttachments
+   * @summary Upload one or more files to a repair
+   * @request POST:/api/repairs/{repair_id}/attachments
+   */
+  uploadRepairAttachments = (
+    { repairId }: UploadRepairAttachmentsParams,
+    data: UploadRepairAttachmentsPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<RepairAttachmentListResponse, void>({
+      path: `/api/repairs/${repairId}/attachments`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name DeleteRepairAttachment
+   * @summary Delete a repair attachment (record + file on disk)
+   * @request DELETE:/api/repairs/{repair_id}/attachments/{attachment_id}
+   */
+  deleteRepairAttachment = (
+    { repairId, attachmentId }: DeleteRepairAttachmentParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
+      method: "DELETE",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Attachments
+   * @name GetRepairAttachment
+   * @summary Download / serve a single attachment file
+   * @request GET:/api/repairs/{repair_id}/attachments/{attachment_id}
+   */
+  getRepairAttachment = (
+    { repairId, attachmentId }: GetRepairAttachmentParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
+      method: "GET",
       ...params,
     });
   /**

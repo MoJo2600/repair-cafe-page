@@ -30,7 +30,8 @@ def pydantic_to_swagger(model: Type[BaseModel]) -> dict:
 
     if "properties" in schema:
         for field_name, field_info in schema["properties"].items():
-            swagger_schema["properties"][field_name] = _convert_field_schema(field_info)
+            swagger_schema["properties"][field_name] = _convert_field_schema(
+                field_info)
 
     return swagger_schema
 
@@ -51,13 +52,16 @@ def _convert_field_schema(field_schema: dict) -> dict:
         if refs:
             ref = refs[0]["$ref"].replace("#/$defs/", "#/components/schemas/")
             return {"$ref": ref}
-        types = [item.get("type") for item in field_schema["anyOf"] if "type" in item]
+        types = [item.get("type")
+                 for item in field_schema["anyOf"] if "type" in item]
         if types:
             swagger_field["type"] = types[0]
 
     # Handle type
     if "type" in field_schema:
         swagger_field["type"] = field_schema["type"]
+    if "enum" in field_schema:
+        swagger_field["enum"] = field_schema["enum"]
 
     # Handle format (e.g., date, email)
     if "format" in field_schema:

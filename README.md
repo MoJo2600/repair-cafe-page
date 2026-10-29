@@ -11,11 +11,11 @@ Designed for self-hosted deployment on a Raspberry Pi or any Linux server.
 - **Work log** — multiple repairer sessions per repair, each with duration and notes
 - **VDE electrical safety testing** — record DIN VDE 0701/0702 test results
   and download a filled Prüfprotokoll PDF
-- **Status tracking** — Offen → In Arbeit → Repariert / Nicht reparierbar
+- **Status tracking** — Offen → In Bearbeitung → Repariert / Nicht Repariert
 - **User management** — admin and repairer accounts with session-based auth
 - **Settings** — configurable dropdown values (repair types, test devices)
   managed through the UI
-- **Data export** — XLSX export; optional e-mail delivery
+- **Data export** — XLSX download (`/api/export`, admin only); optional CSV e-mail delivery
 
 ## Quick start (Docker)
 
@@ -34,6 +34,96 @@ docker compose up -d
 ```
 
 The app is available at `http://<host>`.
+
+### OIDC and Profile PINs
+
+Any OIDC provider supporting discovery and the authorization-code flow can be
+configured with `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and
+`PUBLIC_URL` (the browser-facing application URL). Register
+`<PUBLIC_URL>/api/auth/oidc/callback` as the redirect URI. Use HTTPS and
+`SESSION_COOKIE_SECURE=true` in production. While SSO is enabled, password
+login remains available only to local administrators as a break-glass option.
+Login always requests fresh authentication (`prompt=login`) for shared PCs.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OIDC_SCOPES` | `openid email profile` | Space-separated scopes |
+| `OIDC_ADMIN_CLAIM` | `repaircafe_admin` | Boolean admin claim; absent/false means non-admin |
+| `OIDC_GROUPS_CLAIM` | `groups` | Group-list claim |
+| `OIDC_DENIED_GROUPS` | empty | Comma-separated denied groups |
+| `OIDC_PIN_CLAIM` | `pin_code` | Six-digit PIN claim used in OIDC PIN mode |
+| `PIN_MODE` | `oidc` | `oidc` or `local`, never both |
+
+Claim mappings refer to top-level claims. Optional mappings can be disabled
+with an empty name. Standard `sub`, `email`, `name`, and `preferred_username`
+claims retain their normal meaning. An admin claim must be boolean `true`
+or the string `true`; arbitrary nonempty strings never grant admin rights.
+Changing to another issuer for an existing database requires a deliberate
+identity/account migration: subjects are not automatically re-linked across issuers.
+
+**Local PIN mode:** set `PIN_MODE=local`. Users sign in normally, open their
+profile using their account name in the sidebar, and explicitly generate a
+PIN. No PIN is created by logging in or simply opening the profile. PINs are
+random six-digit values, including possible leading zeroes. Each PIN is shown
+only in its creation response and cannot be retrieved later; a forgotten PIN
+must be replaced with confirmation. A database unique constraint and collision
+retries prevent duplicate PINs. Provider PIN claims are ignored in this mode.
+
+**OIDC PIN mode:** set `PIN_MODE=oidc`. PINs are refreshed from the configured
+claim at each SSO login. Profile generation/replacement is disabled, including
+through the API. Users retrieve their PIN from their identity provider, such
+as their easyVerein profile. Missing/invalid claims clear the previous PIN but
+do not block normal SSO login. A reassigned provider PIN is removed from its
+previous holder, preserving one owner per PIN. There is no local fallback.
+
+For the existing easyVerein integration through Authentik, explicitly set:
+
+```dotenv
+PIN_MODE=oidc
+OIDC_SCOPES=openid email profile repaircafe
+OIDC_PIN_CLAIM=door_code
+OIDC_ADMIN_CLAIM=repaircafe_admin
+OIDC_GROUPS_CLAIM=groups
+OIDC_DENIED_GROUPS=Kind
+```
+
+For a standard provider without a PIN claim, use `PIN_MODE=local` with the
+standard scopes. Configure its admin/group mappings as needed, or leave them
+empty. The supplied `.env.example` selects local mode explicitly.
+
+**Upgrade:** migration 012 renames `door_code_hash` to `pin_code_hash` and
+preserves existing keyed hashes. Duplicate legacy hashes stop migration with
+an actionable error instead of choosing an owner. Configure the explicit
+easyVerein mappings above before upgrading that setup: generic defaults no
+longer request the `repaircafe` scope or read `door_code` automatically.
+Existing provider hashes are tracked as OIDC-owned; they cannot silently
+become local PINs.
+
+**Changing modes deletes all existing PINs.** Back up the database and stop
+all backend instances before switching. Startup refuses the change unless
+`PIN_MODE_RESET_ACK` matches the exact transition:
+
+```dotenv
+PIN_MODE=local
+PIN_MODE_RESET_ACK=oidc-to-local
+```
+
+Use `local-to-oidc` for the reverse transition. Start the backend with the new
+settings, then remove the acknowledgement. The PIN reset and persisted mode
+change are atomic and applied once; subsequent restarts do not erase newly
+issued PINs. Accounts and sessions are not deleted. Local users generate new
+PINs explicitly; provider PINs return at the next successful SSO login.
+Do not run old-mode and new-mode instances together; PIN operations fail
+closed if the persisted mode differs from the process configuration.
+
+PINs are stored only as server-keyed hashes, never plaintext or reversible
+encryption. Keep `FLASK_SECRET_KEY` stable: changing it invalidates existing
+PIN hashes as well as sessions. Treat changes to the PIN claim's meaning as
+a credential migration, not a cosmetic rename. Profile PIN responses are
+uncacheable and PINs are never included in user-list or normal profile data.
+
+This release prepares PIN storage and profile management only. A PIN login
+endpoint, lock screen, and unlock flow are not implemented yet.
 
 
 ### Deploy with Docker Compose
@@ -61,6 +151,17 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
       SESSION_COOKIE_SECURE: "false"     # set "true" if HTTPS terminates upstream
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_SCOPES: ${OIDC_SCOPES-openid email profile}
+      OIDC_PIN_CLAIM: ${OIDC_PIN_CLAIM-pin_code}
+      OIDC_ADMIN_CLAIM: ${OIDC_ADMIN_CLAIM-repaircafe_admin}
+      OIDC_GROUPS_CLAIM: ${OIDC_GROUPS_CLAIM-groups}
+      OIDC_DENIED_GROUPS: ${OIDC_DENIED_GROUPS:-}
+      PIN_MODE: ${PIN_MODE-oidc}
+      PIN_MODE_RESET_ACK: ${PIN_MODE_RESET_ACK:-}
       EMAIL_ENABLED: "false"
       MAIL_TOKEN: ""
       MAIL_SENDER: ""

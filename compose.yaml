@@ -1,5 +1,4 @@
 services:
-
   frontend:
     build:
       context: .
@@ -36,6 +35,17 @@ services:
       # Set to "true" only when TLS terminates upstream (HTTPS deployment).
       # Over plain HTTP (local network / Pi) keep this "false".
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_SCOPES: ${OIDC_SCOPES-openid email profile}
+      OIDC_PIN_CLAIM: ${OIDC_PIN_CLAIM-pin_code}
+      OIDC_ADMIN_CLAIM: ${OIDC_ADMIN_CLAIM-repaircafe_admin}
+      OIDC_GROUPS_CLAIM: ${OIDC_GROUPS_CLAIM-groups}
+      OIDC_DENIED_GROUPS: ${OIDC_DENIED_GROUPS:-}
+      PIN_MODE: ${PIN_MODE-oidc}
+      PIN_MODE_RESET_ACK: ${PIN_MODE_RESET_ACK:-}
       # Label printer — mount the host CUPS socket and set LABEL_PRINTER_ENABLED=true.
       # See README § Setup Label printer for full instructions.
       LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}

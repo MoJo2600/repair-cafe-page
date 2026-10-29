@@ -1,11 +1,13 @@
 flask
 flask_login
+authlib
 flask-cors
 flask-sqlalchemy
 flask-migrate
 alembic
 requests
 pandas
+openpyxl
 apscheduler
 mailtrap
 pyzipper

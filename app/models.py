@@ -16,20 +16,70 @@ class User(flask_login.UserMixin, db.Model):
 
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(db.String(100), nullable=False, unique=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(
+        db.String(100), nullable=False, unique=True)
     vorname: Mapped[Optional[str]] = mapped_column(db.String(100))
     nachname: Mapped[Optional[str]] = mapped_column(db.String(100))
-    email: Mapped[str] = mapped_column(db.String(100), nullable=False, unique=True)
+    email: Mapped[str] = mapped_column(
+        db.String(100), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    is_admin: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
-    is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+    is_admin: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=True)
+    # OIDC subject; set for SSO accounts, NULL for local accounts
+    oidc_sub: Mapped[Optional[str]] = mapped_column(
+        db.String(255), unique=True)
+    pin_code_hash: Mapped[Optional[str]] = mapped_column(
+        db.String(64), unique=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )
 
     def __repr__(self):
         return f"<User {self.id}: {self.vorname} {self.nachname}>"
+
+
+class PinState(db.Model):
+    """Persisted deployment PIN mode; the only row has id=1."""
+
+    __tablename__ = "pin_state"
+    __table_args__ = (db.CheckConstraint(
+        "id = 1", name="ck_pin_state_singleton"),)
+
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=False)
+    mode: Mapped[str] = mapped_column(db.String(10), nullable=False)
+
+
+class PinUnlockSession(db.Model):
+    """Server-side PIN-switch eligibility for one authenticated browser session."""
+
+    __tablename__ = "pin_unlock_sessions"
+
+    session_id: Mapped[str] = mapped_column(db.String(64), primary_key=True)
+    active_user_id: Mapped[int] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    is_locked: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+    failed_attempts: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0, server_default="0"
+    )
+    cooldown_level: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0, server_default="0"
+    )
+    locked_until: Mapped[Optional[datetime]] = mapped_column(db.DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
 
 
 class AppConfig(db.Model):
@@ -55,12 +105,16 @@ class Setting(db.Model):
 
     __tablename__ = "settings"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
-    category: Mapped[str] = mapped_column(db.String(50), nullable=False, index=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(
+        db.String(50), nullable=False, index=True)
     name: Mapped[str] = mapped_column(db.String(200), nullable=False)
     serial_number: Mapped[Optional[str]] = mapped_column(db.String(100))
-    sort_order: Mapped[int] = mapped_column(db.Integer, nullable=False, default=0)
-    is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )
@@ -80,7 +134,8 @@ class Customer(db.Model):
 
     __tablename__ = "customers"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
     vorname: Mapped[str] = mapped_column(db.String(100), nullable=False)
     nachname: Mapped[str] = mapped_column(db.String(100), nullable=False)
     telefon: Mapped[Optional[str]] = mapped_column(db.String(40))
@@ -101,14 +156,16 @@ class Repair(db.Model):
 
     __tablename__ = "repairs"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
     customer_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("customers.id")
     )
     repair_type_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("settings.id", ondelete="SET NULL"), nullable=True
     )
-    datum: Mapped[date] = mapped_column(db.Date, nullable=False, default=datetime.today)
+    datum: Mapped[date] = mapped_column(
+        db.Date, nullable=False, default=datetime.today)
     geraet_art: Mapped[str] = mapped_column(db.String(100), nullable=False)
     defekt_besch: Mapped[Optional[str]] = mapped_column(db.String(400))
     unterschrift_haft: Mapped[Optional[bool]] = mapped_column(db.Boolean)
@@ -120,9 +177,12 @@ class Repair(db.Model):
         db.Integer, db.ForeignKey("users.id")
     )
     reparatur_dauer: Mapped[Optional[int]] = mapped_column(db.SmallInteger)
-    status: Mapped[str] = mapped_column(db.String(20), nullable=False, default="Offen")
-    closed_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime, nullable=True)
-    qr_token: Mapped[str] = mapped_column(db.String(32), unique=True, nullable=False)
+    status: Mapped[str] = mapped_column(
+        db.String(20), nullable=False, default="Offen")
+    closed_at: Mapped[Optional[datetime]] = mapped_column(
+        db.DateTime, nullable=True)
+    qr_token: Mapped[str] = mapped_column(
+        db.String(32), unique=True, nullable=False)
     created_by_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -204,16 +264,20 @@ class RepairLog(db.Model):
 
     __tablename__ = "repair_logs"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
     repair_id: Mapped[int] = mapped_column(
         db.Integer, db.ForeignKey("repairs.id"), nullable=False
     )
     user_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("users.id")
     )
-    reparatur_dauer: Mapped[int] = mapped_column(db.SmallInteger, nullable=False)
-    reparatur_besch: Mapped[str] = mapped_column(db.String(400), nullable=False)
-    log_type: Mapped[str] = mapped_column(db.String(20), nullable=False, default="work")
+    reparatur_dauer: Mapped[int] = mapped_column(
+        db.SmallInteger, nullable=False)
+    reparatur_besch: Mapped[str] = mapped_column(
+        db.String(400), nullable=False)
+    log_type: Mapped[str] = mapped_column(
+        db.String(20), nullable=False, default="work")
     status_from: Mapped[Optional[str]] = mapped_column(db.String(20))
     status_to: Mapped[Optional[str]] = mapped_column(db.String(20))
     created_at: Mapped[datetime] = mapped_column(
@@ -260,7 +324,8 @@ class VdeTest(db.Model):
 
     __tablename__ = "vde_tests"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
     repair_id: Mapped[int] = mapped_column(
         db.Integer, db.ForeignKey("repairs.id"), nullable=False
     )
@@ -286,8 +351,10 @@ class VdeTest(db.Model):
     sichtpruefung_gehaeuse: Mapped[Optional[bool]] = mapped_column(db.Boolean)
     sichtpruefung_kabel: Mapped[Optional[bool]] = mapped_column(db.Boolean)
     sichtpruefung_stecker: Mapped[Optional[bool]] = mapped_column(db.Boolean)
-    sichtpruefung_zugentlastung: Mapped[Optional[bool]] = mapped_column(db.Boolean)
-    sichtpruefung_sicherheit: Mapped[Optional[bool]] = mapped_column(db.Boolean)
+    sichtpruefung_zugentlastung: Mapped[Optional[bool]] = mapped_column(
+        db.Boolean)
+    sichtpruefung_sicherheit: Mapped[Optional[bool]] = mapped_column(
+        db.Boolean)
 
     # Electrical tests — True = bestanden, False = nicht bestanden, None = not tested
     schutzklasse: Mapped[Optional[str]] = mapped_column(db.String(50))
@@ -347,7 +414,8 @@ class RepairAttachment(db.Model):
 
     __tablename__ = "repair_attachments"
 
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        db.Integer, primary_key=True, autoincrement=True)
     repair_id: Mapped[int] = mapped_column(
         db.Integer, db.ForeignKey("repairs.id", ondelete="CASCADE"), nullable=False
     )
@@ -357,7 +425,8 @@ class RepairAttachment(db.Model):
     attachment_type: Mapped[str] = mapped_column(
         db.String(50), nullable=False, default="misc"
     )
-    original_filename: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    original_filename: Mapped[str] = mapped_column(
+        db.String(255), nullable=False)
     stored_filename: Mapped[str] = mapped_column(
         db.String(255), nullable=False, unique=True
     )

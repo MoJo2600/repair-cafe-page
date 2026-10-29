@@ -3,6 +3,8 @@ Flask extensions initialization.
 Extensions are initialized here and imported by other modules.
 """
 
+import os
+
 import flask_login
 from apscheduler.schedulers.background import BackgroundScheduler
 from flasgger import Swagger
@@ -18,12 +20,22 @@ scheduler = BackgroundScheduler()
 
 
 def init_cors(app):
-    """Initialize CORS with configuration."""
+    """Enable CORS only for origins listed in CORS_ORIGINS (comma-separated).
+
+    The frontend reaches the API through the Vite dev proxy or nginx (same
+    origin), so CORS is off by default. A wildcard combined with credentials
+    would let any website make authenticated requests on a user's behalf.
+    """
+    origins = [
+        o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
+    ]
+    if not origins:
+        return
     CORS(
         app,
         resources={
             r"/*": {
-                "origins": "*",
+                "origins": origins,
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,
@@ -38,10 +50,18 @@ def init_swagger(app):
         APIResponse,
         AppConfigResponse,
         AuthResponse,
+        AuthConfigResponse,
         CustomerResponse,
         CustomerWithRepairCountResponse,
         FeaturesResponse,
         LoginRequest,
+        PinStatusResponse,
+        PinGenerateRequest,
+        PinGeneratedResponse,
+        PinSessionStatusResponse,
+        PinUnlockRequest,
+        PinSessionActionResponse,
+        PinDashboardSummaryResponse,
         PruefgeraetResponse,
         RepairAttachmentListResponse,
         RepairAttachmentResponse,
@@ -77,6 +97,14 @@ def init_swagger(app):
                 "APIResponse": pydantic_to_swagger(APIResponse),
                 "AppConfigResponse": pydantic_to_swagger(AppConfigResponse),
                 "AuthResponse": pydantic_to_swagger(AuthResponse),
+                "AuthConfigResponse": pydantic_to_swagger(AuthConfigResponse),
+                "PinStatusResponse": pydantic_to_swagger(PinStatusResponse),
+                "PinGenerateRequest": pydantic_to_swagger(PinGenerateRequest),
+                "PinGeneratedResponse": pydantic_to_swagger(PinGeneratedResponse),
+                "PinSessionStatusResponse": pydantic_to_swagger(PinSessionStatusResponse),
+                "PinUnlockRequest": pydantic_to_swagger(PinUnlockRequest),
+                "PinSessionActionResponse": pydantic_to_swagger(PinSessionActionResponse),
+                "PinDashboardSummaryResponse": pydantic_to_swagger(PinDashboardSummaryResponse),
                 "FeaturesResponse": pydantic_to_swagger(FeaturesResponse),
                 "LoginRequest": pydantic_to_swagger(LoginRequest),
                 "CustomerResponse": pydantic_to_swagger(CustomerResponse),

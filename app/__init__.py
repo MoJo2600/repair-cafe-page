@@ -140,8 +140,14 @@ def create_app(config_name=None):
     # Configure login manager
     login_manager.unauthorized_handler(unauthorized_callback)
 
+    # OIDC client
+    from app.auth.oidc import init_oidc
+
+    init_oidc(app)
+
     # Register blueprints
     register_blueprints(app)
+    register_auth_guard(app)
 
     # Register error handlers
     register_error_handlers(app)
@@ -155,6 +161,9 @@ def create_app(config_name=None):
     # Safe to run repeatedly — is a no-op when an admin already exists.
     with app.app_context():
         ensure_admin_user(app)
+        from app.services.pin_service import reconcile_pin_mode
+
+        reconcile_pin_mode()
 
     return app
 
@@ -201,10 +210,12 @@ def register_blueprints(app):
     from app.api.settings import settings_bp
     from app.api.users import users_bp
     from app.api.vde_tests import vde_tests_bp
+    from app.auth.oidc import oidc_bp
     from app.auth.routes import auth_bp
     from app.web.routes import web_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(oidc_bp, url_prefix="/api")
     app.register_blueprint(web_bp, url_prefix="/api")
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(repairs_bp, url_prefix="/api")
@@ -217,16 +228,69 @@ def register_blueprints(app):
     app.register_blueprint(settings_bp, url_prefix="/api")
 
 
+def register_auth_guard(app):
+    """Require an authenticated session for every /api endpoint not marked @public_endpoint."""
+    import json
+
+    import flask_login
+    from flask import Response, request
+    from app.services.pin_unlock_service import (
+        current_pin_session,
+        expire_pin_session_if_idle,
+    )
+
+    lock_screen_endpoints = {
+        "auth.api_pin_session_status",
+        "auth.api_pin_lock",
+        "auth.api_pin_unlock",
+        "auth.api_pin_activity",
+        "auth.api_pin_dashboard_summary",
+        "auth.api_logout",
+    }
+
+    @app.before_request
+    def require_login_for_api():
+        if request.method == "OPTIONS" or not request.path.startswith("/api/"):
+            return None
+        view = app.view_functions.get(
+            request.endpoint) if request.endpoint else None
+        if view is None or getattr(view, "is_public", False):
+            return None  # unknown routes fall through to 404
+        if request.endpoint in lock_screen_endpoints:
+            return None
+        if not flask_login.current_user.is_authenticated:
+            return Response(
+                json.dumps(
+                    {"reply": "error", "error": "Authentication required"}),
+                status=401,
+                mimetype="application/json",
+            )
+        grant = current_pin_session()
+        if not grant or grant.active_user_id != flask_login.current_user.id:
+            return Response(
+                json.dumps({"reply": "error", "error": "Primary login required"}),
+                status=401,
+                mimetype="application/json",
+            )
+        if expire_pin_session_if_idle(grant):
+            return Response(
+                json.dumps({"reply": "error", "error": "Session locked"}),
+                status=423,
+                mimetype="application/json",
+            )
+        return None
+
+
 def register_error_handlers(app):
     """Register error handlers."""
 
     @app.after_request
     def add_header(response):
         """Add cache control headers."""
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        if "Cache-Control" not in response.headers:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
-        response.headers["Cache-Control"] = "public, max-age=0"
         return response
 
 

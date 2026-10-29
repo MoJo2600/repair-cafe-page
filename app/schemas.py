@@ -3,7 +3,7 @@ Pydantic schemas for request validation and response serialization
 """
 
 from datetime import date, datetime
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import (
     BaseModel,
@@ -127,6 +127,42 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AuthConfigResponse(BaseModel):
+    oidc_enabled: bool
+
+
+class PinStatusResponse(BaseModel):
+    mode: Literal["local", "oidc"]
+    has_pin: bool
+    can_generate: bool
+
+
+class PinGenerateRequest(BaseModel):
+    replace: bool = False
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class PinGeneratedResponse(BaseModel):
+    pin_code: str = Field(..., pattern=r"^[0-9]{6}$")
+
+
+class PinSessionStatusResponse(BaseModel):
+    eligible: bool
+    locked: bool
+    user: Optional[UserResponse] = None
+
+
+class PinUnlockRequest(BaseModel):
+    pin_code: str = Field(..., pattern=r"^[0-9]{6}$")
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class PinSessionActionResponse(BaseModel):
+    locked: bool
 
 
 class AuthResponse(BaseModel):
@@ -295,7 +331,9 @@ class RepairResponse(RepairBase):
 
     id: int = Field(..., description="Repair ID")
     repair_type_id: Optional[int] = Field(None, description="FK to repair type setting")
-    repair_type: Optional["SettingResponse"] = Field(None, description="Linked repair type setting")
+    repair_type: Optional["SettingResponse"] = Field(
+        None, description="Linked repair type setting"
+    )
     customer_id: Optional[int] = Field(None, description="Linked customer ID")
     customer: Optional["CustomerResponse"] = Field(
         None, description="Linked customer object"
@@ -314,7 +352,9 @@ class RepairResponse(RepairBase):
     user: Optional["UserResponse"] = Field(
         None, description="Assigned reparateur user object"
     )
-    created_by_id: Optional[int] = Field(None, description="User who created the repair record")
+    created_by_id: Optional[int] = Field(
+        None, description="User who created the repair record"
+    )
     created_by: Optional["UserResponse"] = Field(
         None, description="User who created the repair record"
     )
@@ -326,7 +366,9 @@ class RepairResponse(RepairBase):
         pattern="^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
         description="Repair status",
     )
-    closed_at: Optional[datetime] = Field(None, description="Timestamp when the repair was closed")
+    closed_at: Optional[datetime] = Field(
+        None, description="Timestamp when the repair was closed"
+    )
     qr_token: str = Field(..., max_length=32, description="QR code token")
 
     model_config = ConfigDict(from_attributes=True)
@@ -581,8 +623,12 @@ class AppConfigResponse(BaseModel):
     """Schema for application-level configuration (org name, website)."""
 
     org_name: str = Field("Repair Café", description="Organisation display name")
-    org_website: str = Field("", description="Organisation website URL printed on the label")
-    app_url: str = Field("", description="Application base URL used for QR code links on labels")
+    org_website: str = Field(
+        "", description="Organisation website URL printed on the label"
+    )
+    app_url: str = Field(
+        "", description="Application base URL used for QR code links on labels"
+    )
 
 
 class AppConfigUpdate(BaseModel):
@@ -623,6 +669,17 @@ class RepairsTimelineResponse(BaseModel):
     data: list[RepairsTimelinePoint] = []
 
 
+class PinDashboardSummaryResponse(BaseModel):
+    total_repairs: int
+    open_repairs: int
+    next_repair_id: Optional[int] = None
+    in_progress_repairs: int
+    repaired_repairs: int
+    not_repaired_repairs: int
+    success_rate: Optional[int] = None
+    timeline: list[RepairsTimelinePoint] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Unified repair attachment schemas
 # ---------------------------------------------------------------------------
@@ -636,7 +693,9 @@ class RepairAttachmentResponse(BaseModel):
     id: int
     repair_id: int
     log_id: Optional[int] = None
-    attachment_type: str = Field(..., description="One of: log_entry, device_photo, disclaimer, misc")
+    attachment_type: str = Field(
+        ..., description="One of: log_entry, device_photo, disclaimer, misc"
+    )
     original_filename: str
     stored_filename: str
     content_type: str

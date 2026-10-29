@@ -189,30 +189,6 @@
 
     <!-- Timeline Chart -->
     <v-row class="mt-4">
-      <!-- <v-card class="pa-2" variant="elevated" height="100%">
-        <v-card-title class="d-flex align-center">
-          <v-icon size="40" class="mr-3">mdi-account-wrench</v-icon>
-          <div>
-            <div class="text-h5">Reparaturen pro Reparateur</div>
-            <div class="text-caption">Erfolgreich repariert</div>
-          </div>
-        </v-card-title>
-        <v-card-text>
-          <div v-if="repairStore.loading" class="text-center py-4">
-            <v-progress-circular indeterminate color="primary" />
-          </div>
-          <div v-else-if="repairedByUser.length === 0" class="text-medium-emphasis py-2">
-            Keine abgeschlossenen Reparaturen
-          </div>
-          <v-list v-else density="compact">
-            <v-list-item v-for="entry in repairedByUser" :key="entry.name" :title="entry.name">
-              <template #append>
-                <v-chip color="success" size="small">{{ entry.count }}</v-chip>
-              </template>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card> -->
 
       <v-col cols="12" md="3">
         <v-card variant="elevated" class="pa-2">
@@ -309,20 +285,6 @@ const timelineLoading = ref(false)
 const timelineData = ref<RepairsTimelinePoint[]>([])
 
 const prevRepairedCount = ref(-1)
-const repairedByUser = computed(() => {
-  const counts: Record<string, number> = {}
-  for (const r of repairStore.repairs) {
-    if (r.status !== 'Repariert') continue
-    const name = r.user
-      ? `${r.user.vorname ?? ''} ${r.user.nachname ?? ''}`.trim() || r.user.username
-      : 'Unbekannt'
-    counts[name] = (counts[name] ?? 0) + 1
-  }
-  return Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-})
-
 const topRepairTypes = computed(() => {
   const counts: Record<string, number> = {}
   for (const r of repairStore.repairs) {
