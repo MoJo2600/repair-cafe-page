@@ -271,15 +271,14 @@ def test_locked_dashboard_summary_excludes_private_repair_data(
     customer = Customer(vorname="Private", nachname="Customer")
     db.session.add(customer)
     db.session.flush()
-    db.session.add(
-        Repair(
-            customer_id=customer.id,
-            datum=date.today(),
-            geraet_art="Private Device",
-            status="Offen",
-            qr_token="a" * 32,
-        )
+    next_repair = Repair(
+        customer_id=customer.id,
+        datum=date.today(),
+        geraet_art="Private Device",
+        status="Offen",
+        qr_token="a" * 32,
     )
+    db.session.add(next_repair)
     db.session.commit()
     assert helper_client.post("/api/auth/pin-session/lock", json={}).status_code == 200
 
@@ -288,6 +287,7 @@ def test_locked_dashboard_summary_excludes_private_repair_data(
     payload = response.get_json()
     assert payload["total_repairs"] == 1
     assert payload["open_repairs"] == 1
+    assert payload["next_repair_id"] == next_repair.id
     serialized = response.get_data(as_text=True)
     assert "Private" not in serialized
     assert "Device" not in serialized
@@ -307,6 +307,13 @@ def test_openapi_registers_pin_contracts(client):
     assert (
         operation["responses"]["200"]["schema"]["$ref"]
         == "#/definitions/PinGeneratedResponse"
+    )
+    dashboard_schema = spec["definitions"]["PinDashboardSummaryResponse"]
+    assert "next_repair_id" in dashboard_schema["properties"]
+    dashboard_operation = spec["paths"]["/api/auth/pin-session/dashboard"]["get"]
+    assert (
+        dashboard_operation["responses"]["200"]["schema"]["$ref"]
+        == "#/definitions/PinDashboardSummaryResponse"
     )
 
 

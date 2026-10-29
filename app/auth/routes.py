@@ -12,32 +12,33 @@ from werkzeug.security import check_password_hash
 from app.auth.decorators import login_required_api, public_endpoint
 from app.auth.oidc import oidc_enabled
 from app.extensions import db, login_manager
-from app.models import Repair, User as DBUser
+from app.models import Repair
+from app.models import User as DBUser
 from app.schemas import (
-  AuthResponse,
-  LoginRequest,
-  PinDashboardSummaryResponse,
-  PinGeneratedResponse,
-  PinGenerateRequest,
-  PinSessionActionResponse,
-  PinSessionStatusResponse,
-  PinStatusResponse,
-  PinUnlockRequest,
-  RepairsTimelinePoint,
+    AuthResponse,
+    LoginRequest,
+    PinDashboardSummaryResponse,
+    PinGeneratedResponse,
+    PinGenerateRequest,
+    PinSessionActionResponse,
+    PinSessionStatusResponse,
+    PinStatusResponse,
+    PinUnlockRequest,
+    RepairsTimelinePoint,
 )
 from app.schemas import UserResponse as UserResponseSchema
-from app.validation import parse_request
 from app.services.pin_service import PinError, generate_pin, require_pin_mode
-from app.services.pin_unlock_service import arm_pin_unlock_session
 from app.services.pin_unlock_service import (
-  current_pin_session,
-  expire_pin_session_if_idle,
-  lock_pin_session,
-  record_pin_activity,
-  revoke_pin_unlock_session,
-  unlock_pin_session,
-  utc_now,
+    arm_pin_unlock_session,
+    current_pin_session,
+    expire_pin_session_if_idle,
+    lock_pin_session,
+    record_pin_activity,
+    revoke_pin_unlock_session,
+    unlock_pin_session,
+    utc_now,
 )
+from app.validation import parse_request
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -99,9 +100,7 @@ def api_login():
     # With SSO enabled, password login is only the break-glass path for local admins.
     if oidc_enabled() and (user.oidc_sub or not user.is_admin):
         return Response(
-            json.dumps(
-                {"reply": "error", "error": "Bitte mit SSO anmelden"}
-            ),
+            json.dumps({"reply": "error", "error": "Bitte mit SSO anmelden"}),
             status=403,
             mimetype="application/json",
         )
@@ -180,7 +179,11 @@ def api_logout():
     """
     if not _same_origin_request():
         return _pin_error("Cross-site session changes are not allowed", 403)
-    username = flask_login.current_user.username if flask_login.current_user.is_authenticated else None
+    username = (
+        flask_login.current_user.username
+        if flask_login.current_user.is_authenticated
+        else None
+    )
     revoke_pin_unlock_session()
     flask_login.logout_user()
     if username:
@@ -215,8 +218,13 @@ def api_pin_session_status():
     result = PinSessionStatusResponse(
         eligible=True,
         locked=locked,
-        user=None if locked else UserResponseSchema.model_validate(
-            flask_login.current_user._get_current_object()),
+        user=(
+            None
+            if locked
+            else UserResponseSchema.model_validate(
+                flask_login.current_user._get_current_object()
+            )
+        ),
     )
     return _pin_response(result)
 
@@ -321,8 +329,9 @@ def api_pin_unlock():
         db.session.rollback()
         return _pin_error(str(error), error.status)
     flask_login.login_user(user, remember=False, fresh=True)
-    return _pin_response(AuthResponse(
-        reply="done", data=UserResponseSchema.model_validate(user)))
+    return _pin_response(
+        AuthResponse(reply="done", data=UserResponseSchema.model_validate(user))
+    )
 
 
 @auth_bp.route("/auth/pin-session/dashboard", methods=["GET"])
@@ -335,7 +344,7 @@ def api_pin_dashboard_summary():
     operationId: pinDashboardSummary
     responses:
       200:
-        description: Aggregate-only repair metrics
+        description: Non-identifying dashboard metrics and next repair ID
         schema:
           $ref: '#/definitions/PinDashboardSummaryResponse'
       401:
@@ -351,17 +360,24 @@ def api_pin_dashboard_summary():
 
     from collections import defaultdict
     from datetime import date, timedelta
+
     from sqlalchemy import func
 
-    counts = dict(db.session.query(Repair.status, func.count(Repair.id)).group_by(
-        Repair.status).all())
+    counts = dict(
+        db.session.query(Repair.status, func.count(Repair.id))
+        .group_by(Repair.status)
+        .all()
+    )
     total = sum(counts.values())
     repaired = counts.get("Repariert", 0)
     not_repaired = counts.get("Nicht Repariert", 0)
     denominator = repaired + not_repaired
     cutoff = date.today() - timedelta(days=365)
-    rows = db.session.query(Repair.datum, Repair.status).filter(
-        Repair.datum >= cutoff).all()
+    rows = (
+        db.session.query(Repair.datum, Repair.status)
+        .filter(Repair.datum >= cutoff)
+        .all()
+    )
     weekly_counts = defaultdict(lambda: defaultdict(int))
     for row in rows:
         year, week, _ = row.datum.isocalendar()
@@ -370,17 +386,22 @@ def api_pin_dashboard_summary():
     for week_key in sorted(weekly_counts):
         year, week = week_key.split("-")
         label = f"KW {int(week)} {year}"
-        timeline.append(RepairsTimelinePoint(
-            week=week_key,
-            label=label,
-            offen=weekly_counts[week_key].get("Offen", 0),
-            in_bearbeitung=weekly_counts[week_key].get("In Bearbeitung", 0),
-            abgeschlossen=weekly_counts[week_key].get("Repariert", 0),
-            nicht_repariert=weekly_counts[week_key].get("Nicht Repariert", 0),
-        ))
+        timeline.append(
+            RepairsTimelinePoint(
+                week=week_key,
+                label=label,
+                offen=weekly_counts[week_key].get("Offen", 0),
+                in_bearbeitung=weekly_counts[week_key].get("In Bearbeitung", 0),
+                abgeschlossen=weekly_counts[week_key].get("Repariert", 0),
+                nicht_repariert=weekly_counts[week_key].get("Nicht Repariert", 0),
+            )
+        )
     result = PinDashboardSummaryResponse(
         total_repairs=total,
         open_repairs=counts.get("Offen", 0),
+        next_repair_id=db.session.query(func.min(Repair.id))
+        .filter(Repair.status == "Offen")
+        .scalar(),
         in_progress_repairs=counts.get("In Bearbeitung", 0),
         repaired_repairs=repaired,
         not_repaired_repairs=not_repaired,
@@ -406,17 +427,19 @@ def _same_origin_request() -> bool:
         allowed = [urlsplit(request.host_url)]
         if current_app.config.get("PUBLIC_URL"):
             allowed.append(urlsplit(current_app.config["PUBLIC_URL"]))
-        if not any((source.scheme, source.netloc) == (target.scheme, target.netloc)
-               for target in allowed):
-          request_origin = urlsplit(request.host_url)
-          development_proxy = (
-            current_app.debug
-            and source.scheme == request_origin.scheme
-            and source.hostname == request_origin.hostname
-            and source.hostname in {"localhost", "127.0.0.1", "::1"}
-          )
-          if not development_proxy:
-            return False
+        if not any(
+            (source.scheme, source.netloc) == (target.scheme, target.netloc)
+            for target in allowed
+        ):
+            request_origin = urlsplit(request.host_url)
+            development_proxy = (
+                current_app.debug
+                and source.scheme == request_origin.scheme
+                and source.hostname == request_origin.hostname
+                and source.hostname in {"localhost", "127.0.0.1", "::1"}
+            )
+            if not development_proxy:
+                return False
     return request.headers.get("Sec-Fetch-Site") != "cross-site"
 
 
@@ -508,10 +531,17 @@ def api_generate_pin():
 
 
 def _pin_response(result):
-    return Response(result.model_dump_json(), mimetype="application/json",
-                    headers={"Cache-Control": "no-store"})
+    return Response(
+        result.model_dump_json(),
+        mimetype="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def _pin_error(message, status):
-    return Response(json.dumps({"reply": "error", "error": message}), status=status,
-                    mimetype="application/json", headers={"Cache-Control": "no-store"})
+    return Response(
+        json.dumps({"reply": "error", "error": message}),
+        status=status,
+        mimetype="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
