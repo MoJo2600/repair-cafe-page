@@ -12,6 +12,7 @@ import base64
 import datetime
 import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -27,15 +28,13 @@ from app.imports.pdfsigner import FIELD_DATE, FIELD_NAME, FIELD_SIGNATURE, PDFSi
 # Helpers
 # ---------------------------------------------------------------------------
 
-PDF_SAMPLE = (
-    Path(__file__).parent.parent.parent / "config" / "Disclaimer_sample.pdf"
-)
+PDF_SAMPLE = Path(__file__).parent.parent.parent / "config" / "Disclaimer_sample.pdf"
 
 TEMPLATE_PATH: Path | None = PDF_SAMPLE if PDF_SAMPLE.exists() else None
 
 
-def _make_minimal_pdf(with_fields: bool = True) -> Path:
-    """Create a minimal in-memory PDF with optional AcroForm text fields."""
+def _make_minimal_pdf(directory: Path, with_fields: bool = True) -> Path:
+    """Create a minimal PDF with optional AcroForm text fields."""
     doc = fitz.open()
     page = doc.new_page(width=595, height=842)  # A4
 
@@ -66,13 +65,8 @@ def _make_minimal_pdf(with_fields: bool = True) -> Path:
         sig_widget.rect = sig_rect
         page.add_widget(sig_widget)
 
-    tmp = Path(
-        fitz.get_pdf_str(doc) if False else "/tmp/test_template.pdf"
-    )  # noqa: F821
-    path = Path(
-        "/tmp/test_template_fields.pdf"
-        if with_fields
-        else "/tmp/test_template_plain.pdf"
+    path = directory / (
+        "test_template_fields.pdf" if with_fields else "test_template_plain.pdf"
     )
     doc.save(str(path))
     doc.close()
@@ -102,10 +96,15 @@ class TestPDFSignerWithFields(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.pdf_path = _make_minimal_pdf(with_fields=True)
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        cls.pdf_path = _make_minimal_pdf(Path(cls.temp_dir.name), with_fields=True)
         cls.signer = PDFSigner(str(cls.pdf_path))
         cls.signature = _make_signature_b64()
         cls.test_date = datetime.date(2026, 5, 14)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp_dir.cleanup()
 
     def test_name_field_detected(self):
         self.assertIn(FIELD_NAME, self.signer._field_names)
@@ -196,10 +195,15 @@ class TestPDFSignerWithoutFields(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.pdf_path = _make_minimal_pdf(with_fields=False)
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        cls.pdf_path = _make_minimal_pdf(Path(cls.temp_dir.name), with_fields=False)
         cls.signer = PDFSigner(str(cls.pdf_path))
         cls.signature = _make_signature_b64()
         cls.test_date = datetime.date(2026, 5, 14)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp_dir.cleanup()
 
     def test_no_fields_detected(self):
         self.assertNotIn(FIELD_DATE, self.signer._field_names)
@@ -254,11 +258,6 @@ class TestRealTemplate(unittest.TestCase):
             f"'signature' field missing. Fields found: {self.signer._field_names}",
         )
 
-    def test_all_detected_fields(self):
-        """Print all fields for quick diagnostics (always passes)."""
-        print(f"\nReal template fields: {self.signer._field_names}")
-        print(f"Widget rects: {self.signer._widget_rects}")
-
     def test_signed_pdf_date_rendered(self):
         result = self.signer.get_signed_pdf(self.signature, self.test_date)
         self.assertIsNotNone(result, "get_signed_pdf returned None")
@@ -273,13 +272,6 @@ class TestRealTemplate(unittest.TestCase):
         images = doc.load_page(0).get_images(full=True)
         doc.close()
         self.assertGreater(len(images), 0, "No signature image in signed PDF")
-
-    def test_save_output_file(self):
-        """Write the signed PDF to /tmp/signed_test.pdf for visual inspection."""
-        result = self.signer.get_signed_pdf(self.signature, self.test_date)
-        out = Path("/tmp/signed_test.pdf")
-        out.write_bytes(result.read())
-        print(f"\nSigned PDF saved to {out} — open it to check visually")
 
 
 if __name__ == "__main__":

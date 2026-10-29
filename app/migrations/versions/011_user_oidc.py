@@ -1,7 +1,7 @@
-"""Add OIDC subject and door code hash to users.
+"""Add OIDC subject and generic PIN code hash to users.
 
-oidc_sub links a user to their Authentik account; door_code_hash stores a
-keyed HMAC of the member's door code, used as the quick-unlock PIN.
+oidc_sub links a user to their Authentik account. pin_code_hash stores the
+keyed HMAC of a user's generic PIN code.
 
 Revision ID: 011
 Revises: 010
@@ -18,14 +18,23 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("users", sa.Column("oidc_sub", sa.String(255), nullable=True))
-    op.create_unique_constraint("uq_users_oidc_sub", "users", ["oidc_sub"])
-    op.add_column("users", sa.Column("door_code_hash", sa.String(64), nullable=True))
-    op.create_index("ix_users_door_code_hash", "users", ["door_code_hash"])
+    with op.batch_alter_table("users") as batch:
+        batch.add_column(sa.Column("oidc_sub", sa.String(255), nullable=True))
+        batch.create_unique_constraint("uq_users_oidc_sub", ["oidc_sub"])
+        batch.add_column(sa.Column("pin_code_hash", sa.String(64), nullable=True))
+        batch.create_unique_constraint("uq_users_pin_code_hash", ["pin_code_hash"])
+    op.create_table(
+        "pin_state",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=False),
+        sa.Column("mode", sa.String(10), nullable=False),
+        sa.CheckConstraint("id = 1", name="ck_pin_state_singleton"),
+    )
 
 
 def downgrade():
-    op.drop_index("ix_users_door_code_hash", table_name="users")
-    op.drop_column("users", "door_code_hash")
-    op.drop_constraint("uq_users_oidc_sub", "users", type_="unique")
-    op.drop_column("users", "oidc_sub")
+    op.drop_table("pin_state")
+    with op.batch_alter_table("users") as batch:
+        batch.drop_constraint("uq_users_pin_code_hash", type_="unique")
+        batch.drop_column("pin_code_hash")
+        batch.drop_constraint("uq_users_oidc_sub", type_="unique")
+        batch.drop_column("oidc_sub")

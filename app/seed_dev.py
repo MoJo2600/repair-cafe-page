@@ -52,6 +52,7 @@ def seed(reset=False):
 
     from app.extensions import db
     from app.models import Customer, Repair, RepairLog, Setting, User, VdeTest
+    from app.services.pin_service import hash_pin_code
 
     with app.app_context():
         if reset:
@@ -80,6 +81,7 @@ def seed(reset=False):
             password_hash=generate_password_hash("admin123"),
             is_admin=True,
             is_active=True,
+            pin_code_hash=hash_pin_code("111111"),
             created_at=_dt(30),
         )
         db.session.query(User).filter_by(
@@ -93,6 +95,7 @@ def seed(reset=False):
             password_hash=generate_password_hash("test123"),
             is_admin=False,
             is_active=True,
+            pin_code_hash=hash_pin_code("123456"),
             created_at=_dt(20),
         )
         erika = User(
@@ -103,6 +106,7 @@ def seed(reset=False):
             password_hash=generate_password_hash("test123"),
             is_admin=False,
             is_active=True,
+            pin_code_hash=hash_pin_code("222222"),
             created_at=_dt(20),
         )
         db.session.add_all([admin, hans, erika])
@@ -311,6 +315,10 @@ def seed(reset=False):
         print("  admin / admin123    (admin)")
         print("  hans.mueller / test123")
         print("  erika.schmidt / test123")
+        print("  Unlock PINs (development only):")
+        print("    admin: 111111")
+        print("    hans.mueller: 123456")
+        print("    erika.schmidt: 222222")
 
         # ------------------------------------------------------------------
         # Disclaimer sample

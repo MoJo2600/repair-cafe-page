@@ -1,14 +1,14 @@
 """Store PIN-switch eligibility and lock state per authenticated session.
 
 Revision ID: 013
-Revises: 012
+Revises: 011
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "013"
-down_revision = "012"
+down_revision = "011"
 branch_labels = None
 depends_on = None
 
@@ -23,9 +23,7 @@ def upgrade():
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column(
-            "is_locked", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("is_locked", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column(
             "last_activity_at",
             sa.DateTime(),
