@@ -3,13 +3,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      # Enable label printing in the devcontainer via the mounted host CUPS socket
+      LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-true}
+      LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
     volumes:
       - ../..:/workspaces:cached
       # Mount Docker socket for Docker-in-Docker
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount USB devices for label printer access
       - /dev/bus/usb:/dev/bus/usb
-      # Mount host CUPS socket for direct printer access (no network needed)
+      # Mount host CUPS socket for direct printer access (/etc/cups/client.conf points here)
       - /run/cups/cups.sock:/run/cups/cups.sock
 
     # Overrides default command so things don't shut down after the process ends.

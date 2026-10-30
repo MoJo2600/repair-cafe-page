@@ -183,219 +183,135 @@ This keeps your existing authentication system intact!
 
 ### Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Label Printing Flow                          │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  Vue Frontend                                                        │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  RepairsList.vue                                             │  │
-│  │  - Print button for each repair                             │  │
-│  │  - Calls POST /api/print-label/<id>                         │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                              ▼                                       │
+│                                                                     │
+│  Vue Frontend                                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  RepairsList.vue / EditRepair.vue                            │   │
+│  │  - Print button shown when LABEL_PRINTER_ENABLED=true        │   │
+│  │  - Calls POST /api/print-label/<id>                          │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                      │
+│                              ▼                                      │
 │  Flask Backend (in Docker Container)                                │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  /api/print-label/<id>                                       │  │
-│  │  1. Fetch repair data from database                         │  │
-│  │  2. Generate QR code (edit URL with token)                  │  │
-│  │  3. Create label image (496x232px, 62mm x 29mm @ 203 DPI)   │  │
-│  │  4. Convert to ESC/POS commands                             │  │
-│  │  5. Send to CUPS server on host                             │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                              ▼                                       │
-│  Container CUPS Client                                               │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Environment: CUPS_SERVER=host.docker.internal:631          │  │
-│  │  Config: /etc/cups/client.conf                              │  │
-│  │  Commands: lpr, lpstat, lpq                                 │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                              │ Network (via host.docker.internal)   │
-│                              ▼                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  /api/print-label/<id> -> LabelService.print_label()         │   │
+│  │  1. Fetch repair data & app_cfg (app_url, org_name, website) │   │
+│  │  2. Generate QR code (<app_url>/edit/<qr_token>)             │   │
+│  │  3. Render PNG image (602x330px, 51mm x 28mm @ 300 DPI)      │   │
+│  │  4. Invoke: lp -d <LABEL_PRINTER_NAME> <tmp.png>             │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                      │
+│                              ▼                                      │
+│  Container CUPS Client                                              │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Package: cups-client                                        │   │
+│  │  Config: /etc/cups/client.conf (ServerName /run/cups/cups.sock)│ │
+│  │  Commands: lp, lpstat                                        │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                      │
+│                              │ Mounted Unix Socket                  │
+│                              │ (/run/cups/cups.sock)                │
+│                              ▼                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Docker Host Machine                          │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  CUPS Server (cupsd)                                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Listening on: *:631                                         │  │
-│  │  Accepts connections from: 172.16.0.0/12 (Docker network)   │  │
-│  │  Manages printer queues                                      │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                              ▼                                       │
-│  Printer Queue: SLP650                                               │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Device: /dev/usb/lp0 or usb://...                          │  │
-│  │  Driver: Generic ESC/POS or SLP650 specific                 │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                              ▼                                       │
-│  SLP 650 Label Printer (USB connected)                              │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Label Size: 62mm x 29mm                                     │  │
-│  │  Resolution: 203 DPI                                         │  │
-│  │  Interface: USB                                              │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                       │
+│                                                                     │
+│  CUPS Server (cupsd)                                                │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Listening on: /run/cups/cups.sock                           │   │
+│  │  Queue: SLP650                                               │   │
+│  │  - Option A (Local USB): usb://SII/SLP650?serial=...         │   │
+│  │    Filter: seikoslp.rastertolabel (siislp650.ppd.gz)         │   │
+│  │  - Option B (Remote Print Server):                           │   │
+│  │    ipp://<printserver>:631/printers/SII_SLP650 (everywhere)  │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                      │
+│                              ▼                                      │
+│  SII SLP 650 Label Printer                                          │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Label Size: 51mm x 28mm (MultiPurpose)                      │   │
+│  │  Resolution: 300 DPI (602 x 330 px)                          │   │
+│  │  Interface: USB (local to Docker host or on remote Pi)       │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Host CUPS Configuration
+### Docker & DevContainer Configuration
 
-The container uses the host's CUPS server for printing. This requires proper CUPS configuration on the host machine.
+Both production (`compose.yaml` + `Dockerfile.backend`) and development (`.devcontainer/docker-compose.yml` + `.devcontainer/Dockerfile`) use the host's CUPS Unix socket rather than exposing TCP port 631 to the container network:
 
-#### Step 1: Edit CUPS Configuration
+1. **`Dockerfile.backend` / `.devcontainer/Dockerfile`**:
+   - Installs `cups-client` and `fonts-dejavu-core`.
+   - Writes `ServerName /run/cups/cups.sock` to `/etc/cups/client.conf`.
+2. **`compose.yaml` / `.devcontainer/docker-compose.yml`**:
+   - Mounts `/run/cups/cups.sock:/run/cups/cups.sock` into the container.
+   - Passes `LABEL_PRINTER_ENABLED` and `LABEL_PRINTER_NAME` into the container environment.
 
-```bash
-# Edit the main CUPS configuration file
-sudo nano /etc/cups/cupsd.conf
+```yaml
+services:
+  backend:
+    environment:
+      LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
+      LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
+    volumes:
+      - app_data:/data
+      - ./config:/config:ro
+      - /run/cups/cups.sock:/run/cups/cups.sock
 ```
-
-Add or modify these sections:
-
-```apache
-# Listen on all interfaces (allow network connections)
-Listen *:631
-
-# Allow access from Docker containers
-<Location />
-  Order allow,deny
-  Allow from 127.0.0.1
-  Allow from 172.16.0.0/12      # Docker default network range
-  Allow from host.docker.internal
-</Location>
-
-<Location /admin>
-  Order allow,deny
-  Allow from 127.0.0.1
-  Allow from 172.16.0.0/12
-</Location>
-
-<Location /admin/conf>
-  AuthType Default
-  Require user @SYSTEM
-  Order allow,deny
-  Allow from 127.0.0.1
-  Allow from 172.16.0.0/12
-</Location>
-```
-
-#### Step 2: Restart CUPS
-
-```bash
-sudo systemctl restart cups
-```
-
-#### Step 3: Verify CUPS is Listening
-
-```bash
-# Check if CUPS is listening on port 631
-sudo netstat -tlnp | grep 631
-
-# Or using ss command
-sudo ss -tlnp | grep 631
-
-# Expected output:
-# tcp   0   0 0.0.0.0:631   0.0.0.0:*   LISTEN   1234/cupsd
-```
-
-#### Step 4: Configure SLP 650 Printer in CUPS
-
-```bash
-# List available USB printers
-lpinfo -v
-
-# Add the SLP 650 printer
-lpadmin -p SLP650 -v usb://... -E -m drv:///sample.drv/generic-escp.ppd
-
-# Or use the CUPS web interface
-# Navigate to: http://localhost:631
-# Administration > Add Printer > Select SLP 650
-```
-
-### Container Configuration
-
-The dev container is configured to communicate with the host CUPS server:
-
-**Dockerfile:**
-- Installs only `cups-client` (not full CUPS server)
-- Creates `/etc/cups/client.conf` pointing to `host.docker.internal:631`
-
-**docker-compose.yml:**
-- Sets `CUPS_SERVER=host.docker.internal:631` environment variable
-- No USB device access required — the container talks to the host CUPS server over the network
 
 ### Label Content
 
-Each printed label includes:
-- **Repair ID** (large, bold at top)
-- **Date** of repair
-- **Customer name** (first + last)
-- **Repair type** (category)
-- **Device type**
-- **Status** (Open/Closed) with color indicator
-- **QR Code** (180x180px on right side)
-  - Contains URL: `http://repaircafe/edit/{id}/{qr_token}`
-  - Scannable with camera to access repair details
+Each printed label (`602 × 330` px PNG generated by `app/services/label_service.py`) includes:
+- **Date** of repair (top left)
+- **Customer name** (`vorname` + `nachname`, up to 3 wrapped lines)
+- **Device type** (`geraet_art`)
+- **QR Code** (`207 × 207` px on the right side, linking to `<app_url>/edit/<qr_token>`)
+- **Repair ID** (`#123`, centered below the QR code)
+- **Logo, Organisation Name & Website** (bottom left; uses `/data/logo.png` if present, otherwise `app/static/logo.jpg`)
 
-### Print Method
+### Print Method & Environment Variables
 
-The label service prints via CUPS using the `lp` command. The container connects to the CUPS server running on the Docker host.
-
-```
-POST /api/print-label/123  →  lp -d <LABEL_PRINTER_NAME>  →  host CUPS  →  printer
+```text
+POST /api/print-label/123  →  lp -d <LABEL_PRINTER_NAME> <tmp.png>  →  /run/cups/cups.sock  →  host CUPS  →  printer
 ```
 
-### Environment Variables
-
-Set these in your `.env` or `docker-compose.yml`:
+Set these in your `.env`:
 
 ```bash
-# Enable the print button and endpoint
+# Enable the print button in the UI and the /api/print-label/<id> endpoint
 LABEL_PRINTER_ENABLED=true
 
-# Name of the printer queue in host CUPS (must match exactly)
+# Exact name of the printer queue on the Docker host CUPS server
 LABEL_PRINTER_NAME=SLP650
 ```
 
-For network printing (printer connected to another machine on the LAN), configure the host CUPS server to forward jobs to the remote printer. See `docs/CUPS_NETWORK_SETUP.md` for step-by-step instructions.
+For full step-by-step instructions covering **Docker configuration**, **local USB setup**, and **remote print server (Raspberry Pi) setup**, see [`docs/CUPS_NETWORK_SETUP.md`](docs/CUPS_NETWORK_SETUP.md).
 
 ### Troubleshooting
 
-**Check CUPS connection from container:**
+**Check CUPS connection from inside the container:**
 ```bash
-# Inside container
-lpstat -r
+docker compose exec backend lpstat -r
 # Should show: scheduler is running
 
-lpstat -p -d
+docker compose exec backend lpstat -p -d
 # Should list available printers including SLP650
 ```
 
-**Test print from container:**
+**Test print a label image from the host or container:**
 ```bash
-# Inside container
-echo "Test print" | lpr -P SLP650
+lp -d SLP650 test_label.png
 ```
 
-**Check CUPS logs on host:**
+**Check CUPS logs on host (or remote print server):**
 ```bash
-# On host machine
 sudo tail -f /var/log/cups/error_log
 ```
 
-**Permission issues:**
-```bash
-# On host, add your user to lpadmin group
-sudo usermod -a -G lpadmin $USER
-
-# Restart CUPS
-sudo systemctl restart cups
-```
 

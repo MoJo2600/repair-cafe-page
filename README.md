@@ -168,13 +168,16 @@ services:
       MAIL_SENDER_NAME: RepairCafe
       EXPORT_MAIL_RECEIVER: ""
       ZIP_PASSWORD: ${ZIP_PASSWORD:-}
+      # Label printer — mount /run/cups/cups.sock below and set LABEL_PRINTER_ENABLED=true in .env
+      LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
+      LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
 
     extra_hosts:
       - "host-gateway:host-gateway"
     volumes:
       - app_data:/data
-      # Uncomment to enable label printing (see § Setup Label printer):
-      # - /run/cups/cups.sock:/run/cups/cups.sock
+      # Mount host CUPS Unix socket to enable label printing (see § Setup Label printer):
+      - /run/cups/cups.sock:/run/cups/cups.sock
     depends_on:
       db:
         condition: service_healthy
@@ -211,6 +214,10 @@ MYSQL_ROOT_PASSWORD=change_me_root
 
 # Flask secret key for session signing – use a long random string in production.
 FLASK_SECRET_KEY=change_me_secret
+
+# Optional – Label printer (requires CUPS on the Docker host and /run/cups/cups.sock mounted)
+LABEL_PRINTER_ENABLED=true
+LABEL_PRINTER_NAME=SLP650
 ```
 
 Database migrations run automatically on first backend startup — no manual
@@ -235,56 +242,70 @@ docker compose up -d
 #### Setup Label printer
 
 The backend can print QR-code labels on a **SII SLP 650** label printer.
-Printing is routed through the host machine's CUPS daemon via a mounted Unix
-socket — no network port configuration needed.
+Printing is routed through the host machine's CUPS daemon via the mounted Unix
+socket `/run/cups/cups.sock` — no container network port exposure is needed.
 
-**1. Install the SLP 650 driver on the host**
+For the complete setup guide covering **Docker configuration**, **local USB setup**,
+**remote Raspberry Pi print server setup**, and **common pitfalls**, see
+[docs/CUPS_NETWORK_SETUP.md](docs/CUPS_NETWORK_SETUP.md).
+
+**Quick setup (printer connected directly to the Docker host):**
+
+**1. Build and install the SLP 650 driver on the host**
 
 ```bash
+sudo apt-get update && sudo apt-get install -y \
+  cups cups-client cups-bsd build-essential git libcups2-dev libcupsimage2-dev
+
 git clone https://github.com/fawkesley/smart-label-printer-slp-linux-driver.git
 cd smart-label-printer-slp-linux-driver/src
-make && sudo make install
+make build && sudo make install
+
+# Fix filter ownership/permissions required by CUPS:
+sudo chown root:root /usr/lib/cups/filter/seikoslp.rastertolabel
+sudo chmod 755 /usr/lib/cups/filter/seikoslp.rastertolabel
 ```
 
-Add the printer in your system's printer settings (CUPS queue name: `SLP650`).
+**2. Add the CUPS printer queue (`SLP650`)**
 
-**2. Allow the Docker container to access CUPS**
-
-Edit `/etc/cups/cupsd.conf` on the host and add the Docker bridge network to
-the allowed list:
-
+```bash
+# Find your printer's USB URI: sudo lpinfo -v | grep usb
+sudo lpadmin \
+  -p SLP650 \
+  -v "usb://SII/SLP650?serial=<YOUR_SERIAL>" \
+  -m seiko/siislp650.ppd.gz \
+  -o PageSize=MultiPurpose \
+  -o Resolution=300dpi \
+  -o Density=HighQuality \
+  -o FinePrint=True \
+  -E
+sudo lpoptions -d SLP650
 ```
-<Location />
-  Order allow,deny
-  Allow localhost
-  Allow from 172.17.0.0/16
-</Location>
-```
 
-Then restart CUPS: `sudo systemctl restart cups`
+*(If the printer is connected to a remote print server instead, see [Topic C in docs/CUPS_NETWORK_SETUP.md](docs/CUPS_NETWORK_SETUP.md#topic-c--printer-on-a-remote-machine-raspberry-pi--linux-print-server)).*
 
-**3. Mount the CUPS socket and enable printing in `compose.yaml`**
+**3. Mount the CUPS socket and enable printing in `compose.yaml` / `.env`**
 
-Uncomment the socket volume and set the two env vars:
+Ensure `/run/cups/cups.sock` is mounted on the `backend` service in `compose.yaml`:
 
 ```yaml
 services:
   backend:
     environment:
-      LABEL_PRINTER_ENABLED: "true"
-      LABEL_PRINTER_NAME: "SLP650"   # must match the CUPS queue name
+      LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
+      LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
     volumes:
       - /run/cups/cups.sock:/run/cups/cups.sock
 ```
 
-Or add to your `.env`:
+Enable printing in your `.env`:
 
 ```bash
 LABEL_PRINTER_ENABLED=true
 LABEL_PRINTER_NAME=SLP650
 ```
 
-Restart the stack: `docker compose up -d backend`
+Recreate the backend container: `docker compose up -d --force-recreate backend`
 
 ### Stack overview
 
