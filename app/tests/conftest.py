@@ -66,7 +66,8 @@ def helper_user(app):
 
 @pytest.fixture
 def helper_client(client, helper_user):
-    resp = client.post("/api/auth/login",
-                       json={"username": "helfer", "password": "secret"})
+    resp = client.post(
+        "/api/auth/login", json={"username": "helfer", "password": "secret"}
+    )
     assert resp.status_code == 200
     return client

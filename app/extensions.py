@@ -49,21 +49,21 @@ def init_swagger(app):
     from app.schemas import (
         APIResponse,
         AppConfigResponse,
-        AuthResponse,
         AuthConfigResponse,
+        AuthResponse,
         CustomerResponse,
         CustomerWithRepairCountResponse,
         FeaturesResponse,
         LoginRequest,
-        PinStatusResponse,
-        PinGenerateRequest,
-        PinGeneratedResponse,
-        PinSessionStatusResponse,
-        PinUnlockRequest,
-        PinSessionActionResponse,
         PinDashboardCategoryCount,
         PinDashboardRepairItem,
         PinDashboardSummaryResponse,
+        PinGeneratedResponse,
+        PinGenerateRequest,
+        PinSessionActionResponse,
+        PinSessionStatusResponse,
+        PinStatusResponse,
+        PinUnlockRequest,
         PruefgeraetResponse,
         RepairAttachmentListResponse,
         RepairAttachmentResponse,
@@ -103,12 +103,20 @@ def init_swagger(app):
                 "PinStatusResponse": pydantic_to_swagger(PinStatusResponse),
                 "PinGenerateRequest": pydantic_to_swagger(PinGenerateRequest),
                 "PinGeneratedResponse": pydantic_to_swagger(PinGeneratedResponse),
-                "PinSessionStatusResponse": pydantic_to_swagger(PinSessionStatusResponse),
+                "PinSessionStatusResponse": pydantic_to_swagger(
+                    PinSessionStatusResponse
+                ),
                 "PinUnlockRequest": pydantic_to_swagger(PinUnlockRequest),
-                "PinSessionActionResponse": pydantic_to_swagger(PinSessionActionResponse),
-                "PinDashboardCategoryCount": pydantic_to_swagger(PinDashboardCategoryCount),
+                "PinSessionActionResponse": pydantic_to_swagger(
+                    PinSessionActionResponse
+                ),
+                "PinDashboardCategoryCount": pydantic_to_swagger(
+                    PinDashboardCategoryCount
+                ),
                 "PinDashboardRepairItem": pydantic_to_swagger(PinDashboardRepairItem),
-                "PinDashboardSummaryResponse": pydantic_to_swagger(PinDashboardSummaryResponse),
+                "PinDashboardSummaryResponse": pydantic_to_swagger(
+                    PinDashboardSummaryResponse
+                ),
                 "FeaturesResponse": pydantic_to_swagger(FeaturesResponse),
                 "LoginRequest": pydantic_to_swagger(LoginRequest),
                 "CustomerResponse": pydantic_to_swagger(CustomerResponse),
@@ -120,8 +128,12 @@ def init_swagger(app):
                 "RepairUpdate": pydantic_to_swagger(RepairUpdate),
                 "RepairResponse": pydantic_to_swagger(RepairResponse),
                 "RepairCreateResponse": pydantic_to_swagger(RepairCreateResponse),
-                "RepairAttachmentResponse": pydantic_to_swagger(RepairAttachmentResponse),
-                "RepairAttachmentListResponse": pydantic_to_swagger(RepairAttachmentListResponse),
+                "RepairAttachmentResponse": pydantic_to_swagger(
+                    RepairAttachmentResponse
+                ),
+                "RepairAttachmentListResponse": pydantic_to_swagger(
+                    RepairAttachmentListResponse
+                ),
                 "RepairsTimelinePoint": pydantic_to_swagger(RepairsTimelinePoint),
                 "RepairsTimelineResponse": pydantic_to_swagger(RepairsTimelineResponse),
                 "SettingResponse": pydantic_to_swagger(SettingResponse),

@@ -673,9 +673,7 @@ class PinDashboardRepairItem(BaseModel):
     """Non-sensitive summary of a single repair for wall projection."""
 
     id: int = Field(..., description="Repair ID")
-    category: Optional[str] = Field(
-        None, description="Predefined repair category name"
-    )
+    category: Optional[str] = Field(None, description="Predefined repair category name")
 
 
 class PinDashboardCategoryCount(BaseModel):
