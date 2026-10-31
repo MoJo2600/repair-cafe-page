@@ -534,18 +534,18 @@ async function unlock() {
   await router.replace({ name: 'Home' })
 }
 
-async function lockForProjection() {
-  if (lockingScreen.value || authStore.isLocked) return
-  lockingScreen.value = true
-  try {
-    const locked = await authStore.lockSession()
-    if (locked) {
-      await router.replace({ name: 'PinLock' })
-    }
-  } finally {
-    lockingScreen.value = false
-  }
-}
+// async function lockForProjection() {
+//   if (lockingScreen.value || authStore.isLocked) return
+//   lockingScreen.value = true
+//   try {
+//     const locked = await authStore.lockSession()
+//     if (locked) {
+//       await router.replace({ name: 'PinLock' })
+//     }
+//   } finally {
+//     lockingScreen.value = false
+//   }
+// }
 
 async function logout() {
   if (loggingOut.value) return
