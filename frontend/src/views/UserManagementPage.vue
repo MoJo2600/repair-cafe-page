@@ -14,18 +14,21 @@
         <!-- Filter bar -->
         <v-row class="mb-2">
             <v-col cols="12" sm="4">
-                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
+                <v-text-field
+v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
                     clearable hide-details />
             </v-col>
             <v-col cols="12" sm="4">
-                <v-select v-model="filterActive" :items="activeFilterOptions" label="Status" density="compact"
+                <v-select
+v-model="filterActive" :items="activeFilterOptions" label="Status" density="compact"
                     hide-details />
             </v-col>
         </v-row>
 
         <!-- Users table -->
         <v-card>
-            <v-data-table :headers="headers" :items="filteredUsers" :loading="loading" item-value="id" hover
+            <v-data-table
+:headers="headers" :items="filteredUsers" :loading="loading" item-value="id" hover
                 @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <!-- Active chip -->
                 <template #item.is_active="{ item }">
@@ -49,12 +52,15 @@
 
                 <!-- Actions -->
                 <template #item.actions="{ item }">
-                    <v-btn icon="mdi-pencil" size="small" variant="text" density="compact"
+                    <v-btn
+icon="mdi-pencil" size="small" variant="text" density="compact"
                         @click.stop="openEditDialog(item)" />
-                    <v-btn v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
+                    <v-btn
+v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
                         color="warning" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
                         @click.stop="confirmDeactivate(item)" />
-                    <v-btn v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
+                    <v-btn
+v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
                         title="Benutzer reaktivieren" @click.stop="reactivate(item)" />
                 </template>
             </v-data-table>
@@ -71,23 +77,28 @@
                     <v-form ref="formRef" @submit.prevent="saveUser">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="form.username" label="Benutzername *"
+                                <v-text-field
+v-model="form.username" label="Benutzername *"
                                     :rules="[required]" autocomplete="off" />
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.vorname" label="Vorname *"
+                                <v-text-field
+v-model="form.vorname" label="Vorname *"
                                     :rules="[required]" />
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.nachname" label="Nachname *"
+                                <v-text-field
+v-model="form.nachname" label="Nachname *"
                                     :rules="[required]" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="form.email" label="E-Mail *"
+                                <v-text-field
+v-model="form.email" label="E-Mail *"
                                     :rules="[required, emailRule]" type="email" autocomplete="off" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="form.password"
+                                <v-text-field
+v-model="form.password"
                                     :label="editingUser ? 'Neues Passwort (leer lassen = unverändert)' : 'Passwort *'"
                                     :type="showPassword ? 'text' : 'password'"
                                     :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
@@ -95,7 +106,8 @@
                                     autocomplete="new-password" @click:append-inner="showPassword = !showPassword" />
                             </v-col>
                             <v-col cols="6">
-                                <v-checkbox v-model="form.is_admin" label="Administrator" hide-details
+                                <v-checkbox
+v-model="form.is_admin" label="Administrator" hide-details
                                     density="compact" />
                             </v-col>
                             <v-col v-if="editingUser" cols="6">

@@ -15,15 +15,18 @@
         </p>
         <v-row class="ga-4">
           <v-col cols="12" sm="6">
-            <v-text-field v-model="orgForm.org_name" label="Name der Organisation"
+            <v-text-field
+v-model="orgForm.org_name" label="Name der Organisation"
               hide-details="auto" placeholder="Repair Café" />
           </v-col>
           <v-col cols="12" sm="6">
-            <v-text-field v-model="orgForm.org_website" label="Website der Organisation"
+            <v-text-field
+v-model="orgForm.org_website" label="Website der Organisation"
               hide-details="auto" placeholder="https://example.org" />
           </v-col>
           <v-col cols="12" sm="6">
-            <v-text-field v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
+            <v-text-field
+v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
               hide-details="auto" placeholder="https://repaircafe.example.org" />
           </v-col>
         </v-row>
@@ -54,13 +57,15 @@
         </p>
         <v-row align="center" class="ga-4">
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
+            <v-btn
+color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
           </v-col>
           <v-col cols="12" sm>
-            <v-file-input v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
+            <v-file-input
+v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
               prepend-icon="mdi-upload" :error-messages="disclaimerError" hide-details="auto"
               @update:model-value="disclaimerError = ''" />
           </v-col>
@@ -90,13 +95,15 @@
         </p>
         <v-row align="center" class="ga-4">
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
+            <v-btn
+color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
           </v-col>
           <v-col cols="12" sm>
-            <v-file-input v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
+            <v-file-input
+v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
               prepend-icon="mdi-upload" :error-messages="cancellationError" hide-details="auto"
               @update:model-value="cancellationError = ''" />
           </v-col>
@@ -125,7 +132,8 @@
             <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg" class="border" />
           </v-col>
           <v-col cols="12" sm>
-            <v-file-input v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+            <v-file-input
+v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.png,.jpg,.jpeg"
               prepend-icon="mdi-image" :error-messages="logoError" hide-details="auto"
               @update:model-value="onLogoFileChange" />
           </v-col>
@@ -145,10 +153,12 @@
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Reparaturarten</span>
-        <v-btn size="small" color="primary" prepend-icon="mdi-plus"
+        <v-btn
+size="small" color="primary" prepend-icon="mdi-plus"
           @click="openCreate('repair_type')">Hinzufügen</v-btn>
       </v-card-title>
-      <v-data-table :headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
+      <v-data-table
+:headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
           <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
@@ -157,7 +167,8 @@
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
-          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+          <v-btn
+icon="mdi-delete" size="small" variant="text" density="compact" color="error"
             @click="confirmDelete(item)" />
         </template>
       </v-data-table>
@@ -167,10 +178,12 @@
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Prüfgeräte</span>
-        <v-btn size="small" color="primary" prepend-icon="mdi-plus"
+        <v-btn
+size="small" color="primary" prepend-icon="mdi-plus"
           @click="openCreate('test_device')">Hinzufügen</v-btn>
       </v-card-title>
-      <v-data-table :headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
+      <v-data-table
+:headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
           <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
@@ -179,7 +192,8 @@
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
-          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+          <v-btn
+icon="mdi-delete" size="small" variant="text" density="compact" color="error"
             @click="confirmDelete(item)" />
         </template>
       </v-data-table>
@@ -194,7 +208,8 @@
             {{ formError }}
           </v-alert>
           <v-form ref="formRef" @submit.prevent="saveItem">
-            <v-text-field v-model="form.name" label="Name *"
+            <v-text-field
+v-model="form.name" label="Name *"
               :rules="[required]" autofocus class="mb-2" />
             <v-text-field v-if="formCategory === 'test_device'" v-model="form.serial_number" label="Seriennummer" />
             <v-checkbox v-if="editingItem" v-model="form.is_active" label="Aktiv" density="comfortable" />

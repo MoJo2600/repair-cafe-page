@@ -18,7 +18,8 @@
         <!-- Filter row -->
         <v-row class="mb-2" align="center">
             <v-col cols="12" sm="4">
-                <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
+                <v-text-field
+v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
                     clearable hide-details />
             </v-col>
             <v-spacer />
@@ -29,11 +30,13 @@
 
         <!-- Customers table -->
         <v-card>
-            <v-data-table :headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
+            <v-data-table
+:headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
                 hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <template #item.repair_count="{ item }">
-                    <v-chip :color="item.repair_count ? 'primary' : 'grey'" size="small" variant="tonal"
-                        @click.stop="goToRepairs(item)" style="cursor: pointer">
+                    <v-chip
+:color="item.repair_count ? 'primary' : 'grey'" size="small" variant="tonal"
+                        style="cursor: pointer" @click.stop="goToRepairs(item)">
                         {{ item.repair_count ?? 0 }}
                     </v-chip>
                 </template>
@@ -43,9 +46,11 @@
                 </template>
 
                 <template #item.actions="{ item }">
-                    <v-btn icon="mdi-pencil" size="small" variant="text" density="compact"
+                    <v-btn
+icon="mdi-pencil" size="small" variant="text" density="compact"
                         @click.stop="openEditDialog(item)" />
-                    <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+                    <v-btn
+icon="mdi-delete" size="small" variant="text" density="compact" color="error"
                         @click.stop="openDeleteDialog(item.id)" />
                 </template>
 
@@ -72,18 +77,21 @@
                     <v-form ref="editForm" v-model="editFormValid">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.vorname" label="Vorname *"
+                                <v-text-field
+v-model="editedCustomer.vorname" label="Vorname *"
                                     required :rules="[v => !!v || 'Vorname ist erforderlich']" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.nachname" label="Nachname *"
+                                <v-text-field
+v-model="editedCustomer.nachname" label="Nachname *"
                                     required :rules="[v => !!v || 'Nachname ist erforderlich']" />
                             </v-col>
                             <v-col cols="12">
                                 <v-text-field v-model="editedCustomer.telefon" label="Telefon" />
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="editedCustomer.email" label="E-Mail (optional)" type="email"
+                                <v-text-field
+v-model="editedCustomer.email" label="E-Mail (optional)" type="email"
                                     :rules="[v => !v || /.+@.+\..+/.test(v) || 'E-Mail muss gültig sein']" />
                             </v-col>
                         </v-row>
@@ -91,9 +99,10 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn variant="text" @click="closeEditDialog" :disabled="saving">Abbrechen</v-btn>
-                    <v-btn color="primary" variant="elevated" @click="saveCustomer" :loading="saving"
-                        :disabled="!editFormValid">
+                    <v-btn variant="text" :disabled="saving" @click="closeEditDialog">Abbrechen</v-btn>
+                    <v-btn
+color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
+                        @click="saveCustomer">
                         Speichern
                     </v-btn>
                 </v-card-actions>
@@ -113,8 +122,8 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn variant="text" @click="deleteDialog = false" :disabled="deleting">Abbrechen</v-btn>
-                    <v-btn color="error" variant="elevated" @click="confirmDelete" :loading="deleting">Löschen</v-btn>
+                    <v-btn variant="text" :disabled="deleting" @click="deleteDialog = false">Abbrechen</v-btn>
+                    <v-btn color="error" variant="elevated" :loading="deleting" @click="confirmDelete">Löschen</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

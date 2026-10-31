@@ -416,7 +416,7 @@ const pinCode = ref('')
 const unlockDialog = ref(false)
 const submitting = ref(false)
 const loggingOut = ref(false)
-const lockingScreen = ref(false)
+// const lockingScreen = ref(false)
 const logoLoadError = ref(false)
 const error = ref('')
 

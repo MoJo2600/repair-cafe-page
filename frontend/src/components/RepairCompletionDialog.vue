@@ -12,10 +12,12 @@
                 </v-alert>
 
                 <v-form ref="formRef" v-model="formValid">
-                    <v-textarea v-model="localDescription" label="Was wurde repariert?" rows="3" required
+                    <v-textarea
+v-model="localDescription" label="Was wurde repariert?" rows="3" required
                         :rules="[v => !!String(v || '').trim() || 'Beschreibung ist erforderlich']"></v-textarea>
 
-                    <v-text-field v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" required
+                    <v-text-field
+v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" required
                         persistent-hint :rules="[
                             v => v !== null && v !== undefined && v !== '' || 'Dauer ist erforderlich',
                             v => Number(v) >= 0 || 'Dauer muss 0 oder groesser sein'
@@ -34,7 +36,8 @@
                         Der letzte VDE-Test ist nicht bestanden. Ein neuer Test ist erforderlich.
                     </v-alert>
 
-                    <v-switch v-model="localNeedsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
+                    <v-switch
+v-model="localNeedsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
                         :readonly="isVdeTestMandatory" :disabled="isVdeTestMandatory" hide-details></v-switch>
                 </v-form>
             </v-card-text>

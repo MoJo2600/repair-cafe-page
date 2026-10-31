@@ -12,14 +12,17 @@
                 </v-alert>
 
                 <v-form ref="formRef" v-model="formValid">
-                    <v-textarea v-model="localDescription" label="Warum konnte die Reparatur nicht durchgeführt werden?"
+                    <v-textarea
+v-model="localDescription" label="Warum konnte die Reparatur nicht durchgeführt werden?"
                         rows="3" required
                         :rules="[v => !!String(v || '').trim() || 'Begründung ist erforderlich']"></v-textarea>
 
-                    <v-select v-model="localStatusDetail" :items="statusDetailOptions" label="Abschlussgrund"
+                    <v-select
+v-model="localStatusDetail" :items="statusDetailOptions" label="Abschlussgrund"
                         clearable></v-select>
 
-                    <v-text-field v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" required
+                    <v-text-field
+v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" required
                         persistent-hint :rules="[
                             v => v !== null && v !== undefined && v !== '' || 'Dauer ist erforderlich',
                             v => Number(v) >= 0 || 'Dauer muss 0 oder groesser sein'
