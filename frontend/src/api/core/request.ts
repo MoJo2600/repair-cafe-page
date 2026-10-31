@@ -4,7 +4,6 @@
 /* eslint-disable */
 import axios from 'axios';
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, AxiosInstance } from 'axios';
-import FormData from 'form-data';
 
 import { ApiError } from './ApiError';
 import type { ApiRequestOptions } from './ApiRequestOptions';
@@ -144,7 +143,7 @@ export const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Reso
     return resolver;
 };
 
-export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions, formData?: FormData): Promise<Record<string, string>> => {
+export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions, _formData?: FormData): Promise<Record<string, string>> => {
     const [token, username, password, additionalHeaders] = await Promise.all([
         resolve(options, config.TOKEN),
         resolve(options, config.USERNAME),
@@ -152,13 +151,10 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         resolve(options, config.HEADERS),
     ]);
 
-    const formHeaders = typeof formData?.getHeaders === 'function' && formData?.getHeaders() || {}
-
     const headers = Object.entries({
         Accept: 'application/json',
         ...additionalHeaders,
         ...options.headers,
-        ...formHeaders,
     })
     .filter(([_, value]) => isDefined(value))
     .reduce((headers, [key, value]) => ({
@@ -250,11 +246,38 @@ export const getResponseBody = (response: AxiosResponse<any>): any => {
 };
 
 export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void => {
+    if (!options.url.startsWith('/api/auth/') && (result.status === 401 || result.status === 423)) {
+        void Promise.all([
+            import('../../stores/authStore'),
+            import('../../router'),
+        ]).then(([{ useAuthStore }, { default: router }]) => {
+            const authStore = useAuthStore();
+            if (result.status === 423) {
+                authStore.isLocked = true;
+                authStore.currentUser = null;
+                if (router.currentRoute.value.name !== 'PinLock') {
+                    void router.push({ name: 'PinLock' });
+                }
+            } else {
+                authStore.currentUser = null;
+                authStore.pinSessionEligible = false;
+                authStore.isLocked = false;
+                if (router.currentRoute.value.name !== 'Login') {
+                    void router.push({
+                        name: 'Login',
+                        query: { redirect: router.currentRoute.value.fullPath },
+                    });
+                }
+            }
+        });
+    }
+
     const errors: Record<number, string> = {
         400: 'Bad Request',
         401: 'Unauthorized',
         403: 'Forbidden',
         404: 'Not Found',
+        423: 'Locked',
         500: 'Internal Server Error',
         502: 'Bad Gateway',
         503: 'Service Unavailable',

@@ -12,11 +12,13 @@ from werkzeug.security import check_password_hash
 from app.auth.decorators import login_required_api, public_endpoint
 from app.auth.oidc import oidc_enabled
 from app.extensions import db, login_manager
-from app.models import Repair
+from app.models import Repair, Setting
 from app.models import User as DBUser
 from app.schemas import (
     AuthResponse,
     LoginRequest,
+    PinDashboardCategoryCount,
+    PinDashboardRepairItem,
     PinDashboardSummaryResponse,
     PinGeneratedResponse,
     PinGenerateRequest,
@@ -337,7 +339,7 @@ def api_pin_unlock():
 @auth_bp.route("/auth/pin-session/dashboard", methods=["GET"])
 def api_pin_dashboard_summary():
     """
-    Return aggregate dashboard metrics allowed on the PIN lock screen.
+    Return aggregate dashboard metrics allowed on the PIN lock screen and unified dashboard.
     ---
     tags:
       - Auth
@@ -349,14 +351,10 @@ def api_pin_dashboard_summary():
           $ref: '#/definitions/PinDashboardSummaryResponse'
       401:
         description: Primary login required
-      403:
-        description: Session is not locked
     """
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
-    if not grant.is_locked:
-        return _pin_error("Dashboard summary is only available while locked", 403)
 
     from collections import defaultdict
     from datetime import date, timedelta
@@ -372,6 +370,42 @@ def api_pin_dashboard_summary():
     repaired = counts.get("Repariert", 0)
     not_repaired = counts.get("Nicht Repariert", 0)
     denominator = repaired + not_repaired
+
+    next_open_row = (
+        db.session.query(Repair.id, Setting.name)
+        .outerjoin(Setting, Repair.repair_type_id == Setting.id)
+        .filter(Repair.status == "Offen")
+        .order_by(Repair.id.asc())
+        .first()
+    )
+    next_repair_id = next_open_row[0] if next_open_row else None
+    next_repair_category = next_open_row[1] if next_open_row else None
+
+    in_progress_rows = (
+        db.session.query(Repair.id, Setting.name)
+        .outerjoin(Setting, Repair.repair_type_id == Setting.id)
+        .filter(Repair.status == "In Bearbeitung")
+        .order_by(Repair.id.asc())
+        .all()
+    )
+    in_progress_items = [
+        PinDashboardRepairItem(id=repair_id, category=category_name)
+        for repair_id, category_name in in_progress_rows
+    ]
+
+    top_category_rows = (
+        db.session.query(Setting.name, func.count(Repair.id))
+        .join(Repair, Repair.repair_type_id == Setting.id)
+        .group_by(Setting.id, Setting.name)
+        .order_by(func.count(Repair.id).desc(), Setting.name.asc())
+        .limit(3)
+        .all()
+    )
+    top_categories = [
+        PinDashboardCategoryCount(name=category_name, count=category_count)
+        for category_name, category_count in top_category_rows
+    ]
+
     cutoff = date.today() - timedelta(days=365)
     rows = (
         db.session.query(Repair.datum, Repair.status)
@@ -399,13 +433,14 @@ def api_pin_dashboard_summary():
     result = PinDashboardSummaryResponse(
         total_repairs=total,
         open_repairs=counts.get("Offen", 0),
-        next_repair_id=db.session.query(func.min(Repair.id))
-        .filter(Repair.status == "Offen")
-        .scalar(),
+        next_repair_id=next_repair_id,
+        next_repair_category=next_repair_category,
         in_progress_repairs=counts.get("In Bearbeitung", 0),
+        in_progress_items=in_progress_items,
         repaired_repairs=repaired,
         not_repaired_repairs=not_repaired,
         success_rate=round(repaired / denominator * 100) if denominator else None,
+        top_categories=top_categories,
         timeline=timeline,
     )
     return _pin_response(result)

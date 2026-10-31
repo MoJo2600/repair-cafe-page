@@ -192,7 +192,7 @@
             <div class="mt-6">
               <h3 class="text-h6 mb-3">Anhänge</h3>
 
-              <!-- Disclaimer PDF – static read-only item -->
+              <!-- Disclaimer & Cancellation PDFs – static read-only items -->
               <v-card class="mb-3">
                 <v-list lines="one" class="py-0">
                   <v-list-item
@@ -216,35 +216,32 @@
                       <v-icon v-else color="grey" size="small">mdi-minus</v-icon>
                     </template>
                   </v-list-item>
+                  <template v-if="cancellationExists || repairRecord?.status_detail === 'Abbruch'">
+                    <v-divider />
+                    <v-list-item
+                      prepend-icon="mdi-file-pdf-box"
+                      :href="cancellationUrl"
+                      target="_blank"
+                      :disabled="!cancellationExists"
+                      :subtitle="cancellationExists ? 'PDF herunterladen' : 'Nicht vorhanden'"
+                    >
+                      <v-list-item-title>Abbruchbestätigung</v-list-item-title>
+                      <template #append>
+                        <v-btn
+                          v-if="cancellationExists"
+                          icon="mdi-download"
+                          variant="text"
+                          size="small"
+                          :href="cancellationUrl"
+                          :download="`abbruch_${repairRecord?.id}.pdf`"
+                          @click.stop
+                        ></v-btn>
+                        <v-icon v-else color="grey" size="small">mdi-minus</v-icon>
+                      </template>
+                    </v-list-item>
+                  </template>
                 </v-list>
               </v-card>
-
-              <!-- Log entry attachments (photos / files uploaded with log entries) -->
-              <v-file-upload-list v-if="allLogAttachmentItems.length > 0" show-size class="mb-3">
-                <template #default>
-                  <v-file-upload-item
-                    v-for="att in allLogAttachmentItems"
-                    :key="att.url"
-                    :title="att.name"
-                    :subtitle="formatFileSize(att.size)"
-                    :file-icon="getAttachmentIcon(att.content_type)"
-                  >
-                    <template #append>
-                      <v-btn
-                        :icon="
-                          att.content_type.startsWith('image/') ? 'mdi-open-in-new' : 'mdi-download'
-                        "
-                        variant="text"
-                        size="small"
-                        :href="att.url"
-                        :download="att.content_type.startsWith('image/') ? undefined : att.name"
-                        :target="att.content_type.startsWith('image/') ? '_blank' : undefined"
-                        @click.stop
-                      ></v-btn>
-                    </template>
-                  </v-file-upload-item>
-                </template>
-              </v-file-upload-list>
 
               <!-- Unified store attachments -->
               <v-file-upload-list v-if="repairAttachments.length > 0" show-size class="mb-3">
@@ -736,26 +733,12 @@ const disclaimerExists = ref(false)
 const disclaimerUrl = computed(() =>
   repairRecord.value?.id ? `/api/repairs/${repairRecord.value.id}/disclaimer` : ''
 )
+const cancellationExists = ref(false)
+const cancellationUrl = computed(() =>
+  repairRecord.value?.id ? `/api/repairs/${repairRecord.value.id}/cancellation` : ''
+)
 
-// Log attachments
-interface AttachmentInfo {
-  name: string
-  url: string
-  content_type: string
-  size: number
-}
-const logAttachments = ref<Record<number, AttachmentInfo[]>>({})
-
-// Flatten all log attachments for display in the Anhänge section
-const allLogAttachmentItems = computed(() => {
-  const items: AttachmentInfo[] = []
-  for (const atts of Object.values(logAttachments.value)) {
-    items.push(...atts)
-  }
-  return items
-})
-
-// Unified repair attachments (new attachment store)
+// Unified repair attachments
 interface RepairAttachment {
   id: number
   repair_id: number
@@ -771,6 +754,33 @@ interface RepairAttachment {
 const repairAttachments = ref<RepairAttachment[]>([])
 const pendingAttachmentFiles = ref<File[]>([])
 const attachmentsUploading = ref(false)
+
+// Per-log attachments derived from the unified repairAttachments list
+interface AttachmentInfo {
+  name: string
+  url: string
+  content_type: string
+  size: number
+}
+const logAttachments = computed<Record<number, AttachmentInfo[]>>(() => {
+  const mapped: Record<number, AttachmentInfo[]> = {}
+  const repairId = repairRecord.value?.id
+  if (!repairId) return mapped
+  for (const att of repairAttachments.value) {
+    if (att.log_id !== null) {
+      if (!mapped[att.log_id]) {
+        mapped[att.log_id] = []
+      }
+      mapped[att.log_id].push({
+        name: att.original_filename,
+        url: `/api/repairs/${repairId}/attachments/${att.id}`,
+        content_type: att.content_type,
+        size: att.size,
+      })
+    }
+  }
+  return mapped
+})
 
 // Camera state for log dialog
 const logVideoElement = ref<HTMLVideoElement | null>(null)
@@ -1035,6 +1045,9 @@ const {
   showSnackbar,
   loadRepairLogs,
   onNeedsVdeTest: (preFilledUserId) => openVdeDialogForCloseFlow(preFilledUserId),
+  onCancellationSigned: () => {
+    cancellationExists.value = true
+  },
 })
 
 onMounted(async () => {
@@ -1076,24 +1089,32 @@ onMounted(async () => {
 
     vdeInitialPruferUserId.value = repair.user_id ?? null
 
-    // Load repair logs, VDE tests, attachments, and check for disclaimer
+    // Load repair logs, VDE tests, and attachments
     await Promise.all([
       loadRepairLogs(),
       loadVdeTests(),
-      loadLogAttachments(),
       loadRepairAttachments(),
     ])
 
-    // Check if disclaimer PDF exists
+    // Check if disclaimer & cancellation PDFs exist
     if (repairRecord.value?.id) {
-      try {
-        const res = await fetch(`/api/repairs/${repairRecord.value.id}/disclaimer`, {
-          method: 'HEAD',
-        })
-        disclaimerExists.value = res.ok
-      } catch {
-        disclaimerExists.value = false
-      }
+      const repairId = repairRecord.value.id
+      await Promise.all([
+        fetch(`/api/repairs/${repairId}/disclaimer`, { method: 'HEAD' })
+          .then((res) => {
+            disclaimerExists.value = res.ok
+          })
+          .catch(() => {
+            disclaimerExists.value = false
+          }),
+        fetch(`/api/repairs/${repairId}/cancellation`, { method: 'HEAD' })
+          .then((res) => {
+            cancellationExists.value = res.ok
+          })
+          .catch(() => {
+            cancellationExists.value = false
+          }),
+      ])
     }
 
     loading.value = false
@@ -1103,25 +1124,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-async function loadLogAttachments() {
-  if (!repairRecord.value?.id) return
-  try {
-    const res = await fetch(`/api/repairs/${repairRecord.value.id}/log_attachments`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.reply === 'done') {
-        const mapped: Record<number, AttachmentInfo[]> = {}
-        for (const [k, v] of Object.entries(data.data as Record<string, AttachmentInfo[]>)) {
-          mapped[Number(k)] = v
-        }
-        logAttachments.value = mapped
-      }
-    }
-  } catch {
-    // silently ignore
-  }
-}
 
 async function startLogCamera() {
   try {
@@ -1177,10 +1179,15 @@ function dataUrlToFile(dataUrl: string, filename: string): File {
 }
 
 async function uploadPendingAttachments(logId: number): Promise<void> {
-  if (pendingLogFiles.value.length === 0) return
+  if (!repairRecord.value?.id || pendingLogFiles.value.length === 0) return
   const fd = new FormData()
   pendingLogFiles.value.forEach((f) => fd.append('files', f))
-  await fetch(`/api/repair_logs/${logId}/attachments`, { method: 'POST', body: fd })
+  fd.append('attachment_type', 'log_entry')
+  fd.append('log_id', String(logId))
+  await fetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
+    method: 'POST',
+    body: fd,
+  })
 }
 
 async function loadRepairAttachments() {
@@ -1269,7 +1276,7 @@ async function addLogEntry() {
       // Upload any pending attachments
       if (response.id) {
         await uploadPendingAttachments(response.id)
-        await loadLogAttachments()
+        await loadRepairAttachments()
       }
 
       showSnackbar('Logeintrag erfolgreich hinzugefügt')

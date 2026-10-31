@@ -5,7 +5,8 @@
         <span>{{ repairData.geraet_art }} ({{ repairData.id }})</span>
         <div class="d-flex align-center gap-2">
           <v-btn v-if="repairData.id" icon="mdi-pencil" size="small" variant="text" @click="openEditDialog"></v-btn>
-          <v-chip :color="getStatusColor(repairData.status ?? '')" variant="tonal"
+          <v-chip
+:color="getStatusColor(repairData.status ?? '')" variant="tonal"
             :prepend-icon="getStatusIcon(repairData.status ?? '')">
             {{ repairData.status }}
           </v-chip>
@@ -69,7 +70,8 @@
         <v-col v-if="vdeTests && vdeTests.length > 0" cols="12">
           <v-divider class="my-3"></v-divider>
           <div class="text-subtitle-2 text-grey-darken-1 mb-2">Letztes Test Ergebnis nach VDE</div>
-          <v-alert v-for="test in vdeTests" :key="test.id" :type="test.gesamtergebnis === true ? 'success' : 'error'"
+          <v-alert
+v-for="test in vdeTests" :key="test.id" :type="test.gesamtergebnis === true ? 'success' : 'error'"
             variant="tonal" density="compact" class="mb-2">
             <div class="d-flex align-center">
               <div class="flex-grow-1">
@@ -100,11 +102,14 @@
       </v-card-title>
       <v-card-text>
         <v-text-field v-model="editForm.datum" label="Datum" type="date"></v-text-field>
-        <v-select v-model="editForm.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
+        <v-select
+v-model="editForm.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
           label="Kategorie" class="mt-3"></v-select>
-        <v-text-field v-model="editForm.geraet_art" label="Geräte Art / Bezeichnung"
+        <v-text-field
+v-model="editForm.geraet_art" label="Geräte Art / Bezeichnung"
           class="mt-3"></v-text-field>
-        <v-textarea v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
+        <v-textarea
+v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
           class="mt-3"></v-textarea>
       </v-card-text>
       <v-card-actions>

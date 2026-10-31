@@ -3,12 +3,8 @@ Repair Logs API endpoints for tracking work sessions.
 """
 
 import json
-import mimetypes
-from pathlib import Path
 
-from flask import Blueprint, Response, current_app, request
-from flask import send_file as flask_send_file
-from werkzeug.utils import secure_filename
+from flask import Blueprint, Response, current_app
 
 from app.extensions import db
 from app.models import Repair, RepairLog
@@ -19,10 +15,6 @@ from app.schemas import (
     RepairLogUpdate,
 )
 from app.validation import validate_request
-
-_LOG_ATTACH_ROOT = (
-    Path(__file__).parent.parent.parent / "data" / "repair_log_attachments"
-)
 
 
 repair_logs_bp = Blueprint("repair_logs", __name__)
@@ -347,146 +339,3 @@ def api_delete_repair_log(repair_id, log_id):
             mimetype="application/json",
         )
 
-
-@repair_logs_bp.route("/repair_logs/<int:log_id>/attachments", methods=["POST"])
-def api_upload_log_attachments(log_id):
-    """Upload one or more files as attachments to a repair log entry."""
-    try:
-        RepairLog.query.get_or_404(log_id)
-
-        files = request.files.getlist("files")
-        if not files:
-            return Response(
-                json.dumps({"reply": "error", "error": "No files provided"}),
-                status=400,
-                mimetype="application/json",
-            )
-
-        attach_dir = _LOG_ATTACH_ROOT / str(log_id)
-        attach_dir.mkdir(parents=True, exist_ok=True)
-
-        saved = []
-        for f in files:
-            if not f.filename:
-                continue
-            filename = secure_filename(f.filename)
-            if not filename:
-                continue
-            dest = attach_dir / filename
-            counter = 1
-            stem = Path(filename).stem
-            suffix = Path(filename).suffix
-            while dest.exists():
-                dest = attach_dir / f"{stem}_{counter}{suffix}"
-                counter += 1
-            f.save(str(dest))
-            saved.append(dest.name)
-
-        current_app.logger.info(f"Saved {len(saved)} attachments for log {log_id}")
-        return Response(
-            json.dumps({"reply": "done", "saved": saved}),
-            status=201,
-            mimetype="application/json",
-        )
-    except Exception as e:
-        current_app.logger.error(
-            f"Error uploading attachments for log {log_id}: {e}", exc_info=True
-        )
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )
-
-
-@repair_logs_bp.route("/repairs/<int:repair_id>/log_attachments", methods=["GET"])
-def api_list_repair_log_attachments(repair_id):
-    """List all attachments grouped by log_id for a repair."""
-    try:
-        Repair.query.get_or_404(repair_id)
-        logs = RepairLog.query.filter_by(repair_id=repair_id).all()
-
-        result: dict = {}
-        for log in logs:
-            attach_dir = _LOG_ATTACH_ROOT / str(log.id)
-            if not attach_dir.exists():
-                continue
-            items = []
-            for fpath in sorted(attach_dir.iterdir()):
-                if not fpath.is_file():
-                    continue
-                ct, _ = mimetypes.guess_type(fpath.name)
-                items.append(
-                    {
-                        "name": fpath.name,
-                        "url": f"/api/repair_logs/{log.id}/attachments/{fpath.name}",
-                        "content_type": ct or "application/octet-stream",
-                        "size": fpath.stat().st_size,
-                    }
-                )
-            if items:
-                result[str(log.id)] = items
-
-        return Response(
-            json.dumps({"reply": "done", "data": result}),
-            status=200,
-            mimetype="application/json",
-        )
-    except Exception as e:
-        current_app.logger.error(
-            f"Error listing log attachments for repair {repair_id}: {e}", exc_info=True
-        )
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )
-
-
-@repair_logs_bp.route(
-    "/repair_logs/<int:log_id>/attachments/<path:filename>", methods=["GET"]
-)
-def api_get_log_attachment(log_id, filename):
-    """Serve a specific log attachment file."""
-    try:
-        RepairLog.query.get_or_404(log_id)
-        safe_name = secure_filename(filename)
-        if not safe_name:
-            return Response(
-                json.dumps({"reply": "error", "error": "Invalid filename"}),
-                status=400,
-                mimetype="application/json",
-            )
-
-        attach_dir = _LOG_ATTACH_ROOT / str(log_id)
-        target = (attach_dir / safe_name).resolve()
-        if not str(target).startswith(str(attach_dir.resolve())):
-            return Response(
-                json.dumps({"reply": "error", "error": "Invalid filename"}),
-                status=400,
-                mimetype="application/json",
-            )
-
-        if not target.exists():
-            return Response(
-                json.dumps({"reply": "error", "error": "File not found"}),
-                status=404,
-                mimetype="application/json",
-            )
-
-        ct, _ = mimetypes.guess_type(safe_name)
-        return flask_send_file(
-            str(target),
-            mimetype=ct or "application/octet-stream",
-            as_attachment=False,
-            download_name=safe_name,
-        )
-    except Exception as e:
-        current_app.logger.error(
-            f"Error serving attachment {filename} for log {log_id}: {e}", exc_info=True
-        )
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )

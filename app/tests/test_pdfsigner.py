@@ -29,8 +29,14 @@ from app.imports.pdfsigner import FIELD_DATE, FIELD_NAME, FIELD_SIGNATURE, PDFSi
 # ---------------------------------------------------------------------------
 
 PDF_SAMPLE = Path(__file__).parent.parent.parent / "config" / "Disclaimer_sample.pdf"
+CANCELLATION_SAMPLE = (
+    Path(__file__).parent.parent.parent / "config" / "Cancellation_sample.pdf"
+)
 
 TEMPLATE_PATH: Path | None = PDF_SAMPLE if PDF_SAMPLE.exists() else None
+CANCELLATION_TEMPLATE_PATH: Path | None = (
+    CANCELLATION_SAMPLE if CANCELLATION_SAMPLE.exists() else None
+)
 
 
 def _make_minimal_pdf(directory: Path, with_fields: bool = True) -> Path:
@@ -272,6 +278,39 @@ class TestRealTemplate(unittest.TestCase):
         images = doc.load_page(0).get_images(full=True)
         doc.close()
         self.assertGreater(len(images), 0, "No signature image in signed PDF")
+
+
+@unittest.skipUnless(
+    CANCELLATION_TEMPLATE_PATH is not None,
+    f"Cancellation template not found at {CANCELLATION_SAMPLE}",
+)
+class TestRealCancellationTemplate(unittest.TestCase):
+    """Integration tests against config/Cancellation_sample.pdf."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.signer = PDFSigner(str(CANCELLATION_TEMPLATE_PATH))
+        cls.signature = _make_signature_b64()
+        cls.test_date = datetime.date(2026, 5, 14)
+
+    def test_required_fields_present(self):
+        self.assertIn(FIELD_DATE, self.signer._field_names)
+        self.assertIn(FIELD_SIGNATURE, self.signer._field_names)
+        self.assertIn(FIELD_NAME, self.signer._field_names)
+
+    def test_signed_cancellation_renders_name_date_and_image(self):
+        result = self.signer.get_signed_pdf(
+            self.signature, self.test_date, name="Max Mustermann"
+        )
+        self.assertIsNotNone(result)
+        doc = fitz.open(stream=result.read(), filetype="pdf")
+        page = doc.load_page(0)
+        text = page.get_text()
+        images = page.get_images(full=True)
+        doc.close()
+        self.assertIn("14.05.2026", text)
+        self.assertIn("Max Mustermann", text)
+        self.assertGreater(len(images), 0)
 
 
 if __name__ == "__main__":

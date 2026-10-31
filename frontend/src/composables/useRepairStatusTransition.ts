@@ -9,6 +9,7 @@ import {
   type RepairStatus,
 } from '@/stores/repairStore'
 import { RepairLogsService } from '@/api/services/RepairLogsService'
+import { RepairsService } from '@/api/services/RepairsService'
 import confetti from 'canvas-confetti'
 import type { Repair } from '@/api/types'
 
@@ -25,6 +26,8 @@ export interface UseRepairStatusTransitionOptions {
   loadRepairLogs: () => Promise<void>
   /** Called when a status transition requires a VDE test first. */
   onNeedsVdeTest: (preFilledUserId?: number | null) => void
+  /** Called after a signed cancellation PDF has been generated. */
+  onCancellationSigned?: () => Promise<void> | void
 }
 
 export function useRepairStatusTransition(options: UseRepairStatusTransitionOptions) {
@@ -200,8 +203,9 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         })
         await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
           user_id: userId || options.repairRecord.value.user_id || undefined,
-          reparatur_dauer: Number(completionData.value.duration ?? 0),
+          reparatur_dauer: 0,
           reparatur_besch: completionData.value.description,
+          log_type: 'status_change',
           status_from: fromStatus,
           status_to: 'Repariert',
         })
@@ -259,12 +263,27 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     await saveNotRepairable(payload)
   }
 
-  async function confirmAbbruchSignature(_signaturePayload: { signature: string }) {
+  async function confirmAbbruchSignature(signaturePayload: { signature: string }) {
     abbruchSignatureDialog.value = false
-    if (pendingAbbruchPayload.value) {
-      await saveNotRepairable(pendingAbbruchPayload.value)
-      pendingAbbruchPayload.value = null
+    if (!pendingAbbruchPayload.value || !options.repairRecord.value?.id) return
+    const payload = pendingAbbruchPayload.value
+    pendingAbbruchPayload.value = null
+
+    try {
+      await RepairsService.createRepairCancellation(options.repairRecord.value.id, {
+        signature: signaturePayload.signature,
+      })
+      await options.onCancellationSigned?.()
+    } catch (err) {
+      console.error('Error saving cancellation PDF:', err)
+      options.showSnackbar(
+        'Fehler beim Erstellen der Abbruchbestätigung: ' + (err as Error).message,
+        'error'
+      )
+      return
     }
+
+    await saveNotRepairable(payload)
   }
 
   async function saveNotRepairable(payload: { description: string; statusDetail: string; duration: number }) {
@@ -282,8 +301,9 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       })
       await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
         user_id: options.repairRecord.value.user_id || undefined,
-        reparatur_dauer: payload.duration,
+        reparatur_dauer: 0,
         reparatur_besch: payload.description,
+        log_type: 'status_change',
         status_from: fromStatus,
         status_to: 'Nicht Repariert',
       })
@@ -293,6 +313,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       options.repairRecord.value.reparatur_besch = payload.description
       options.repairRecord.value.reparatur_dauer = payload.duration
       options.selectedRepairStatus.value = 'Nicht Repariert'
+      await options.loadRepairLogs()
     } catch (err) {
       console.error('Error closing repair as not repairable:', err)
       options.showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')

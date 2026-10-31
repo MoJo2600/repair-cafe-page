@@ -186,6 +186,26 @@ export class RepairsService {
   }
 
   /**
+   * Generate and store a signed cancellation PDF for a repair.
+   */
+  public static createRepairCancellation(
+    id: number,
+    body: { signature: string }
+  ): CancelablePromise<{ reply: string; error?: string }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/repairs/{id}/cancellation',
+      path: { id },
+      body,
+      errors: {
+        400: `Invalid signature`,
+        404: `Repair not found`,
+        500: `Internal server error`,
+      },
+    })
+  }
+
+  /**
    * Get weekly repair counts per status for the last 12 months.
    * @returns RepairsTimelineResponse
    */

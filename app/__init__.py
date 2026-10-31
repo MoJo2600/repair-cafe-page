@@ -10,6 +10,7 @@ import traceback
 from pathlib import Path
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import LokiConfig, get_config
 from app.extensions import (
@@ -42,6 +43,11 @@ def create_app(config_name=None):
 
     config = get_config()
     app.config.from_object(config)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
+
+    # Ensure persistent DATA_DIR exists
+    data_dir = Path(app.config["DATA_DIR"])
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     # Ensure SECRET_KEY is always set; in development a random key is acceptable.
     if not app.config.get("SECRET_KEY"):
@@ -119,11 +125,24 @@ def create_app(config_name=None):
     app.config["REMEMBER_COOKIE_HTTPONLY"] = True
     init_cors(app)
 
-    # Initialize PDF service and attach to app
+    # Initialize PDF services (disclaimer and cancellation) and attach to app
     from app.services.pdf_service import PDFService
 
     app.pdf_service = PDFService(  # type: ignore
-        storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH")
+        data_dir=app.config.get("DATA_DIR"),
+        config_dir=app.config.get("CONFIG_DIR"),
+        storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH"),
+        active_filename="disclaimer.pdf",
+        sample_filename="Disclaimer_sample.pdf",
+        storage_subdir="signed_disclaimers",
+    )
+    app.cancellation_pdf_service = PDFService(  # type: ignore
+        data_dir=app.config.get("DATA_DIR"),
+        config_dir=app.config.get("CONFIG_DIR"),
+        storage_dir=app.config.get("SIGNED_CANCELLATION_STORAGE_PATH"),
+        active_filename="cancellation.pdf",
+        sample_filename="Cancellation_sample.pdf",
+        storage_subdir="signed_cancellations",
     )
 
     # Initialize Label service and attach to app

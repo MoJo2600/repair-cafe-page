@@ -20,42 +20,49 @@
                     <h4 class="text-subtitle-2 mb-2">Allgemeine Angaben</h4>
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-text-field v-model="form.created_at" label="Prüfung nach DIN VDE 0701 am"
+                            <v-text-field
+v-model="form.created_at" label="Prüfung nach DIN VDE 0701 am"
                                 type="datetime-local" density="compact" required
                                 :rules="[(v: string) => !!v || 'Datum ist erforderlich']" />
                         </v-col>
                         <v-col cols="12" sm="6">
-                            <v-text-field :model-value="repairId" label="Gehört zu Laufzettel-Nummer" density="compact"
+                            <v-text-field
+:model-value="repairId" label="Gehört zu Laufzettel-Nummer" density="compact"
                                 readonly />
                         </v-col>
                     </v-row>
 
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-select v-model="selectedPruefgeraet" :items="pruefgeraete" item-title="name"
+                            <v-select
+v-model="selectedPruefgeraet" :items="pruefgeraete" item-title="name"
                                 item-value="name" label="Mit Prüfgerät" density="compact" clearable />
                         </v-col>
                         <v-col cols="12" sm="6">
-                            <v-text-field :model-value="selectedPruefgeraetSerial" read-only
+                            <v-text-field
+:model-value="selectedPruefgeraetSerial" read-only
                                 label="Seriennummer Prüfgerät" density="compact" readonly />
                         </v-col>
                     </v-row>
 
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-autocomplete v-model="form.prufer_user_id" :items="userItems" item-title="label"
+                            <v-autocomplete
+v-model="form.prufer_user_id" :items="userItems" item-title="label"
                                 item-value="id" label="Durchgeführt von" density="compact" clearable required
                                 :rules="[(v: number | null) => !!v || 'Prüfer ist erforderlich']" />
                         </v-col>
                         <v-col cols="12" sm="6">
-                            <v-text-field v-model="form.electrician" label="Falls EuP, im Beisein von Elektrofachkraft"
+                            <v-text-field
+v-model="form.electrician" label="Falls EuP, im Beisein von Elektrofachkraft"
                                 density="compact" />
                         </v-col>
                     </v-row>
 
                     <v-row dense>
                         <v-col cols="12">
-                            <v-textarea v-model="form.bemerkungen" label="Bemerkungen / Mängel" rows="2"
+                            <v-textarea
+v-model="form.bemerkungen" label="Bemerkungen / Mängel" rows="2"
                                 density="compact" auto-grow />
                         </v-col>
                     </v-row>
@@ -68,7 +75,8 @@
                             <span class="text-body-2">Gehäuse i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.sichtpruefung_gehaeuse" inline density="compact"
+                            <v-radio-group
+v-model="form.sichtpruefung_gehaeuse" inline density="compact"
                                 :rules="[(v: boolean | null) => v !== null || 'Erforderlich']" hide-details="auto">
                                 <v-radio label="Ja" :value="true" />
                                 <v-radio label="Nein" :value="false" />
@@ -80,7 +88,8 @@
                             <span class="text-body-2">Kabel i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.sichtpruefung_kabel" inline density="compact"
+                            <v-radio-group
+v-model="form.sichtpruefung_kabel" inline density="compact"
                                 :rules="[(v: boolean | null) => v !== null || 'Erforderlich']" hide-details="auto">
                                 <v-radio label="Ja" :value="true" />
                                 <v-radio label="Nein" :value="false" />
@@ -92,7 +101,8 @@
                             <span class="text-body-2">Stecker i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.sichtpruefung_stecker" inline density="compact"
+                            <v-radio-group
+v-model="form.sichtpruefung_stecker" inline density="compact"
                                 :rules="[(v: boolean | null) => v !== null || 'Erforderlich']" hide-details="auto">
                                 <v-radio label="Ja" :value="true" />
                                 <v-radio label="Nein" :value="false" />
@@ -105,7 +115,8 @@
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.sichtpruefung_zugentlastung" inline density="compact"
+                            <v-radio-group
+v-model="form.sichtpruefung_zugentlastung" inline density="compact"
                                 :rules="[(v: boolean | null) => v !== null || 'Erforderlich']" hide-details="auto">
                                 <v-radio label="Ja" :value="true" />
                                 <v-radio label="Nein" :value="false" />
@@ -118,7 +129,8 @@
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.sichtpruefung_sicherheit" inline density="compact"
+                            <v-radio-group
+v-model="form.sichtpruefung_sicherheit" inline density="compact"
                                 :rules="[(v: boolean | null) => v !== null || 'Erforderlich']" hide-details="auto">
                                 <v-radio label="Ja" :value="true" />
                                 <v-radio label="Nein" :value="false" />
@@ -134,7 +146,8 @@
                             <span class="text-body-2">Schutzklasse</span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-select v-model="form.schutzklasse"
+                            <v-select
+v-model="form.schutzklasse"
                                 :items="['Schutzklasse I', 'Schutzklasse II', 'Schutzklasse III']" density="compact"
                                 hide-details />
                         </v-col>
@@ -182,7 +195,8 @@
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
-                            <v-radio-group v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
+                            <v-radio-group
+v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
                                 required :rules="[(v: boolean | null) => v !== null || 'Ergebnis erforderlich']"
                                 :disabled="vdeTestHasFailedQuestion && vdeTestAllQuestionsAnswered"
                                 :readonly="vdeTestHasFailedQuestion && vdeTestAllQuestionsAnswered">
@@ -202,7 +216,7 @@
             <v-card-actions>
                 <v-btn @click="onCancel">Abbrechen</v-btn>
                 <v-spacer />
-                <v-btn color="primary" @click="onSubmit" :disabled="!inlineVdeFormValid" :loading="saving">
+                <v-btn color="primary" :disabled="!inlineVdeFormValid" :loading="saving" @click="onSubmit">
                     <v-icon start>mdi-check-all</v-icon>
                     {{ confirmText }}
                 </v-btn>

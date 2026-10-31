@@ -20,7 +20,8 @@
                 </p>
 
                 <div class="signature-container" :class="{ 'error-border': signatureError }">
-                    <canvas ref="signatureCanvas" width="600" height="180"
+                    <canvas
+ref="signatureCanvas" width="600" height="180"
                         style="border: 1px solid #ccc; cursor: crosshair; width: 100%; touch-action: none; border-radius: 4px;"
                         @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing" @mouseleave="stopDrawing"
                         @touchstart="startDrawingTouch" @touchmove="drawTouch" @touchend="stopDrawing"></canvas>

@@ -16,10 +16,10 @@ services:
       dockerfile: Dockerfile.backend
     image: ghcr.io/mojo2600/repaircafepage-backend:latest
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     environment:
       FLASK_ENV: production
+      DATA_DIR: ${DATA_DIR:-/data}
+      CONFIG_DIR: ${CONFIG_DIR:-/config}
       MYSQL_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}
@@ -46,8 +46,10 @@ services:
       OIDC_DENIED_GROUPS: ${OIDC_DENIED_GROUPS:-}
       PIN_MODE: ${PIN_MODE-oidc}
       PIN_MODE_RESET_ACK: ${PIN_MODE_RESET_ACK:-}
-      # Label printer — mount the host CUPS socket and set LABEL_PRINTER_ENABLED=true.
-      # See README § Setup Label printer for full instructions.
+      # Label printer — mount the host CUPS socket (/run/cups/cups.sock) and set
+      # LABEL_PRINTER_ENABLED=true in .env. Works for both a local USB printer on
+      # the Docker host and a remote print server relayed via the host's CUPS daemon.
+      # See docs/CUPS_NETWORK_SETUP.md for full instructions.
       LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
       LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
     extra_hosts:
@@ -55,8 +57,9 @@ services:
     volumes:
       - app_data:/data
       - ./config:/config:ro
-      # Uncomment to enable label printing via the host CUPS server:
-      # - /run/cups/cups.sock:/run/cups/cups.sock
+      # Mount the host CUPS Unix socket so `lp` inside the container can submit
+      # print jobs to the host's CUPS daemon (configured via /etc/cups/client.conf):
+      - /run/cups/cups.sock:/run/cups/cups.sock
     depends_on:
       db:
         condition: service_healthy

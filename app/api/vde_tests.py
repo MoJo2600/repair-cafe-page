@@ -147,7 +147,7 @@ def api_create_vde_test(repair_id):
         db.session.add(new_test)
 
         # Update repair's din_pruef field based on test result
-        repair.din_pruef = body.gesamtergebnis == "bestanden"
+        repair.din_pruef = bool(body.gesamtergebnis)
 
         db.session.commit()
 

@@ -5,8 +5,11 @@ Label printing service for generating and printing QR code labels on a SLP 650 l
 import logging
 import os
 import subprocess
+import tempfile
+from pathlib import Path
 
 import qrcode
+from flask import current_app, has_app_context
 from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
@@ -107,10 +110,15 @@ def generate_label_image(
     id_x = qr_x + (207 - (bbox[2] - bbox[0])) // 2
     draw.text((id_x, 251), id_text, fill="black", font=font_large)
 
-    # Logo — bottom left
-    logo_path = os.path.join(
+    # Logo — bottom left (prefer custom logo in DATA_DIR over default static/logo.jpg)
+    default_logo_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "static", "logo.jpg"
     )
+    logo_path = default_logo_path
+    if has_app_context() and current_app.config.get("DATA_DIR"):
+        custom_logo = Path(current_app.config["DATA_DIR"]) / "logo.png"
+        if custom_logo.exists():
+            logo_path = str(custom_logo)
     try:
         logo = Image.open(logo_path).resize((95, 95))
         img.paste(logo, (0, LABEL_HEIGHT - 95))
@@ -151,11 +159,15 @@ class LabelService:
         return self._print_cups(label_image, repair_id)
 
     def _print_cups(self, image: Image.Image, repair_id) -> dict:
-        tmp = f"/tmp/label_{repair_id}.png"
+        tmp_path: str | None = None
         try:
-            image.save(tmp, format="PNG")
+            with tempfile.NamedTemporaryFile(
+                prefix=f"label_{repair_id}_", suffix=".png", delete=False
+            ) as tmp_file:
+                tmp_path = tmp_file.name
+            image.save(tmp_path, format="PNG")
             proc = subprocess.Popen(
-                ["lp", "-d", self.printer_name, tmp],
+                ["lp", "-d", self.printer_name, tmp_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -169,7 +181,8 @@ class LabelService:
         except Exception as exc:
             return {"reply": "error", "error": str(exc)}
         finally:
-            try:
-                os.remove(tmp)
-            except OSError:
-                pass
+            if tmp_path:
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass

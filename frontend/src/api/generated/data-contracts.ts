@@ -105,16 +105,34 @@ export interface LoginRequest {
   username: string
 }
 
+export interface PinDashboardCategoryCount {
+  /** Total repairs in this category */
+  count: number
+  /** Predefined repair category name */
+  name: string
+}
+
+export interface PinDashboardRepairItem {
+  /** Predefined repair category name */
+  category?: string | null
+  /** Repair ID */
+  id: number
+}
+
 export interface PinDashboardSummaryResponse {
+  in_progress_items?: PinDashboardRepairItem[]
   in_progress_repairs: number
   /** @default null */
-  next_repair_id?: number
+  next_repair_category?: string | null
+  /** @default null */
+  next_repair_id?: number | null
   not_repaired_repairs: number
   open_repairs: number
   repaired_repairs: number
   /** @default null */
-  success_rate?: number
+  success_rate?: number | null
   timeline?: RepairsTimelinePoint[]
+  top_categories?: PinDashboardCategoryCount[]
   total_repairs: number
 }
 

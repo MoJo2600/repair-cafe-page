@@ -4,10 +4,11 @@ FROM python:3.12-slim
 # /srv mirrors the repo root: wsgi.py here, app/ is the Flask package.
 WORKDIR /srv
 
-# System packages required by Python deps (PyMuPDF, Pillow) and PDF fonts
+# System packages required by Python deps (PyMuPDF, Pillow), PDF fonts, and CUPS label printing
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    fonts-dejavu-core libglib2.0-0 libgl1 \
-  && rm -rf /var/lib/apt/lists/*
+    fonts-dejavu-core libglib2.0-0 libgl1 cups-client \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /etc/cups && echo "ServerName /run/cups/cups.sock" > /etc/cups/client.conf
 
 # Python dependencies (separate layer for caching)
 COPY app/requirements.txt app/requirements.txt
@@ -22,7 +23,9 @@ COPY config/ /config/
 COPY entrypoint.backend.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Persistent data directory (mount a volume here in production)
+# Persistent data & config directory defaults for container runtime
+ENV DATA_DIR=/data \
+    CONFIG_DIR=/config
 RUN mkdir -p /data
 
 # Gunicorn listens on 5000; only exposed to the internal Docker network.

@@ -98,9 +98,11 @@
 
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click.stop="editRepair(item)" />
-          <v-btn v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
+          <v-btn
+v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
             :loading="printingLabelId === item.id" @click.stop="printLabel(item.id)" />
-          <v-btn icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+          <v-btn
+icon="mdi-delete" size="small" variant="text" density="compact" color="error"
             @click.stop="deleteRepair(item.id)" />
         </template>
 
@@ -232,7 +234,8 @@
                 />
               </v-col>
               <v-col cols="12">
-                <v-switch v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value="true"
+                <v-switch
+v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value="true"
                   :false-value="false" hide-details />
               </v-col>
             </v-row>

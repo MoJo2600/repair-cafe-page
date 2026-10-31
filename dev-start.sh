@@ -28,6 +28,8 @@ export MYSQL_USER="${MYSQL_USER:-root}"
 export MYSQL_PASSWORD="${MYSQL_PASSWORD:-mariadb}"
 export FLASK_ENV=development
 export FLASK_SECRET_KEY="${FLASK_SECRET_KEY:-repaircafe-local-development-only}"
+export LABEL_PRINTER_ENABLED="${LABEL_PRINTER_ENABLED:-true}"
+export LABEL_PRINTER_NAME="${LABEL_PRINTER_NAME:-SLP650}"
 
 echo "Starting development database (Compose project: $COMPOSE_PROJECT)..."
 DATABASE_ID="$(docker ps -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" --filter 'label=com.docker.compose.service=db')"

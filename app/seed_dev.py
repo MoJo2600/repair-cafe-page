@@ -321,16 +321,22 @@ def seed(reset=False):
         print("    erika.schmidt: 222222")
 
         # ------------------------------------------------------------------
-        # Disclaimer sample
+        # Disclaimer & Cancellation samples
         # ------------------------------------------------------------------
         import shutil
 
-        sample = Path(parent_dir) / "config" / "Disclaimer_sample.pdf"
-        dest = Path(parent_dir) / "data" / "disclaimer.pdf"
-        if sample.exists() and not dest.exists():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(sample, dest)
-            print(f"\n  Disclaimer sample copied to {dest}")
+        config_dir = Path(app.config["CONFIG_DIR"])
+        data_dir = Path(app.config["DATA_DIR"])
+        for sample_name, active_name in [
+            ("Disclaimer_sample.pdf", "disclaimer.pdf"),
+            ("Cancellation_sample.pdf", "cancellation.pdf"),
+        ]:
+            sample = config_dir / sample_name
+            dest = data_dir / active_name
+            if sample.exists() and not dest.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(sample, dest)
+                print(f"\n  {sample_name} copied to {dest}")
 
 
 # ---------------------------------------------------------------------------

@@ -97,59 +97,31 @@ def export():
     )
 
 
-@web_bp.route("/createDisclaimer/<id>", methods=["GET"])
-def create_disclaimer(id):
-    """Generate and download a signed disclaimer PDF for a repair record."""
-    from app.services.pdf_service import PDFService
+def execute_mail_export(cron: bool = False) -> dict:
+    """Execute the CSV export email delivery (usable from both HTTP route and cron job)."""
+    from app.services.email_service import EmailService
+    from app.services.export_service import ExportService
 
-    try:
-        repair = Repair.query.get_or_404(id)
-        data = repair.to_dict()
+    if not current_app.config.get("EMAIL_ENABLED"):
+        return {"reply": "error", "error": "E-Mail versandt ist deaktiviert."}
 
-        pdf_service = PDFService()
-        signed_pdf_stream = pdf_service.get_signed_pdf(
-            data["unterschrift"], data["datum"]
-        )
-
-        if signed_pdf_stream:
-            signed_pdf_stream.seek(0)
-            return send_file(
-                signed_pdf_stream,
-                as_attachment=True,
-                download_name=f"Haftungsausschluss_{id}_{data['datum']}.pdf",
-                mimetype="application/pdf",
-            )
-        return Response(
-            json.dumps({"reply": "error", "error": "Failed to create PDF"}),
-            status=500,
-            mimetype="application/json",
-        )
-    except Exception as e:
-        current_app.logger.error(f"createDisclaimer error: {e}", exc_info=True)
-        return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
-            status=500,
-            mimetype="application/json",
-        )
+    email_service = EmailService(current_app.config)
+    export_service = ExportService()
+    repairs = Repair.query.all()
+    csv_data = export_service.repairs_to_csv(repairs)
+    return email_service.send_export_email(csv_data, filename_prefix="repairs_export")
 
 
 @web_bp.route("/mailexport", methods=["GET"])
 @admin_required
 def send_mail_export():
     """Trigger a CSV export e-mail to the configured recipient."""
-    from app.services.email_service import EmailService
-    from app.services.export_service import ExportService
-
-    if not current_app.config["EMAIL_ENABLED"]:
+    if not current_app.config.get("EMAIL_ENABLED"):
         return Response(
             json.dumps({"reply": "error", "error": "E-Mail versandt ist deaktiviert."}),
             status=400,
             mimetype="application/json",
         )
 
-    email_service = EmailService(current_app.config)
-    export_service = ExportService()
-    repairs = Repair.query.all()
-    csv_data = export_service.repairs_to_csv(repairs)
-    result = email_service.send_export_email(csv_data, filename_prefix="repairs_export")
-    return json.dumps(result)
+    result = execute_mail_export(cron=False)
+    return Response(json.dumps(result), status=200, mimetype="application/json")
