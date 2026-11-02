@@ -677,6 +677,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { sessionFetch } from '@/api/session'
 import { useRouter, useRoute } from 'vue-router'
 import { RepairsService } from '@/api/services/RepairsService'
@@ -723,10 +724,7 @@ const loading = ref(true)
 const error = ref('')
 const saving = ref(false)
 const logFormValid = ref(false)
-const logForm = ref<{
-  validate: () => Promise<{ valid: boolean }>
-  resetValidation?: () => void
-} | null>(null)
+const logForm = ref<InstanceType<typeof VForm> | null>(null)
 
 const repairRecord = ref<Repair | null>(null)
 const repairLogs = ref<RepairLog[]>([])
@@ -881,10 +879,7 @@ const editingLogId = ref<number | null>(null)
 function canDelete(ownerId?: number | null) {
   return authStore.isAdmin || (ownerId != null && ownerId === authStore.currentUser?.id)
 }
-const editLogForm = ref<{
-  validate: () => Promise<{ valid: boolean }>
-  resetValidation?: () => void
-} | null>(null)
+const editLogForm = ref<InstanceType<typeof VForm> | null>(null)
 const editLog = ref({
   user_id: null as number | null,
   reparatur_besch: '',

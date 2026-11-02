@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="800px" persistent scrollable @update:model-value="onDialogToggle">
+    <v-dialog v-model="open" max-width="800px" persistent scrollable>
         <v-card>
             <v-card-title class="text-headline-small">
                 <v-icon start>mdi-flash</v-icon>
@@ -227,6 +227,7 @@ v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { VForm } from 'vuetify/components'
 import type { UserResponse, PruefgeraetResponse } from '@/api/types'
 
 export interface VdeFormData {
@@ -249,7 +250,6 @@ export interface VdeFormData {
 }
 
 interface Props {
-    modelValue: boolean
     saving: boolean
     repairId?: number
     selectedRepairStatus?: string
@@ -260,6 +260,8 @@ interface Props {
     pruefgeraete: PruefgeraetResponse[]
 }
 
+const open = defineModel<boolean>({ required: true })
+
 const props = withDefaults(defineProps<Props>(), {
     repairId: undefined,
     selectedRepairStatus: '',
@@ -269,12 +271,11 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
     (e: 'submit', payload: VdeFormData): void
 }>()
 
 const inlineVdeFormValid = ref(false)
-const inlineVdeForm = ref<{ validate: () => Promise<{ valid: boolean }>; resetValidation?: () => void } | null>(null)
+const inlineVdeForm = ref<InstanceType<typeof VForm> | null>(null)
 const selectedPruefgeraet = ref<string>('')
 
 const userItems = computed(() =>
@@ -317,18 +318,13 @@ function createEmptyForm(): VdeFormData {
 
 const form = ref<VdeFormData>(createEmptyForm())
 
-watch(
-    () => props.modelValue,
-    (isOpen) => {
-        if (isOpen) {
-            form.value = createEmptyForm()
-            selectedPruefgeraet.value = ''
-            if (inlineVdeForm.value?.resetValidation) {
-                inlineVdeForm.value.resetValidation()
-            }
-        }
+watch(open, (isOpen) => {
+    if (isOpen) {
+        form.value = createEmptyForm()
+        selectedPruefgeraet.value = ''
+        inlineVdeForm.value?.resetValidation()
     }
-)
+})
 
 const selectedPruefgeraetSerial = computed(() => {
     if (!selectedPruefgeraet.value) return ''
@@ -409,10 +405,6 @@ async function onSubmit() {
 }
 
 function onCancel() {
-    emit('update:modelValue', false)
-}
-
-function onDialogToggle(isOpen: boolean) {
-    emit('update:modelValue', isOpen)
+    open.value = false
 }
 </script>

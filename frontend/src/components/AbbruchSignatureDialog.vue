@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="680px" persistent @update:model-value="onDialogToggle">
+    <v-dialog v-model="open" max-width="680px" persistent>
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" color="error">mdi-alert-octagon</v-icon>
@@ -52,15 +52,15 @@ ref="signatureCanvas" width="600" height="180"
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 
-const props = withDefaults(defineProps<{
-    modelValue: boolean
+const open = defineModel<boolean>({ required: true })
+
+withDefaults(defineProps<{
     loading?: boolean
 }>(), {
     loading: false
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
     (e: 'confirm', value: { signature: string }): void
 }>()
 
@@ -69,7 +69,7 @@ const isDrawing = ref(false)
 const signatureData = ref<string | null>(null)
 const signatureError = ref('')
 
-watch(() => props.modelValue, async (isOpen) => {
+watch(open, async (isOpen) => {
     if (isOpen) {
         signatureData.value = null
         signatureError.value = ''
@@ -164,12 +164,8 @@ function isCanvasEmpty(): boolean {
     return !pixelData.data.some(channel => channel !== 0)
 }
 
-function onDialogToggle(value: boolean) {
-    if (!value) closeDialog()
-}
-
 function closeDialog() {
-    emit('update:modelValue', false)
+    open.value = false
 }
 
 function confirmDialog() {

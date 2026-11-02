@@ -110,6 +110,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { AuthService } from '@/api/services/AuthService'
@@ -118,7 +119,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)

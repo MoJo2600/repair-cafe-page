@@ -145,6 +145,7 @@ v-model="form.is_admin" label="Administrator" hide-details
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import type { VForm } from "vuetify/components";
 import { sessionFetch } from "@/api/session";
 import type { UserResponse } from "@/api/types";
 import { useAuthStore } from "@/stores/authStore";
@@ -167,7 +168,7 @@ const deactivateTarget = ref<UserResponse | null>(null);
 const editingUser = ref<UserResponse | null>(null);
 const formError = ref("");
 const showPassword = ref(false);
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const formRef = ref<InstanceType<typeof VForm> | null>(null);
 
 
 const emptyForm = () => ({

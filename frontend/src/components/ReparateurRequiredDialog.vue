@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="600px" @update:model-value="onDialogToggle">
+    <v-dialog v-model="open" max-width="600px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-account</v-icon>
@@ -15,7 +15,7 @@
 
                 <v-form ref="formRef" v-model="formValid">
                     <v-autocomplete
-                        v-model="localUserId"
+                        v-model="userId"
                         :items="userStore.users"
                         :item-title="getUserTitle"
                         item-value="id"
@@ -49,14 +49,16 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { useUserStore } from '@/stores/userStore'
 import type { UserResponse } from '@/api/types'
 
 const userStore = useUserStore()
 
-const props = withDefaults(defineProps<{
-    modelValue: boolean
-    userId: number | null
+const open = defineModel<boolean>({ required: true })
+const userId = defineModel<number | null>('userId', { required: true })
+
+withDefaults(defineProps<{
     title?: string
     message?: string
     confirmText?: string
@@ -71,17 +73,11 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'update:userId', value: number | null): void
     (e: 'confirm', value: number): void
 }>()
 
-const formRef = ref<{
-    validate: () => Promise<{ valid: boolean }>
-    resetValidation?: () => void
-} | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = ref(false)
-const localUserId = ref<number | null>(props.userId)
 
 function getUserTitle(user: UserResponse): string {
     return [user.vorname, user.nachname].filter(Boolean).join(' ') || `User #${user.id}`
@@ -91,34 +87,20 @@ onMounted(() => {
     if (!userStore.loaded) userStore.fetchUsers()
 })
 
-watch(() => props.userId, (value) => {
-    localUserId.value = value
+watch(open, (isOpen) => {
+    if (isOpen) formRef.value?.resetValidation()
 })
-
-watch(localUserId, (value) => {
-    emit('update:userId', value)
-})
-
-watch(() => props.modelValue, (isOpen) => {
-    if (isOpen) {
-        formRef.value?.resetValidation?.()
-    }
-})
-
-function onDialogToggle(value: boolean) {
-    emit('update:modelValue', value)
-}
 
 function closeDialog() {
-    emit('update:modelValue', false)
+    open.value = false
 }
 
 async function confirmDialog() {
     if (!formRef.value) return
 
     const { valid } = await formRef.value.validate()
-    if (!valid || !localUserId.value) return
+    if (!valid || !userId.value) return
 
-    emit('confirm', localUserId.value)
+    emit('confirm', userId.value)
 }
 </script>

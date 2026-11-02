@@ -252,6 +252,7 @@ v-model="form.name" label="Name *"
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { sessionFetch } from '@/api/session'
 import type { SettingResponse } from '../api/generated/data-contracts'
 import { ConfigService } from '../api/services/ConfigService'
@@ -287,7 +288,7 @@ const formDialog = ref(false)
 const formCategory = ref<string>('repair_type')
 const editingItem = ref<SettingResponse | null>(null)
 const formError = ref<string | null>(null)
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 
 const form = ref({ name: '', serial_number: '', is_active: true })
 

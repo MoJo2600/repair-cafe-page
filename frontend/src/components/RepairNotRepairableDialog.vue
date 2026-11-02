@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="640px" @update:model-value="onDialogToggle">
+    <v-dialog v-model="open" max-width="640px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" color="error">mdi-close-circle</v-icon>
@@ -42,13 +42,12 @@ v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" requ
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { REPAIR_STATUS_DETAIL_OPTIONS } from '@/stores/repairStore'
 
+const open = defineModel<boolean>({ required: true })
+
 const props = withDefaults(defineProps<{
-    modelValue: boolean
-    description?: string
-    statusDetail?: string
-    duration?: number | null
     suggestedDuration?: number
     title?: string
     message?: string
@@ -56,9 +55,6 @@ const props = withDefaults(defineProps<{
     cancelText?: string
     loading?: boolean
 }>(), {
-    description: '',
-    statusDetail: '',
-    duration: null,
     suggestedDuration: 0,
     title: 'Reparatur nicht möglich',
     message: 'Bitte gib an, warum die Reparatur nicht durchgeführt werden konnte.',
@@ -68,32 +64,28 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
     (e: 'confirm', value: { description: string; statusDetail: string; duration: number }): void
 }>()
 
-const formRef = ref<any>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = ref(false)
-const localDescription = ref(props.description || '')
-const localStatusDetail = ref(props.statusDetail || '')
-const localDuration = ref<number>(props.duration ?? props.suggestedDuration ?? 0)
+// Draft values, reset each time the dialog opens and sent with "confirm"
+const localDescription = ref('')
+const localStatusDetail = ref('')
+const localDuration = ref<number>(props.suggestedDuration)
 const statusDetailOptions = REPAIR_STATUS_DETAIL_OPTIONS['Nicht Repariert']
 
-watch(() => props.modelValue, (isOpen) => {
+watch(open, (isOpen) => {
     if (isOpen) {
-        localDescription.value = props.description || ''
-        localStatusDetail.value = props.statusDetail || ''
-        localDuration.value = props.duration ?? props.suggestedDuration ?? 0
+        localDescription.value = ''
+        localStatusDetail.value = ''
+        localDuration.value = props.suggestedDuration
         formRef.value?.resetValidation()
     }
 })
 
-function onDialogToggle(value: boolean) {
-    emit('update:modelValue', value)
-}
-
 function closeDialog() {
-    emit('update:modelValue', false)
+    open.value = false
 }
 
 async function confirmDialog() {

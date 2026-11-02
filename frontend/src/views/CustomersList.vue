@@ -133,6 +133,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
@@ -164,7 +165,7 @@ const headers = [
 const editDialog = ref(false)
 const editFormValid = ref(false)
 const saving = ref(false)
-const editForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const editForm = ref<InstanceType<typeof VForm> | null>(null)
 
 type EditableCustomer = { id?: number; vorname: string; nachname: string; telefon: string; email: string }
 const blankCustomer = (): EditableCustomer => ({ vorname: '', nachname: '', telefon: '', email: '' })

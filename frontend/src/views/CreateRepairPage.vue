@@ -407,6 +407,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { sessionFetch } from '@/api/session'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
@@ -420,9 +421,9 @@ const step = ref(1)
 const step1Valid = ref(false)
 const step2Valid = ref(false)
 const step3Valid = ref(false)
-const step1Form = ref<any>(null)
-const step2Form = ref<any>(null)
-const step3Form = ref<any>(null)
+const step1Form = ref<InstanceType<typeof VForm> | null>(null)
+const step2Form = ref<InstanceType<typeof VForm> | null>(null)
+const step3Form = ref<InstanceType<typeof VForm> | null>(null)
 const submitting = ref(false)
 const createdRepairId = ref<number | null>(null)
 const createdRepairQrToken = ref<number | null>(null)
@@ -662,14 +663,19 @@ function isCanvasEmpty(): boolean {
   return !pixelData.data.some((channel) => channel !== 0)
 }
 
+// A step's form that is not rendered counts as invalid
+async function isFormValid(form: InstanceType<typeof VForm> | null): Promise<boolean> {
+  return (await form?.validate())?.valid ?? false
+}
+
 async function nextStep() {
   if (step.value === 1) {
-    const { valid } = await step1Form.value.validate()
+    const valid = await isFormValid(step1Form.value)
     if (valid) {
       step.value++
     }
   } else if (step.value === 2) {
-    const { valid } = await step2Form.value.validate()
+    const valid = await isFormValid(step2Form.value)
     if (valid) {
       // Stop camera when leaving step 2
       if (cameraActive.value) {
@@ -680,7 +686,7 @@ async function nextStep() {
       step.value++
     }
   } else if (step.value === 3) {
-    const { valid } = await step3Form.value.validate()
+    const valid = await isFormValid(step3Form.value)
     if (valid) {
       // Stop camera when leaving step 3
       step.value++
@@ -703,7 +709,7 @@ async function submitForm() {
     }
   }
 
-  const { valid } = await step3Form.value.validate()
+  const valid = await isFormValid(step3Form.value)
   if (valid) {
     submitting.value = true
     try {
