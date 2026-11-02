@@ -264,33 +264,12 @@
                       Mit meiner Unterschrift bestätige ich die Bedingungen und bestätige die
                       Datenschutzerklärung gelesen und verstanden zu haben:
                     </p>
-                    <div class="signature-container" :class="{ 'error-border': signatureError }">
-                      <canvas
-                        ref="signatureCanvas"
-                        width="700"
-                        height="200"
-                        style="
-                          border: 1px solid #ccc;
-                          cursor: crosshair;
-                          width: 100%;
-                          max-width: 700px;
-                          touch-action: none;
-                        "
-                        @mousedown="startDrawing"
-                        @mousemove="draw"
-                        @mouseup="stopDrawing"
-                        @mouseleave="stopDrawing"
-                        @touchstart="startDrawingTouch"
-                        @touchmove="drawTouch"
-                        @touchend="stopDrawing"
-                      ></canvas>
-                    </div>
-                    <v-btn size="small" class="mt-2" @click="clearSignature">
-                      Unterschrift löschen
-                    </v-btn>
-                    <div v-if="signatureError" class="text-error text-body-small mt-1">
-                      {{ signatureError }}
-                    </div>
+                    <SignaturePad
+                      v-model="signatureData"
+                      :width="700"
+                      :height="200"
+                      :error="signatureError"
+                    />
                   </v-card-text>
                 </v-card>
 
@@ -406,7 +385,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { sessionFetch } from '@/api/session'
 import { useRouter } from 'vue-router'
@@ -416,6 +395,7 @@ import { RepairsService } from '@/api/services/RepairsService'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
 import { useCameraStream } from '@/composables/useCameraStream'
+import SignaturePad from '@/components/SignaturePad.vue'
 
 const step = ref(1)
 const step1Valid = ref(false)
@@ -492,11 +472,13 @@ function openPdfDialog() {
   })
 }
 
-// Signature pad variables
-const signatureCanvas = ref<HTMLCanvasElement | null>(null)
-const isDrawing = ref(false)
+// Signature (PNG data URL from SignaturePad; null while empty)
 const signatureData = ref<string | null>(null)
 const signatureError = ref('')
+
+watch(signatureData, (value) => {
+  if (value) signatureError.value = ''
+})
 
 // Camera and photo variables
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -558,111 +540,6 @@ function onRepairTypeChange(id: number | null) {
 
 const router = useRouter()
 
-// Signature pad functions
-function getContext(): CanvasRenderingContext2D | null {
-  if (!signatureCanvas.value) return null
-  return signatureCanvas.value.getContext('2d')
-}
-
-function startDrawing(event: MouseEvent) {
-  isDrawing.value = true
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-
-  ctx.beginPath()
-  ctx.moveTo((event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY)
-  signatureError.value = ''
-}
-
-function draw(event: MouseEvent) {
-  if (!isDrawing.value) return
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-
-  ctx.lineTo((event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY)
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 2
-  ctx.lineCap = 'round'
-  ctx.stroke()
-}
-
-function stopDrawing() {
-  if (isDrawing.value) {
-    isDrawing.value = false
-    saveSignature()
-  }
-}
-
-function startDrawingTouch(event: TouchEvent) {
-  event.preventDefault()
-  isDrawing.value = true
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-  const touch = event.touches[0]
-
-  ctx.beginPath()
-  ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)
-  signatureError.value = ''
-}
-
-function drawTouch(event: TouchEvent) {
-  event.preventDefault()
-  if (!isDrawing.value) return
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-  const touch = event.touches[0]
-
-  ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 2
-  ctx.lineCap = 'round'
-  ctx.stroke()
-}
-
-function saveSignature() {
-  if (!signatureCanvas.value) return
-  signatureData.value = signatureCanvas.value.toDataURL()
-}
-
-function clearSignature() {
-  const ctx = getContext()
-  if (!ctx || !signatureCanvas.value) return
-
-  ctx.clearRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height)
-  signatureData.value = null
-  signatureError.value = ''
-}
-
-function isCanvasEmpty(): boolean {
-  if (!signatureCanvas.value) return true
-  const ctx = getContext()
-  if (!ctx) return true
-
-  const pixelData = ctx.getImageData(
-    0,
-    0,
-    signatureCanvas.value.width,
-    signatureCanvas.value.height
-  )
-  return !pixelData.data.some((channel) => channel !== 0)
-}
-
 // A step's form that is not rendered counts as invalid
 async function isFormValid(form: InstanceType<typeof VForm> | null): Promise<boolean> {
   return (await form?.validate())?.valid ?? false
@@ -682,7 +559,7 @@ async function nextStep() {
         stopCamera()
       }
       termsAccepted.value = false
-      clearSignature() // Clear signature when moving to review
+      signatureData.value = null // Fresh signature for the review step
       step.value++
     }
   } else if (step.value === 3) {
@@ -697,7 +574,7 @@ async function nextStep() {
 async function submitForm() {
   // Validate disclaimer
   if (disclaimerMode.value === 'sign') {
-    if (isCanvasEmpty()) {
+    if (!signatureData.value) {
       signatureError.value = 'Bitte unterschreiben Sie, um fortzufahren'
       return
     }
@@ -795,7 +672,6 @@ function createAnother() {
   }
   signatureData.value = null
   signatureError.value = ''
-  clearSignature()
   disclaimerMode.value = 'sign'
   uploadedPdfFile.value = null
   uploadedPdfError.value = ''
@@ -879,15 +755,6 @@ function goBack() {
 </script>
 
 <style scoped>
-.signature-container {
-  display: inline-block;
-}
-
-.signature-container.error-border canvas {
-  border-color: rgb(var(--v-theme-error)) !important;
-  border-width: 2px;
-}
-
 .cursor-pointer {
   cursor: pointer;
 }
