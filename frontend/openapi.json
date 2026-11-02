@@ -604,6 +604,160 @@
       ],
       "type": "object"
     },
+    "RepairListItem": {
+      "properties": {
+        "closed_at": {
+          "default": null,
+          "description": "Timestamp when the repair was closed",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "created_by_id": {
+          "default": null,
+          "description": "User who created the repair record",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "customer": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CustomerResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "customer_id": {
+          "default": null,
+          "description": "Linked customer ID",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "datum": {
+          "description": "Date of repair intake",
+          "format": "date",
+          "type": "string"
+        },
+        "defekt_besch": {
+          "default": null,
+          "description": "Defect description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "din_pruef": {
+          "default": null,
+          "description": "DIN test performed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "description": "Device type",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "description": "Repair ID",
+          "type": "integer"
+        },
+        "latest_log": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RepairLogResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "qr_token": {
+          "description": "QR code token",
+          "maxLength": 32,
+          "type": "string"
+        },
+        "repair_type": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SettingResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "repair_type_id": {
+          "default": null,
+          "description": "FK to repair type setting",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "reparatur_besch": {
+          "default": null,
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "reparatur_dauer": {
+          "default": null,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "status": {
+          "default": "Offen",
+          "description": "Repair status",
+          "pattern": "^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
+          "type": "string"
+        },
+        "status_detail": {
+          "default": null,
+          "description": "Additional detail for repair status",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift": {
+          "default": null,
+          "description": "Signature image as base64",
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift_haft": {
+          "default": null,
+          "description": "Liability disclaimer signed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "user": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "datum",
+        "geraet_art",
+        "id",
+        "qr_token"
+      ],
+      "type": "object"
+    },
     "RepairListResponse": {
       "properties": {
         "count": {
@@ -612,7 +766,7 @@
         },
         "data": {
           "items": {
-            "$ref": "#/definitions/RepairResponse"
+            "$ref": "#/definitions/RepairListItem"
           },
           "type": "array"
         },

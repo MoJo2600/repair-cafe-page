@@ -380,11 +380,19 @@ class RepairResponse(RepairBase):
         return _parse_date_value(value)
 
 
+class RepairListItem(RepairResponse):
+    """Repair as returned by GET /api/list"""
+
+    latest_log: Optional["RepairLogResponse"] = Field(
+        None, description="Most recent log entry of any type, if any"
+    )
+
+
 class RepairListResponse(BaseModel):
     """GET /api/list"""
 
     reply: str = Field(..., description="Response status (done, error)")
-    data: list[RepairResponse]
+    data: list[RepairListItem]
     count: int = Field(..., description="Number of repairs returned")
 
     model_config = ConfigDict(from_attributes=True)
@@ -780,3 +788,7 @@ class DropdownConfigResponse(BaseModel):
     """GET /api/config/dropdowns"""
 
     repair_type: list[SettingOption]
+
+
+RepairListItem.model_rebuild()
+RepairListResponse.model_rebuild()

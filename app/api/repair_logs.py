@@ -131,7 +131,8 @@ def api_create_repair_log(validated_data, repair_id):
         validated_data.repair_id = repair_id
 
         # Create the repair log
-        log_data = validated_data.model_dump(exclude_unset=True)
+        # Include schema defaults (e.g. reparatur_dauer=0): the columns are NOT NULL
+        log_data = validated_data.model_dump()
         new_log = RepairLog(**log_data)
 
         # increment repair time in parent repair record
