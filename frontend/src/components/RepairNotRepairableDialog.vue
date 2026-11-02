@@ -43,7 +43,7 @@ v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" requ
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { REPAIR_STATUS_DETAIL_OPTIONS } from '@/stores/repairStore'
+import { REPAIR_STATUS_DETAIL_OPTIONS } from '@/domain/repairStatus'
 
 const open = defineModel<boolean>({ required: true })
 

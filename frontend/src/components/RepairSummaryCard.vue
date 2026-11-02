@@ -127,7 +127,7 @@ v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
 import { api } from '@/api/client'
 import { ref, computed } from 'vue'
 import type { Repair, VdeTestResponse } from '@/api/types'
-import { getRepairStatusColor, getRepairStatusIcon } from '@/stores/repairStore'
+import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
 
 // A repair being created: no ids yet, and unselected fields are null.

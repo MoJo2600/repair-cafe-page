@@ -267,7 +267,7 @@ import {
   isOpenRepairStatus,
   isClosedRepairStatus,
   type RepairStatus,
-} from '@/stores/repairStore'
+} from '@/domain/repairStatus'
 import { useToast } from '@/composables/useToast'
 
 const toast = useToast()

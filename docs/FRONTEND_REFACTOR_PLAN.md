@@ -77,7 +77,7 @@ stale fetches with a revision counter.
 | **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
 | **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | done (+ VForm refs and `markLocked` from 12), checked in the browser |
 | **UI rework** | Redesign on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | open |
-| **P2 – API layer** | Item 6, item 11 (backend writes the status log); see P2 plan below | in progress |
+| **P2 – API layer** | Item 6, item 11 (backend writes the status log); see P2 plan below | done – needs browser check |
 | **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |
 | **Housekeeping** | Dependabot: group frontend npm updates into one PR so the lockfile is updated once; run CI on Node 26 like the Docker image | open |
 
@@ -171,3 +171,18 @@ Decisions: stay on Swagger 2.0 (OpenAPI 3 would mean rewriting every docstring);
 4. **Frontend domain:** status constants/helpers from `repairStore.ts` to
    `domain/repairStatus.ts`; remove the client-side log writes; overview uses the
    latest log from the list instead of N requests per refresh.
+
+## P2 changes
+
+- **Spec:** all 66 operations documented with operationIds and typed responses (except
+  file downloads, redirects, the 204 health check); nullability (`x-nullable`) and
+  Swagger 2.0 refs fixed; `frontend/openapi.json` is dumped by
+  `scripts/dump_openapi_spec.py` and checked in CI; contract tests
+  (`app/tests/test_api_contract.py`) validate real responses against the schemas.
+- **Backend:** status/assignee changes are logged in the same transaction as the
+  update; `GET /api/list` includes `latest_log`; fixed log creation without
+  `reparatur_dauer` and customer search on SQLite.
+- **Frontend:** one generated client (`api` from `api/client.ts`) with 401/423 handling,
+  `ApiError` and `asFormData`; hand-written services, `core/`, axios and the extra
+  generators removed; status rules in `domain/repairStatus.ts`; overview uses
+  `latest_log`. How-to: `frontend/src/api/API_TYPES.md`.

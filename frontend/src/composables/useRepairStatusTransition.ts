@@ -1,14 +1,16 @@
 import { api } from '@/api/client'
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { useRepairStore } from '@/stores/repairStore'
 import {
-  useRepairStore,
   normalizeRepairStatus,
   REPAIR_STATUSES,
   getRepairStatusDetailOptions,
   requiresCompletionDetailsForTransition,
   requiresFailureDetailsForTransition,
   type RepairStatus,
-} from '@/stores/repairStore'
+  canTransitionStatus,
+  requiresReparateurForTransition,
+} from '@/domain/repairStatus'
 import confetti from 'canvas-confetti'
 import { useToast } from '@/composables/useToast'
 import type { Repair } from '@/api/types'
@@ -52,7 +54,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
   function isStatusChangeDisabled(status: string): boolean {
     const target = normalizeRepairStatus(status) as RepairStatus
     const from = options.currentRepairStatus.value as RepairStatus
-    return from === target || !repairStore.canTransitionStatus(from, target)
+    return from === target || !canTransitionStatus(from, target)
   }
 
   const availableNextStatuses = computed<RepairStatus[]>(() =>
@@ -128,7 +130,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     }
 
     if (
-      repairStore.requiresReparateurForTransition(fromStatus, toStatus) &&
+      requiresReparateurForTransition(fromStatus, toStatus) &&
       !options.repairRecord.value?.user_id
     ) {
       transitionUserId.value = null

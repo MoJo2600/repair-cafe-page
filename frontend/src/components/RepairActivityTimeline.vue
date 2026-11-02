@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RepairThreadEntry } from '@/composables/useRepairThread'
-import { getRepairStatusColor } from '@/stores/repairStore'
+import { getRepairStatusColor } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
 
 /** Chronological activity of a repair: work logs, status/assignee changes, VDE tests. */

@@ -9,7 +9,7 @@ import {
   getRepairStatusDetailOptions,
   getRepairStatusIcon,
   normalizeRepairStatus,
-} from '@/stores/repairStore'
+} from '@/domain/repairStatus'
 import { useUserStore } from '@/stores/userStore'
 import { useRepairDetail } from '@/composables/useRepairDetail'
 import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'

@@ -7,7 +7,7 @@ import type {
   RepairLog,
   VdeTestResponse,
 } from '@/api/types'
-import { calculateRepairDurationFromLogs } from '@/stores/repairStore'
+import { calculateRepairDurationFromLogs } from '@/domain/repairStatus'
 import { useRepairThread } from '@/composables/useRepairThread'
 
 export interface LogAttachment {
