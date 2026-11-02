@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.4.1...v1.5.0) (2026-11-02)
+
+
+### Features
+
+* added password reset script ([1e97abe](https://github.com/MoJo2600/repair-cafe-page/commit/1e97abecaadbec2d8c4dde30d07e40e22d6ce7de))
+
 ## [1.4.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.4.0...v1.4.1) (2026-11-02)
 
 
