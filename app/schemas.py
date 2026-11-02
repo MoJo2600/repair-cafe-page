@@ -817,6 +817,12 @@ class CustomerSingleResponse(APIResponse):
     data: CustomerResponse
 
 
+class SettingSingleResponse(APIResponse):
+    """A single setting (POST/PUT /api/settings)"""
+
+    data: SettingResponse
+
+
 class CustomerSearchResponse(BaseModel):
     """GET /api/customers/search"""
 

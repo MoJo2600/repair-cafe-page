@@ -9,6 +9,15 @@ from app.extensions import db
 from app.models import Setting
 from app.tests.conftest import _make_user, login_as
 from app.schemas import (
+    AuthConfigResponse,
+    AuthResponse,
+    PinDashboardSummaryResponse,
+    PinSessionActionResponse,
+    PinSessionStatusResponse,
+    PinStatusResponse,
+    AppConfigResponse,
+    FeaturesResponse,
+    PruefgeraetResponse,
     APIResponse,
     CustomerSearchResponse,
     CustomerSingleResponse,
@@ -21,6 +30,7 @@ from app.schemas import (
     RepairLogSingleResponse,
     RepairSingleResponse,
     SettingOption,
+    SettingSingleResponse,
     UserListResponse,
     UserSingleResponse,
     VdeTestCreateResponse,
@@ -185,3 +195,43 @@ def test_repair_delete_matches_spec(client, app):
 
     deleted = _validate(IdResponse, client.delete(f"/api/repairs/{repair_id}"))
     assert deleted.id == repair_id
+
+
+def test_settings_and_config_endpoints_match_spec(client, app):
+    _make_user("chefin", is_admin=True)
+    login_as(client, "chefin")
+
+    created = _validate(
+        SettingSingleResponse,
+        client.post("/api/settings", json={"category": "repair_type", "name": "Holz"}),
+        status=201,
+    )
+    _validate(
+        SettingSingleResponse,
+        client.put(f"/api/settings/{created.data.id}", json={"name": "Holzarbeiten"}),
+    )
+    listing = client.get("/api/settings/all").get_json()
+    assert listing["reply"] == "done"
+    _validate(APIResponse, client.delete(f"/api/settings/{created.data.id}"))
+
+    _validate(AppConfigResponse, client.get("/api/config/app-config"))
+    _validate(FeaturesResponse, client.get("/api/config/features"))
+    resp = client.get("/api/config/pruefgeraete")
+    assert resp.status_code == 200
+    TypeAdapter(list[PruefgeraetResponse]).validate_python(resp.get_json())
+
+
+def test_auth_endpoints_match_spec(client, helper_user):
+    _validate(AuthConfigResponse, client.get("/api/auth/config"))
+    # Before login /api/auth/pin-session answers 401 (the app treats that as "logged out")
+    assert client.get("/api/auth/pin-session").status_code == 401
+
+    _validate(
+        AuthResponse, client.post("/api/auth/login", json={"username": "helfer", "password": "secret"})
+    )
+    _validate(AuthResponse, client.get("/api/auth/me"))
+    _validate(PinSessionStatusResponse, client.get("/api/auth/pin-session"))
+    _validate(PinStatusResponse, client.get("/api/auth/me/pin"))
+    _validate(PinSessionActionResponse, client.post("/api/auth/pin-session/activity"))
+    _validate(PinDashboardSummaryResponse, client.get("/api/auth/pin-session/dashboard"))
+    _validate(APIResponse, client.post("/api/auth/logout"))

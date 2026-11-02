@@ -93,11 +93,17 @@ def api_create_setting():
     tags:
       - Settings
     operationId: createSetting
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/SettingCreate'
     responses:
       201:
         description: Created
         schema:
-          $ref: '#/definitions/SettingResponse'
+          $ref: '#/definitions/SettingSingleResponse'
       409:
         description: Duplicate name in category
     """
@@ -153,11 +159,16 @@ def api_update_setting(setting_id):
         in: path
         required: true
         type: integer
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/SettingUpdate'
     responses:
       200:
         description: Updated
         schema:
-          $ref: '#/definitions/SettingResponse'
+          $ref: '#/definitions/SettingSingleResponse'
       404:
         description: Not found
       409:

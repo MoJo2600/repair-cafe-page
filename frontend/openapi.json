@@ -1428,6 +1428,35 @@
       },
       "type": "object"
     },
+    "SettingCreate": {
+      "properties": {
+        "category": {
+          "maxLength": 50,
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        "serial_number": {
+          "default": null,
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "sort_order": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category",
+        "name"
+      ],
+      "type": "object"
+    },
     "SettingOption": {
       "properties": {
         "id": {
@@ -1489,6 +1518,61 @@
         "created_at",
         "updated_at"
       ],
+      "type": "object"
+    },
+    "SettingSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/SettingResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "SettingUpdate": {
+      "properties": {
+        "is_active": {
+          "default": null,
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "name": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "serial_number": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "sort_order": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
       "type": "object"
     },
     "SettingsGroupedResponse": {
@@ -3740,11 +3824,21 @@
       },
       "post": {
         "operationId": "createSetting",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SettingCreate"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "Created",
             "schema": {
-              "$ref": "#/definitions/SettingResponse"
+              "$ref": "#/definitions/SettingSingleResponse"
             }
           },
           "409": {
@@ -3820,13 +3914,21 @@
             "name": "setting_id",
             "required": true,
             "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SettingUpdate"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Updated",
             "schema": {
-              "$ref": "#/definitions/SettingResponse"
+              "$ref": "#/definitions/SettingSingleResponse"
             }
           },
           "404": {
