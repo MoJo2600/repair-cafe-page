@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { UserResponse } from "@/api/types";
+import { sessionFetch } from "@/api/session";
 
 export const useUserStore = defineStore("users", () => {
   const users = ref<UserResponse[]>([]);
@@ -13,7 +14,9 @@ export const useUserStore = defineStore("users", () => {
     const revision = fetchRevision;
     loading.value = true;
     try {
-      const res = await fetch("/api/users");
+      const res = await sessionFetch("/api/users");
+      // Keep `loaded` false on errors (e.g. locked session) so a later call retries
+      if (!res.ok) return;
       const data = await res.json();
       if (revision === fetchRevision) {
         users.value = data.data ?? [];

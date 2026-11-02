@@ -407,11 +407,13 @@
 
 <script setup lang="ts">
 import { ref, inject, computed, onMounted, nextTick } from 'vue'
+import { sessionFetch } from '@/api/session'
 import { useRouter } from 'vue-router'
 import { ConfigService } from '@/api/services/ConfigService'
 import { RepairsService } from '@/api/services/RepairsService'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
+import { useCameraStream } from '@/composables/useCameraStream'
 
 const step = ref(1)
 const step1Valid = ref(false)
@@ -499,10 +501,13 @@ const signatureError = ref('')
 // Camera and photo variables
 const videoElement = ref<HTMLVideoElement | null>(null)
 const photoCanvas = ref<HTMLCanvasElement | null>(null)
-const cameraActive = ref(false)
-const cameraPermissionDenied = ref(false)
+const {
+  active: cameraActive,
+  permissionDenied: cameraPermissionDenied,
+  start: startCameraStream,
+  stop: stopCamera,
+} = useCameraStream(videoElement)
 const devicePhotos = ref<string[]>([])
-let cameraStream: MediaStream | null = null
 
 // Email validation rules: optional but must be valid if provided
 const emailRules = [(v: string) => !v || /.+@.+\..+/.test(v) || 'Email muss gültig sein']
@@ -736,7 +741,7 @@ async function submitForm() {
         ) {
           const fd = new FormData()
           fd.append('file', uploadedPdfFile.value)
-          await fetch(`/api/repairs/${createdRepairId.value}/disclaimer`, {
+          await sessionFetch(`/api/repairs/${createdRepairId.value}/disclaimer`, {
             method: 'POST',
             body: fd,
           })
@@ -817,33 +822,10 @@ async function printLabel() {
 
 // Camera functions
 async function startCamera() {
-  try {
-    cameraPermissionDenied.value = false
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, // Use back camera on mobile if available
-      audio: false,
-    })
-    cameraStream = stream
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream
-      cameraActive.value = true
-    }
-  } catch (error) {
-    console.error('Error accessing camera:', error)
-    cameraPermissionDenied.value = true
+  const started = await startCameraStream()
+  if (!started && cameraPermissionDenied.value) {
     showToast?.('Fehler beim Zugriff auf die Kamera', { color: 'error' })
   }
-}
-
-function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach((track) => track.stop())
-    cameraStream = null
-  }
-  if (videoElement.value) {
-    videoElement.value.srcObject = null
-  }
-  cameraActive.value = false
 }
 
 function capturePhoto() {

@@ -267,41 +267,40 @@ const startRepairUserId = ref<number | null>(null)
 const repairLogsMap = ref<Record<number, RepairLog[]>>({})
 
 
-// Fetch repair logs for in-progress repairs
+// Fetch repair logs for in-progress repairs (latest first)
+// TODO(P2): have the list endpoint return the latest log per repair instead
+let logsFetchToken = 0
+
 async function fetchRepairLogs() {
-  const inProgress = repairStore.inProgressRepairs
-  const logsMap: Record<number, RepairLog[]> = {}
-
-  for (const repair of inProgress) {
-    try {
-      const response = await RepairLogsService.listRepairLogs(repair.id)
-      if (response.data && response.data.length > 0) {
-        // Sort by created_at descending to get latest first
-        logsMap[repair.id] = response.data.sort((a, b) => {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        })
+  const token = ++logsFetchToken
+  const results = await Promise.all(
+    repairStore.inProgressRepairs.map(async (repair) => {
+      try {
+        const response = await RepairLogsService.listRepairLogs(repair.id)
+        const logs = (response.data ?? []) as RepairLog[]
+        logs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        return [repair.id, logs] as const
+      } catch (error) {
+        console.error(`Error fetching logs for repair ${repair.id}:`, error)
+        return null
       }
-    } catch (error) {
-      console.error(`Error fetching logs for repair ${repair.id}:`, error)
-    }
-  }
+    })
+  )
+  // A newer refresh started meanwhile; its result wins
+  if (token !== logsFetchToken) return
 
+  const logsMap: Record<number, RepairLog[]> = {}
+  for (const entry of results) {
+    if (entry && entry[1].length > 0) logsMap[entry[0]] = entry[1]
+  }
   repairLogsMap.value = logsMap
 }
 
-// Watch for changes in inProgressRepairs and fetch logs
-watch(
-  () => repairStore.inProgressRepairs,
-  async () => {
-    await fetchRepairLogs()
-  },
-  { immediate: false }
-)
+// Every store refresh replaces the list, so this runs once per refresh
+watch(() => repairStore.inProgressRepairs, fetchRepairLogs)
 
-// Initialize and start auto-refresh on mount
 onMounted(async () => {
   await repairStore.fetchRepairs()
-  await fetchRepairLogs()
   repairStore.startAutoRefresh()
 })
 

@@ -110,6 +110,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** Server reported the PIN session as locked (HTTP 423). */
+  function markLocked() {
+    currentUser.value = null
+    isLocked.value = true
+  }
+
+  /** Server reported the session as gone (HTTP 401). */
+  function markSessionEnded() {
+    currentUser.value = null
+    pinSessionEligible.value = false
+    isLocked.value = false
+  }
+
   return {
     currentUser,
     loading,
@@ -125,5 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
     lockSession,
     recordActivity,
     unlock,
+    markLocked,
+    markSessionEnded,
   }
 })

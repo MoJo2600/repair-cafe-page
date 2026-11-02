@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="720px" @update:model-value="onDialogToggle">
+    <v-dialog v-model="open" max-width="720px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-check-circle</v-icon>
@@ -13,11 +13,11 @@
 
                 <v-form ref="formRef" v-model="formValid">
                     <v-textarea
-v-model="localDescription" label="Was wurde repariert?" rows="3" required
+v-model="description" label="Was wurde repariert?" rows="3" required
                         :rules="[v => !!String(v || '').trim() || 'Beschreibung ist erforderlich']"></v-textarea>
 
                     <v-text-field
-v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" required
+v-model.number="duration" label="Gesamtdauer in Minuten" type="number" required
                         persistent-hint :rules="[
                             v => v !== null && v !== undefined && v !== '' || 'Dauer ist erforderlich',
                             v => Number(v) >= 0 || 'Dauer muss 0 oder groesser sein'
@@ -37,7 +37,7 @@ v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" requ
                     </v-alert>
 
                     <v-switch
-v-model="localNeedsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
+v-model="needsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
                         :readonly="isVdeTestMandatory" :disabled="isVdeTestMandatory" hide-details></v-switch>
                 </v-form>
             </v-card-text>
@@ -53,15 +53,17 @@ v-model="localNeedsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import type { VForm } from 'vuetify/components'
+
+const open = defineModel<boolean>({ required: true })
+const description = defineModel<string>('description', { required: true })
+const duration = defineModel<number | null>('duration', { required: true })
+const needsVdeTest = defineModel<boolean>('needsVdeTest', { default: false })
 
 const props = withDefaults(defineProps<{
-    modelValue: boolean
-    description: string
-    duration: number | null
     suggestedDuration?: number
     hasAnyVdeTest?: boolean
     lastVdeTestPassed?: boolean
-    needsVdeTest?: boolean
     title?: string
     message?: string
     confirmText?: string
@@ -71,7 +73,6 @@ const props = withDefaults(defineProps<{
     suggestedDuration: 0,
     hasAnyVdeTest: false,
     lastVdeTestPassed: false,
-    needsVdeTest: false,
     title: 'Reparatur abschliessen',
     message: 'Bitte erfasse die Abschlussdaten fuer die erfolgreiche Reparatur.',
     confirmText: 'Weiter',
@@ -80,18 +81,11 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'update:description', value: string): void
-    (e: 'update:duration', value: number | null): void
-    (e: 'update:needsVdeTest', value: boolean): void
     (e: 'confirm', value: { description: string; duration: number; needsVdeTest: boolean }): void
 }>()
 
-const formRef = ref<any>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = ref(false)
-const localDescription = ref(props.description || '')
-const localDuration = ref<number | null>(props.duration ?? props.suggestedDuration ?? 0)
-const localNeedsVdeTest = ref(Boolean(props.needsVdeTest))
 const isVdeTestMandatory = computed(() => props.hasAnyVdeTest && !props.lastVdeTestPassed)
 const vdeSwitchLabel = computed(() => {
     if (isVdeTestMandatory.value) {
@@ -100,68 +94,31 @@ const vdeSwitchLabel = computed(() => {
     return props.hasAnyVdeTest ? 'VDE-Test jetzt erfassen' : 'VDE-Test jetzt erfassen (empfohlen)'
 })
 
-watch(() => props.description, (value) => {
-    localDescription.value = value || ''
-})
-
-watch(() => props.duration, (value) => {
-    localDuration.value = value ?? props.suggestedDuration ?? 0
-})
-
-watch(() => props.suggestedDuration, (value) => {
-    if (props.modelValue) {
-        localDuration.value = props.duration ?? value ?? 0
-    }
-})
-
-watch(() => props.needsVdeTest, (value) => {
-    localNeedsVdeTest.value = Boolean(value)
-})
-
-watch(() => isVdeTestMandatory, (mandatory) => {
-    if (mandatory) {
-        localNeedsVdeTest.value = true
-    }
+// A failed last VDE test forces a new one while the dialog is open.
+watch([open, isVdeTestMandatory], ([isOpen, mandatory]) => {
+    if (isOpen && mandatory) needsVdeTest.value = true
 }, { immediate: true })
 
-watch(localDescription, (value) => {
-    emit('update:description', value)
+watch(open, (isOpen) => {
+    if (!isOpen) return
+    if (duration.value === null) duration.value = props.suggestedDuration
+    formRef.value?.resetValidation()
 })
-
-watch(localDuration, (value) => {
-    emit('update:duration', value)
-})
-
-watch(localNeedsVdeTest, (value) => {
-    emit('update:needsVdeTest', value)
-})
-
-watch(() => props.modelValue, (isOpen) => {
-    if (isOpen) {
-        localDescription.value = props.description || ''
-        localDuration.value = props.duration ?? props.suggestedDuration ?? 0
-        formRef.value?.resetValidation()
-    }
-})
-
-function onDialogToggle(value: boolean) {
-    emit('update:modelValue', value)
-}
 
 function closeDialog() {
-    emit('update:modelValue', false)
+    open.value = false
 }
 
 async function confirmDialog() {
     if (!formRef.value) return
 
     const { valid } = await formRef.value.validate()
-    if (!valid || localDuration.value === null) return
+    if (!valid || duration.value === null) return
 
     emit('confirm', {
-        description: localDescription.value.trim(),
-        duration: Number(localDuration.value),
-        needsVdeTest: localNeedsVdeTest.value,
+        description: description.value.trim(),
+        duration: Number(duration.value),
+        needsVdeTest: needsVdeTest.value,
     })
 }
 </script>

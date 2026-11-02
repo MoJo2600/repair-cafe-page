@@ -256,6 +256,7 @@ v-model="form.name" label="Name *"
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { sessionFetch } from '@/api/session'
 import type { SettingResponse } from '../api/generated/data-contracts'
 import { ConfigService } from '../api/services/ConfigService'
 import { SettingsService } from '../api/services/SettingsService'
@@ -486,7 +487,7 @@ async function uploadLogo() {
   try {
     const fd = new FormData()
     fd.append('file', logoFile.value)
-    const res = await fetch('/api/config/logo', { method: 'POST', body: fd })
+    const res = await sessionFetch('/api/config/logo', { method: 'POST', body: fd })
     const json = await res.json()
     if (!res.ok || json.reply !== 'done') {
       logoError.value = json.error ?? 'Fehler beim Hochladen'
@@ -523,7 +524,7 @@ async function uploadDisclaimer() {
   try {
     const fd = new FormData()
     fd.append('file', disclaimerFile.value)
-    const res = await fetch('/api/config/disclaimer', { method: 'POST', body: fd })
+    const res = await sessionFetch('/api/config/disclaimer', { method: 'POST', body: fd })
     const json = await res.json()
     if (!res.ok || json.reply !== 'done') {
       disclaimerError.value = json.error ?? 'Fehler beim Hochladen'
@@ -553,7 +554,7 @@ async function uploadCancellation() {
   try {
     const fd = new FormData()
     fd.append('file', cancellationFile.value)
-    const res = await fetch('/api/config/cancellation', { method: 'POST', body: fd })
+    const res = await sessionFetch('/api/config/cancellation', { method: 'POST', body: fd })
     const json = await res.json()
     if (!res.ok || json.reply !== 'done') {
       cancellationError.value = json.error ?? 'Fehler beim Hochladen'

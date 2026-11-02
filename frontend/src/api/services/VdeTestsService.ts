@@ -3,6 +3,7 @@ import type {
   VdeTestResponse,
   VdeTestCreate,
 } from "../generated/data-contracts";
+import { sessionFetch } from "../session";
 
 export type { VdeTestResponse, VdeTestCreate };
 
@@ -20,7 +21,7 @@ async function apiFetch<T>(
     opts.headers = HEADERS;
     opts.body = JSON.stringify(body);
   }
-  const res = await fetch(BASE + url, opts);
+  const res = await sessionFetch(BASE + url, opts);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     let error = text;

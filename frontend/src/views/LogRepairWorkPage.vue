@@ -680,7 +680,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { sessionFetch } from '@/api/session'
 import { useRouter, useRoute } from 'vue-router'
 import { RepairsService } from '@/api/services/RepairsService'
 import {
@@ -702,6 +703,7 @@ import RepairNotRepairableDialog from '@/components/RepairNotRepairableDialog.vu
 import AbbruchSignatureDialog from '@/components/AbbruchSignatureDialog.vue'
 import VdeTestDialog from '@/components/VdeTestDialog.vue'
 import { useRepairThread } from '@/composables/useRepairThread'
+import { useCameraStream } from '@/composables/useCameraStream'
 import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -787,9 +789,12 @@ const logAttachments = computed<Record<number, AttachmentInfo[]>>(() => {
 // Camera state for log dialog
 const logVideoElement = ref<HTMLVideoElement | null>(null)
 const logPhotoCanvas = ref<HTMLCanvasElement | null>(null)
-let logCameraStream: MediaStream | null = null
-const logCameraActive = ref(false)
-const logCameraPermissionDenied = ref(false)
+const {
+  active: logCameraActive,
+  permissionDenied: logCameraPermissionDenied,
+  start: startLogCamera,
+  stop: stopLogCamera,
+} = useCameraStream(logVideoElement)
 
 // Pending files for the new log entry (shown in VFileUpload inset list)
 const pendingLogFiles = ref<File[]>([])
@@ -831,6 +836,11 @@ const newLog = ref<NewLogFormData>({
 })
 
 const logDialog = ref(false)
+// The log dialog can also be dismissed via scrim/Esc, not only closeLogDialog()
+watch(logDialog, (isOpen) => {
+  if (!isOpen) stopLogCamera()
+})
+
 const vdeDialog = ref(false)
 const vdeDialogMode = ref<'manual' | 'close'>('manual')
 const vdeInitialPruferUserId = ref<number | null>(null)
@@ -929,7 +939,7 @@ async function loadRepairRecord() {
   if (!qrToken) return
   try {
     const response = await RepairsService.getRepairByQrToken(qrToken)
-    if (response?.data) {
+    if (response?.data && route.params.qrToken === qrToken) {
       repairRecord.value = response.data as Repair
     }
   } catch (err) {
@@ -941,8 +951,9 @@ async function loadRepairLogs() {
   if (!repairRecord.value?.id) return
 
   try {
-    const response = await RepairLogsService.listRepairLogs(repairRecord.value.id)
-    if (response.data) {
+    const repairId = repairRecord.value.id
+    const response = await RepairLogsService.listRepairLogs(repairId)
+    if (response.data && repairRecord.value?.id === repairId) {
       repairLogs.value = response.data
     }
   } catch (err) {
@@ -954,8 +965,9 @@ async function loadVdeTests() {
   if (!repairRecord.value?.id) return
 
   try {
-    const response = await VdeTestsService.listVdeTests(repairRecord.value.id)
-    if (response.reply === 'done' && response.data) {
+    const repairId = repairRecord.value.id
+    const response = await VdeTestsService.listVdeTests(repairId)
+    if (response.reply === 'done' && response.data && repairRecord.value?.id === repairId) {
       vdeTests.value = response.data
     }
   } catch (err) {
@@ -1057,8 +1069,41 @@ const {
   },
 })
 
-onMounted(async () => {
-  const qrToken = route.params.qrToken as string
+// Data that does not depend on the opened repair
+onMounted(() => {
+  void Promise.all([
+    loadPruefgeraete(),
+    userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
+    ConfigService.getFeatures()
+      .then((f) => {
+        labelPrinterEnabled.value = f.label_printer ?? false
+      })
+      .catch(() => {}),
+  ])
+})
+
+function resetRepairState() {
+  logDialog.value = false
+  editLogDialog.value = false
+  deleteLogDialog.value = false
+  vdeDialog.value = false
+  repairRecord.value = null
+  repairLogs.value = []
+  vdeTests.value = []
+  repairAttachments.value = []
+  pendingAttachmentFiles.value = []
+  disclaimerExists.value = false
+  cancellationExists.value = false
+  error.value = ''
+}
+
+let repairLoadToken = 0
+
+async function loadRepairPage(qrToken: string | undefined) {
+  const token = ++repairLoadToken
+  const isCurrent = () => token === repairLoadToken
+  resetRepairState()
+  loading.value = true
 
   if (!qrToken) {
     error.value = 'Kein QR-Token angegeben'
@@ -1067,19 +1112,8 @@ onMounted(async () => {
   }
 
   try {
-    // Load testing devices and users first
-    await Promise.all([
-      loadPruefgeraete(),
-      userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
-      ConfigService.getFeatures()
-        .then((f) => {
-          labelPrinterEnabled.value = f.label_printer ?? false
-        })
-        .catch(() => {}),
-    ])
-
-    // Fetch repair data by QR token
     const response = await RepairsService.getRepairByQrToken(qrToken)
+    if (!isCurrent()) return
 
     if (!response || !response.data) {
       error.value = 'Reparatur nicht gefunden'
@@ -1096,68 +1130,40 @@ onMounted(async () => {
 
     vdeInitialPruferUserId.value = repair.user_id ?? null
 
-    // Load repair logs, VDE tests, and attachments
+    const repairId = repair.id
     await Promise.all([
       loadRepairLogs(),
       loadVdeTests(),
       loadRepairAttachments(),
+      // Check if disclaimer & cancellation PDFs exist
+      sessionFetch(`/api/repairs/${repairId}/disclaimer`, { method: 'HEAD' })
+        .then((res) => res.ok)
+        .catch(() => false)
+        .then((exists) => {
+          if (isCurrent()) disclaimerExists.value = exists
+        }),
+      sessionFetch(`/api/repairs/${repairId}/cancellation`, { method: 'HEAD' })
+        .then((res) => res.ok)
+        .catch(() => false)
+        .then((exists) => {
+          if (isCurrent()) cancellationExists.value = exists
+        }),
     ])
-
-    // Check if disclaimer & cancellation PDFs exist
-    if (repairRecord.value?.id) {
-      const repairId = repairRecord.value.id
-      await Promise.all([
-        fetch(`/api/repairs/${repairId}/disclaimer`, { method: 'HEAD' })
-          .then((res) => {
-            disclaimerExists.value = res.ok
-          })
-          .catch(() => {
-            disclaimerExists.value = false
-          }),
-        fetch(`/api/repairs/${repairId}/cancellation`, { method: 'HEAD' })
-          .then((res) => {
-            cancellationExists.value = res.ok
-          })
-          .catch(() => {
-            cancellationExists.value = false
-          }),
-      ])
-    }
-
-    loading.value = false
+    if (isCurrent()) loading.value = false
   } catch (err) {
+    if (!isCurrent()) return
     console.error('Error loading repair:', err)
     error.value = 'Fehler beim Laden der Reparaturdaten: ' + (err as Error).message
     loading.value = false
   }
-})
-
-async function startLogCamera() {
-  try {
-    logCameraPermissionDenied.value = false
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
-      audio: false,
-    })
-    logCameraStream = stream
-    logCameraActive.value = true
-    await nextTick()
-    if (logVideoElement.value) {
-      logVideoElement.value.srcObject = stream
-    }
-  } catch {
-    logCameraPermissionDenied.value = true
-  }
 }
 
-function stopLogCamera() {
-  if (logCameraStream) {
-    logCameraStream.getTracks().forEach((t) => t.stop())
-    logCameraStream = null
-  }
-  if (logVideoElement.value) logVideoElement.value.srcObject = null
-  logCameraActive.value = false
-}
+// Navigating /edit/a -> /edit/b (e.g. QR scan) reuses this component instance
+watch(
+  () => route.params.qrToken as string | undefined,
+  (qrToken) => void loadRepairPage(qrToken),
+  { immediate: true }
+)
 
 function captureLogPhoto() {
   if (!logVideoElement.value || !logPhotoCanvas.value) return
@@ -1191,7 +1197,7 @@ async function uploadPendingAttachments(logId: number): Promise<void> {
   pendingLogFiles.value.forEach((f) => fd.append('files', f))
   fd.append('attachment_type', 'log_entry')
   fd.append('log_id', String(logId))
-  await fetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
+  await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
     method: 'POST',
     body: fd,
   })
@@ -1200,10 +1206,11 @@ async function uploadPendingAttachments(logId: number): Promise<void> {
 async function loadRepairAttachments() {
   if (!repairRecord.value?.id) return
   try {
-    const res = await fetch(`/api/repairs/${repairRecord.value.id}/attachments`)
+    const repairId = repairRecord.value.id
+    const res = await sessionFetch(`/api/repairs/${repairId}/attachments`)
     if (res.ok) {
       const data = await res.json()
-      if (data.reply === 'done') {
+      if (data.reply === 'done' && repairRecord.value?.id === repairId) {
         repairAttachments.value = data.data
       }
     }
@@ -1222,7 +1229,7 @@ async function uploadRepairAttachments() {
     if (authStore.currentUser?.id) {
       fd.append('uploaded_by_id', String(authStore.currentUser.id))
     }
-    const res = await fetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
+    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
       method: 'POST',
       body: fd,
     })
@@ -1243,7 +1250,7 @@ async function uploadRepairAttachments() {
 async function deleteRepairAttachment(attachmentId: number) {
   if (!repairRecord.value?.id) return
   try {
-    const res = await fetch(`/api/repairs/${repairRecord.value.id}/attachments/${attachmentId}`, {
+    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments/${attachmentId}`, {
       method: 'DELETE',
     })
     if (res.ok) {
@@ -1327,7 +1334,7 @@ function openEditLogDialog(logId: number) {
 async function downloadVdePdf(testId: number) {
   if (!repairRecord.value?.id) return
   try {
-    const res = await fetch(`/api/repairs/${repairRecord.value.id}/vde-tests/${testId}/pdf`, {
+    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/vde-tests/${testId}/pdf`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)

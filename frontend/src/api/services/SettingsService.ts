@@ -1,4 +1,5 @@
 import type { SettingResponse } from "../generated/data-contracts";
+import { sessionFetch } from "../session";
 
 const BASE = "/api";
 const HEADERS = { "Content-Type": "application/json" };
@@ -10,7 +11,7 @@ async function apiFetch<T>(url: string, method = "GET", body?: unknown): Promise
     opts.headers = HEADERS;
     opts.body = JSON.stringify(body);
   }
-  const res = await fetch(BASE + url, opts);
+  const res = await sessionFetch(BASE + url, opts);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     let error = text;

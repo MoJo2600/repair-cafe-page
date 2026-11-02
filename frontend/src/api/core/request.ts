@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import axios from 'axios';
+import { handleSessionStatus } from '../session';
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, AxiosInstance } from 'axios';
 
 import { ApiError } from './ApiError';
@@ -246,31 +247,7 @@ export const getResponseBody = (response: AxiosResponse<any>): any => {
 };
 
 export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void => {
-    if (!options.url.startsWith('/api/auth/') && (result.status === 401 || result.status === 423)) {
-        void Promise.all([
-            import('../../stores/authStore'),
-            import('../../router'),
-        ]).then(([{ useAuthStore }, { default: router }]) => {
-            const authStore = useAuthStore();
-            if (result.status === 423) {
-                authStore.isLocked = true;
-                authStore.currentUser = null;
-                if (router.currentRoute.value.name !== 'PinLock') {
-                    void router.push({ name: 'PinLock' });
-                }
-            } else {
-                authStore.currentUser = null;
-                authStore.pinSessionEligible = false;
-                authStore.isLocked = false;
-                if (router.currentRoute.value.name !== 'Login') {
-                    void router.push({
-                        name: 'Login',
-                        query: { redirect: router.currentRoute.value.fullPath },
-                    });
-                }
-            }
-        });
-    }
+    handleSessionStatus(options.url, result.status);
 
     const errors: Record<number, string> = {
         400: 'Bad Request',

@@ -148,6 +148,7 @@ v-model="form.is_admin" label="Administrator" hide-details
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { sessionFetch } from "@/api/session";
 import type { UserResponse } from "@/api/types";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -234,7 +235,7 @@ function showMsg(text: string, color = "success") {
 async function fetchUsers() {
     loading.value = true;
     try {
-        const res = await fetch("/api/users", { credentials: "include" });
+        const res = await sessionFetch("/api/users", { credentials: "include" });
         const data = await res.json();
         users.value = data.data ?? [];
     } finally {
@@ -295,7 +296,7 @@ async function saveUser() {
             : "/api/users";
         const method = editingUser.value ? "PUT" : "POST";
 
-        const res = await fetch(url, {
+        const res = await sessionFetch(url, {
             method,
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -325,7 +326,7 @@ async function doDeactivate() {
     if (!deactivateTarget.value) return;
     saving.value = true;
     try {
-        const res = await fetch(`/api/users/${deactivateTarget.value.id}`, {
+        const res = await sessionFetch(`/api/users/${deactivateTarget.value.id}`, {
             method: "DELETE",
             credentials: "include",
         });
@@ -345,7 +346,7 @@ async function doDeactivate() {
 async function reactivate(user: UserResponse) {
     saving.value = true;
     try {
-        const res = await fetch(`/api/users/${user.id}`, {
+        const res = await sessionFetch(`/api/users/${user.id}`, {
             method: "PUT",
             credentials: "include",
             headers: { "Content-Type": "application/json" },

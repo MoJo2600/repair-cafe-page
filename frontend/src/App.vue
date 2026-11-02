@@ -186,6 +186,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useRepairStore } from '@/stores/repairStore'
 import { useUserStore } from '@/stores/userStore'
 import jsQR from 'jsqr'
+import { useCameraStream } from '@/composables/useCameraStream'
 
 const router = useRouter()
 const route = useRoute()
@@ -356,9 +357,14 @@ const qrScannerDialog = ref(false)
 const videoElement = ref<HTMLVideoElement | null>(null)
 const canvasElement = ref<HTMLCanvasElement | null>(null)
 const scanning = ref(false)
-const cameraPermissionDenied = ref(false)
-let mediaStream: MediaStream | null = null
+const qrCamera = useCameraStream(videoElement)
+const cameraPermissionDenied = qrCamera.permissionDenied
 let animationFrameId: number | null = null
+
+// The dialog can also be dismissed via scrim/Esc, not only the close buttons
+watch(qrScannerDialog, (isOpen) => {
+  if (!isOpen) closeQrScanner()
+})
 
 function showToast(message: string, options?: { color?: string; timeout?: number }) {
   toastMessage.value = message
@@ -369,23 +375,11 @@ function showToast(message: string, options?: { color?: string; timeout?: number
 
 async function openQrScanner() {
   qrScannerDialog.value = true
-  cameraPermissionDenied.value = false
-
-  try {
-    // Request camera access
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, // Use back camera on mobile
-    })
-
-    if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream
-      videoElement.value.play()
-      scanning.value = true
-      scanQRCode()
-    }
-  } catch (error) {
-    console.error('Error accessing camera:', error)
-    cameraPermissionDenied.value = true
+  const started = await qrCamera.start()
+  if (started && qrScannerDialog.value) {
+    scanning.value = true
+    scanQRCode()
+  } else if (cameraPermissionDenied.value) {
     showToast('Could not access camera. Please check permissions.', { color: 'error' })
   }
 }
@@ -456,16 +450,7 @@ function closeQrScanner() {
     animationFrameId = null
   }
 
-  // Stop media stream
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop())
-    mediaStream = null
-  }
-
-  // Clear video source
-  if (videoElement.value) {
-    videoElement.value.srcObject = null
-  }
+  qrCamera.stop()
 }
 
 // Cleanup on component unmount
