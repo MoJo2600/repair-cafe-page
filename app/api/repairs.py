@@ -323,7 +323,27 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
 @repairs_bp.route("/repairs/<int:id>", methods=["DELETE"])
 @admin_required
 def api_delete_repair(id: int):
-    """Delete a repair record and its associated files on disk."""
+    """Delete a repair record and its associated files on disk.
+    ---
+    operationId: deleteRepair
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/IdResponse'
+      403:
+        description: Admin only
+      404:
+        description: Repair not found
+    """
     try:
         repair = Repair.query.get_or_404(id)
         db.session.delete(repair)
@@ -491,7 +511,32 @@ def api_create_repair(validated_data: RepairCreate):
 
 @repairs_bp.route("/repairs/<int:id>/disclaimer", methods=["POST"])
 def api_upload_disclaimer(id: int):
-    """Upload a pre-signed disclaimer PDF for a repair."""
+    """Upload a pre-signed disclaimer PDF for a repair.
+    ---
+    operationId: uploadRepairDisclaimer
+    tags:
+      - Repairs
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Signed disclaimer PDF
+    responses:
+      200:
+        description: Disclaimer stored
+        schema:
+          $ref: '#/definitions/APIResponse'
+      400:
+        description: Missing or invalid PDF
+    """
     try:
         Repair.query.get_or_404(id)
 
@@ -625,6 +670,16 @@ def api_create_or_upload_cancellation(id: int):
         required: true
         type: integer
         description: Repair ID
+      - name: body
+        in: body
+        required: false
+        description: Signature as PNG data URL (alternatively a multipart "file" with a signed PDF)
+        schema:
+          type: object
+          required: [signature]
+          properties:
+            signature:
+              type: string
     responses:
       201:
         description: Signed cancellation PDF stored

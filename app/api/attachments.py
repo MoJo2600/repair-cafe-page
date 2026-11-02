@@ -102,8 +102,7 @@ def api_list_repair_attachments(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: attachment_type
         in: query
         required: false
@@ -189,8 +188,7 @@ def api_upload_repair_attachments(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: files
         in: formData
         type: array
@@ -365,13 +363,11 @@ def api_get_repair_attachment(repair_id, attachment_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: attachment_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
     responses:
       200:
         description: File contents
@@ -441,13 +437,11 @@ def api_delete_repair_attachment(repair_id, attachment_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: attachment_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
     responses:
       200:
         description: Attachment deleted

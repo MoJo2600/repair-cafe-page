@@ -33,8 +33,7 @@ def api_list_vde_tests(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     responses:
       200:
@@ -95,8 +94,7 @@ def api_create_vde_test(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     requestBody:
       required: true
@@ -186,14 +184,12 @@ def api_get_vde_test(repair_id, test_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
       - name: test_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The VDE test ID
     responses:
       200:
@@ -237,7 +233,28 @@ def api_get_vde_test(repair_id, test_id):
 )
 @login_required_api
 def api_get_vde_test_pdf(repair_id, test_id):
-    """Download a VDE Prüfprotokoll as PDF for the given test."""
+    """Download a VDE Prüfprotokoll as PDF for the given test.
+    ---
+    operationId: getVdeTestPdf
+    tags:
+      - VDE Tests
+    produces:
+      - application/pdf
+    parameters:
+      - name: repair_id
+        in: path
+        required: true
+        type: integer
+      - name: test_id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Prüfprotokoll PDF
+      404:
+        description: Repair or VDE test not found
+    """
     repair = Repair.query.get(repair_id)
     if not repair:
         return Response(

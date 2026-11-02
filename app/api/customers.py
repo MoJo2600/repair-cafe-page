@@ -75,7 +75,25 @@ def api_list_customers():
 
 @customers_bp.route("/customers/search", methods=["GET"])
 def api_search_customers():
-    """Search customers by name, phone or email."""
+    """Search customers by name, phone or email.
+    ---
+    operationId: searchCustomers
+    tags:
+      - Customers
+    parameters:
+      - name: q
+        in: query
+        required: false
+        type: string
+        description: Search text (name, phone or email)
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/CustomerSearchResponse'
+      500:
+        description: Internal server error
+    """
     q = request.args.get("q", "").strip()
     if not q:
         return Response(
@@ -91,7 +109,7 @@ def api_search_customers():
                 or_(
                     Customer.vorname.ilike(like),
                     Customer.nachname.ilike(like),
-                    db.func.concat(Customer.vorname, " ", Customer.nachname).ilike(
+                    (Customer.vorname + " " + Customer.nachname).ilike(
                         like
                     ),
                     Customer.telefon.ilike(like),
@@ -124,7 +142,25 @@ def api_search_customers():
 @customers_bp.route("/customers", methods=["POST"])
 @validate_request(CustomerCreate)
 def api_create_customer(validated_data: CustomerCreate):
-    """Create a new customer."""
+    """Create a new customer.
+    ---
+    operationId: createCustomer
+    tags:
+      - Customers
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/CustomerCreate'
+    responses:
+      201:
+        description: Success
+        schema:
+          $ref: '#/definitions/CustomerSingleResponse'
+      400:
+        description: Invalid input
+    """
     try:
         customer = Customer(
             vorname=validated_data.vorname,
@@ -152,7 +188,25 @@ def api_create_customer(validated_data: CustomerCreate):
 
 @customers_bp.route("/customers/<int:customer_id>", methods=["GET"])
 def api_get_customer(customer_id: int):
-    """Get a single customer by ID."""
+    """Get a single customer by ID.
+    ---
+    operationId: getCustomer
+    tags:
+      - Customers
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        type: integer
+        description: Customer ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/CustomerSingleResponse'
+      404:
+        description: Customer not found
+    """
     try:
         customer = Customer.query.get_or_404(customer_id)
         data = CustomerResponse.model_validate(customer).model_dump(mode="json")
@@ -175,7 +229,30 @@ def api_get_customer(customer_id: int):
 @customers_bp.route("/customers/<int:customer_id>", methods=["PUT"])
 @validate_request(CustomerCreate)
 def api_update_customer(validated_data: CustomerCreate, customer_id: int):
-    """Update a customer."""
+    """Update a customer.
+    ---
+    operationId: updateCustomer
+    tags:
+      - Customers
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        type: integer
+        description: Customer ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/CustomerCreate'
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/CustomerSingleResponse'
+      404:
+        description: Customer not found
+    """
     try:
         customer = Customer.query.get_or_404(customer_id)
         customer.vorname = validated_data.vorname
@@ -204,7 +281,27 @@ def api_update_customer(validated_data: CustomerCreate, customer_id: int):
 @customers_bp.route("/customers/<int:customer_id>", methods=["DELETE"])
 @admin_required
 def api_delete_customer(customer_id: int):
-    """Delete a customer (sets customer_id to NULL on linked repairs)."""
+    """Delete a customer (sets customer_id to NULL on linked repairs).
+    ---
+    operationId: deleteCustomer
+    tags:
+      - Customers
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        type: integer
+        description: Customer ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/IdResponse'
+      403:
+        description: Admin only
+      404:
+        description: Customer not found
+    """
     try:
         customer = Customer.query.get_or_404(customer_id)
         # Detach repairs rather than cascading delete

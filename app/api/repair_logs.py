@@ -33,8 +33,7 @@ def api_list_repair_logs(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     responses:
       200:
@@ -96,8 +95,7 @@ def api_create_repair_log(validated_data, repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     requestBody:
       required: true
@@ -186,14 +184,12 @@ def api_get_repair_log(repair_id, log_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
       - name: log_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair log ID
     responses:
       200:
@@ -235,7 +231,35 @@ def api_get_repair_log(repair_id, log_id):
 @repair_logs_bp.route("/repairs/<int:repair_id>/logs/<int:log_id>", methods=["PUT"])
 @validate_request(RepairLogUpdate)
 def api_update_repair_log(validated_data, repair_id, log_id):
-    """Update an existing repair log entry."""
+    """Update an existing repair log entry.
+    ---
+    operationId: updateRepairLog
+    tags:
+      - Repair Logs
+    parameters:
+      - name: repair_id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+      - name: log_id
+        in: path
+        required: true
+        type: integer
+        description: Repair log ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/RepairLogUpdate'
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/RepairLogSingleResponse'
+      404:
+        description: Repair log not found
+    """
     try:
         log = RepairLog.query.filter_by(id=log_id, repair_id=repair_id).first()
         if not log:
@@ -294,13 +318,11 @@ def api_delete_repair_log(repair_id, log_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: log_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
     responses:
       200:
         description: Repair log deleted successfully

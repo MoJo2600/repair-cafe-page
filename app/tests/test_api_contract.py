@@ -7,9 +7,13 @@ from pydantic import TypeAdapter
 
 from app.extensions import db
 from app.models import Setting
+from app.tests.conftest import _make_user, login_as
 from app.schemas import (
     APIResponse,
+    CustomerSearchResponse,
+    CustomerSingleResponse,
     DropdownConfigResponse,
+    IdResponse,
     RepairAttachmentListResponse,
     RepairListResponse,
     RepairLogCreateResponse,
@@ -17,6 +21,8 @@ from app.schemas import (
     RepairLogSingleResponse,
     RepairSingleResponse,
     SettingOption,
+    UserListResponse,
+    UserSingleResponse,
     VdeTestCreateResponse,
     VdeTestListResponse,
     VdeTestSingleResponse,
@@ -121,3 +127,61 @@ def test_lookup_endpoints_match_spec(helper_client):
     assert resp.status_code == 200
     grouped = TypeAdapter(dict[str, list[SettingOption]]).validate_python(resp.get_json())
     assert grouped["pruefgeraet"][0].serial_number == "SN-1"
+
+
+def test_customer_endpoints_match_spec(client, app):
+    _make_user("chefin", is_admin=True)
+    login_as(client, "chefin")
+
+    created = _validate(
+        CustomerSingleResponse,
+        client.post("/api/customers", json={"vorname": "Max", "nachname": "Muster"}),
+        status=201,
+    )
+    customer_id = created.data.id
+
+    _validate(CustomerSingleResponse, client.get(f"/api/customers/{customer_id}"))
+    _validate(
+        CustomerSingleResponse,
+        client.put(f"/api/customers/{customer_id}", json={"vorname": "Max", "nachname": "Mustermann"}),
+    )
+    found = _validate(CustomerSearchResponse, client.get("/api/customers/search?q=Muster"))
+    assert [c.id for c in found.data] == [customer_id]
+    deleted = _validate(IdResponse, client.delete(f"/api/customers/{customer_id}"))
+    assert deleted.id == customer_id
+
+
+def test_user_endpoints_match_spec(client, app):
+    _make_user("chefin", is_admin=True)
+    login_as(client, "chefin")
+
+    created = _validate(
+        UserSingleResponse,
+        client.post(
+            "/api/users",
+            json={
+                "username": "neu",
+                "vorname": "Neue",
+                "nachname": "Helferin",
+                "email": "neu@example.org",
+                "password": "geheim123",
+            },
+        ),
+        status=201,
+    )
+    user_id = created.data.id
+
+    listing = _validate(UserListResponse, client.get("/api/users"))
+    assert listing.count == len(listing.data)
+    _validate(UserSingleResponse, client.get(f"/api/users/{user_id}"))
+    _validate(UserSingleResponse, client.put(f"/api/users/{user_id}", json={"vorname": "Neu"}))
+    _validate(APIResponse, client.delete(f"/api/users/{user_id}"))
+
+
+def test_repair_delete_matches_spec(client, app):
+    _make_user("chefin", is_admin=True)
+    login_as(client, "chefin")
+    repair_id = _create_repair(client)["id"]
+
+    deleted = _validate(IdResponse, client.delete(f"/api/repairs/{repair_id}"))
+    assert deleted.id == repair_id

@@ -18,7 +18,19 @@ users_bp = Blueprint("users", __name__)
 
 @users_bp.route("/users", methods=["GET"])
 def api_list_users():
-    """List all users."""
+    """List all users.
+    ---
+    operationId: listUsers
+    tags:
+      - Users
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/UserListResponse'
+      500:
+        description: Internal server error
+    """
     try:
         users = User.query.order_by(User.vorname, User.nachname).all()
         data = [UserResponse.model_validate(u).model_dump(mode="json") for u in users]
@@ -38,7 +50,25 @@ def api_list_users():
 
 @users_bp.route("/users/<int:user_id>", methods=["GET"])
 def api_get_user(user_id):
-    """Get a single user by ID."""
+    """Get a single user by ID.
+    ---
+    operationId: getUser
+    tags:
+      - Users
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        type: integer
+        description: User ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/UserSingleResponse'
+      404:
+        description: User not found
+    """
     user = db.session.get(User, user_id)
     if not user:
         return Response(
@@ -61,7 +91,27 @@ def api_get_user(user_id):
 @users_bp.route("/users", methods=["POST"])
 @admin_required
 def api_create_user():
-    """Create a new user."""
+    """Create a new user.
+    ---
+    operationId: createUser
+    tags:
+      - Users
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/UserCreate'
+    responses:
+      201:
+        description: Success
+        schema:
+          $ref: '#/definitions/UserSingleResponse'
+      403:
+        description: Admin only
+      409:
+        description: Username or email already in use
+    """
     body, err = parse_request(UserCreate)
     if err:
         return err
@@ -111,7 +161,34 @@ def api_create_user():
 @users_bp.route("/users/<int:user_id>", methods=["PUT"])
 @admin_required
 def api_update_user(user_id):
-    """Update an existing user."""
+    """Update an existing user.
+    ---
+    operationId: updateUser
+    tags:
+      - Users
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        type: integer
+        description: User ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/UserUpdate'
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/UserSingleResponse'
+      403:
+        description: Admin only
+      404:
+        description: User not found
+      409:
+        description: Username or email already in use
+    """
     user = db.session.get(User, user_id)
     if not user:
         return Response(
@@ -181,7 +258,27 @@ def api_update_user(user_id):
 @users_bp.route("/users/<int:user_id>", methods=["DELETE"])
 @admin_required
 def api_delete_user(user_id):
-    """Soft-delete a user by setting is_active=False."""
+    """Soft-delete a user by setting is_active=False.
+    ---
+    operationId: deactivateUser
+    tags:
+      - Users
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        type: integer
+        description: User ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/APIResponse'
+      403:
+        description: Admin only
+      404:
+        description: User not found
+    """
     user = db.session.get(User, user_id)
     if not user:
         return Response(

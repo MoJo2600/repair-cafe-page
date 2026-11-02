@@ -790,5 +790,38 @@ class DropdownConfigResponse(BaseModel):
     repair_type: list[SettingOption]
 
 
+
+class IdResponse(APIResponse):
+    """Deletes that echo the affected ID"""
+
+    id: int
+
+
+class UserListResponse(BaseModel):
+    """GET /api/users"""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: list[UserResponse]
+    count: int
+
+
+class UserSingleResponse(APIResponse):
+    """A single user"""
+
+    data: UserResponse
+
+
+class CustomerSingleResponse(APIResponse):
+    """A single customer"""
+
+    data: CustomerResponse
+
+
+class CustomerSearchResponse(BaseModel):
+    """GET /api/customers/search"""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: list[CustomerResponse]
+
 RepairListItem.model_rebuild()
 RepairListResponse.model_rebuild()
