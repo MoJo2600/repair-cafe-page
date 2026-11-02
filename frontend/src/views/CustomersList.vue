@@ -128,9 +128,6 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-            {{ snackbarText }}
-        </v-snackbar>
     </v-container>
 </template>
 
@@ -140,6 +137,9 @@ import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -148,15 +148,6 @@ const customers = ref<CustomerResponse[]>([])
 const loading = ref(false)
 const search = ref('')
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-const snackbarColor = ref('success')
-
-function showMsg(text: string, color = 'success') {
-    snackbarText.value = text
-    snackbarColor.value = color
-    snackbar.value = true
-}
 
 const headers = [
     { title: 'ID', key: 'id', sortable: true },
@@ -190,7 +181,7 @@ async function loadCustomers() {
         const res = await CustomersService.listCustomers()
         customers.value = res.data ?? []
     } catch (err: any) {
-        showMsg(err.message || 'Fehler beim Laden der Kunden', 'error')
+        toast.error(err.message || 'Fehler beim Laden der Kunden')
     } finally {
         loading.value = false
     }
@@ -236,15 +227,15 @@ async function saveCustomer() {
         }
         if (editedCustomer.value.id) {
             await CustomersService.updateCustomer(editedCustomer.value.id, payload)
-            showMsg('Kunde aktualisiert')
+            toast.success('Kunde aktualisiert')
         } else {
             await CustomersService.createCustomer(payload)
-            showMsg('Kunde erstellt')
+            toast.success('Kunde erstellt')
         }
         closeEditDialog()
         await loadCustomers()
     } catch (err: any) {
-        showMsg(err.message || 'Fehler beim Speichern', 'error')
+        toast.error(err.message || 'Fehler beim Speichern')
     } finally {
         saving.value = false
     }
@@ -262,10 +253,10 @@ async function confirmDelete() {
     try {
         await CustomersService.deleteCustomer(deleteTargetId.value)
         deleteDialog.value = false
-        showMsg('Kunde gelöscht')
+        toast.success('Kunde gelöscht')
         await loadCustomers()
     } catch (err) {
-        showMsg('Fehler beim Löschen: ' + (err as Error).message, 'error')
+        toast.error('Fehler beim Löschen: ' + (err as Error).message)
     } finally {
         deleting.value = false
         deleteTargetId.value = null

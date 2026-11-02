@@ -124,19 +124,8 @@
       </v-container>
     </v-main>
 
-    <!-- Global snackbar -->
-    <v-snackbar
-      v-if="canUseApp"
-      v-model="toastVisible"
-      :timeout="toastTimeout"
-      :color="toastColor"
-      location="bottom right"
-    >
-      {{ toastMessage }}
-      <template #actions>
-        <v-btn icon="mdi-close" variant="text" @click="toastVisible = false"></v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Global toasts (useToast); unmounted while locked so nothing shows on the PIN screen -->
+    <v-snackbar-queue v-if="canUseApp" v-model="toastQueue" location="bottom right" closable />
 
     <!-- QR Scanner Dialog -->
     <v-dialog v-if="canUseApp" v-model="qrScannerDialog" max-width="600px">
@@ -180,13 +169,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, provide, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useRepairStore } from '@/stores/repairStore'
 import { useUserStore } from '@/stores/userStore'
 import jsQR from 'jsqr'
 import { useCameraStream } from '@/composables/useCameraStream'
+import { useToast, useToastQueue } from '@/composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
@@ -208,7 +198,7 @@ async function logout() {
     await authStore.logout()
     await router.replace({ name: 'Login' })
   } catch {
-    showToast('Abmelden fehlgeschlagen. Bitte erneut versuchen.', { color: 'error' })
+    toast.show('Abmelden fehlgeschlagen. Bitte erneut versuchen.', { color: 'error' })
   } finally {
     loggingOut.value = false
   }
@@ -231,11 +221,8 @@ onMounted(() => {
   scheduleIdleLock()
 })
 
-// Global toast state
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastColor = ref<'success' | 'error' | 'warning' | 'info' | string>('info')
-const toastTimeout = ref(4000)
+const toast = useToast()
+const toastQueue = useToastQueue()
 let idleTimer: number | null = null
 let lastActivityRequest = 0
 let lastActivityBroadcast = 0
@@ -307,6 +294,7 @@ watch(
   () => authStore.isLocked,
   (locked) => {
     if (locked) {
+      toastQueue.value = []
       repairStore.clear()
       userStore.clear()
       closeQrScanner()
@@ -366,13 +354,6 @@ watch(qrScannerDialog, (isOpen) => {
   if (!isOpen) closeQrScanner()
 })
 
-function showToast(message: string, options?: { color?: string; timeout?: number }) {
-  toastMessage.value = message
-  toastColor.value = options?.color ?? 'error'
-  toastTimeout.value = options?.timeout ?? 4000
-  toastVisible.value = true
-}
-
 async function openQrScanner() {
   qrScannerDialog.value = true
   const started = await qrCamera.start()
@@ -380,7 +361,7 @@ async function openQrScanner() {
     scanning.value = true
     scanQRCode()
   } else if (cameraPermissionDenied.value) {
-    showToast('Could not access camera. Please check permissions.', { color: 'error' })
+    toast.show('Could not access camera. Please check permissions.', { color: 'error' })
   }
 }
 
@@ -431,13 +412,13 @@ function handleQRCodeDetected(data: string) {
     // Navigate to edit page with token
     closeQrScanner()
     router.push(`/edit/${token}`)
-    showToast('QR Code scanned successfully!', { color: 'success' })
+    toast.show('QR Code scanned successfully!', { color: 'success' })
     return
   }
 
   // If it's just a token or repair ID, show it
   closeQrScanner()
-  showToast(`Scanned: ${data}`, { color: 'info', timeout: 6000 })
+  toast.show(`Scanned: ${data}`, { color: 'info', timeout: 6000 })
 }
 
 function closeQrScanner() {
@@ -465,7 +446,4 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', revalidatePinSession)
   lockChannel?.close()
 })
-
-// Expose globally via provide/inject
-provide('showToast', showToast)
 </script>

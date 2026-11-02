@@ -242,9 +242,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, inject, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { formatDateTime } from '@/utils/date'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 import { useRepairStore, normalizeRepairStatus } from '@/stores/repairStore'
 import { RepairLogsService } from '@/api/services/RepairLogsService'
 import type { Repair, RepairLog } from '@/api/types'
@@ -253,9 +254,7 @@ import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 const router = useRouter()
 const repairStore = useRepairStore()
 
-const showToast = inject('showToast') as
-  | undefined
-  | ((message: string, options?: { color?: string; timeout?: number }) => void)
+const toast = useToast()
 
 // Start repair dialog state
 const startRepairDialog = ref(false)
@@ -354,7 +353,7 @@ async function confirmStartRepair(userId: number) {
       status_to: 'In Bearbeitung',
     })
 
-    showToast?.('Reparatur wurde gestartet', { color: 'success' })
+    toast.show('Reparatur wurde gestartet', { color: 'success' })
 
     // Close dialog
     closeStartRepairDialog()
@@ -363,7 +362,7 @@ async function confirmStartRepair(userId: number) {
     router.push(`/edit/${qrToken}`)
   } catch (error) {
     console.error('Error starting repair:', error)
-    showToast?.('Fehler beim Starten der Reparatur', { color: 'error' })
+    toast.show('Fehler beim Starten der Reparatur', { color: 'error' })
   } finally {
     startingRepair.value = false
   }

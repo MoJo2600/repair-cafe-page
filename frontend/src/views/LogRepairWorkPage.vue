@@ -414,10 +414,6 @@
       </v-card-actions>
     </v-card>
 
-    <!-- Success Snackbar -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
-      {{ snackbar.message }}
-    </v-snackbar>
 
     <!-- Log Entry Dialog -->
     <v-dialog v-model="logDialog" max-width="600px">
@@ -708,6 +704,9 @@ import { useRepairStatusTransition } from '@/composables/useRepairStatusTransiti
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDate, formatDateTime } from '@/utils/date'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 interface NewLogFormData {
   user_id: number | null
@@ -858,14 +857,14 @@ async function confirmDeleteLog() {
       deletingLogId.value
     )
     if (response.reply === 'done') {
-      showSnackbar('Logeintrag gelöscht')
+      toast.success('Logeintrag gelöscht')
       deleteLogDialog.value = false
       await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
-      showSnackbar(response.error || 'Fehler beim Löschen', 'error')
+      toast.error(response.error || 'Fehler beim Löschen')
     }
   } catch (err) {
-    showSnackbar('Fehler beim Löschen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Löschen: ' + (err as Error).message)
   } finally {
     deleteLogLoading.value = false
     deletingLogId.value = null
@@ -903,20 +902,6 @@ const assigneeItems = computed(() =>
     title: `${u.vorname} ${u.nachname}`,
   }))
 )
-
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'success',
-})
-
-function showSnackbar(message: string, color: string = 'success') {
-  snackbar.value = {
-    show: true,
-    message,
-    color,
-  }
-}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   const maybeError = err as { body?: { error?: string }; message?: string }
@@ -990,9 +975,9 @@ async function printLabel() {
   printingLabel.value = true
   try {
     const result = await RepairsService.printLabel(repairRecord.value.id)
-    showSnackbar(result.message || 'Label gedruckt')
+    toast.success(result.message || 'Label gedruckt')
   } catch (err: unknown) {
-    showSnackbar(getErrorMessage(err, 'Fehler beim Drucken'), 'error')
+    toast.error(getErrorMessage(err, 'Fehler beim Drucken'))
   } finally {
     printingLabel.value = false
   }
@@ -1018,9 +1003,9 @@ async function assignUser(userId: number | null) {
     })
     await loadRepairLogs()
 
-    showSnackbar(userId ? 'Zuständigkeit aktualisiert' : 'Zuweisung entfernt')
+    toast.success(userId ? 'Zuständigkeit aktualisiert' : 'Zuweisung entfernt')
   } catch (err) {
-    showSnackbar('Fehler beim Zuweisen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Zuweisen: ' + (err as Error).message)
     selectedAssigneeId.value = repairRecord.value.user_id ?? null
   } finally {
     assigneeLoading.value = false
@@ -1061,7 +1046,6 @@ const {
   lastVdeTestPassed,
   suggestedRepairDuration,
   selectedAssigneeId,
-  showSnackbar,
   loadRepairLogs,
   onNeedsVdeTest: (preFilledUserId) => openVdeDialogForCloseFlow(preFilledUserId),
   onCancellationSigned: () => {
@@ -1236,12 +1220,12 @@ async function uploadRepairAttachments() {
     if (res.ok) {
       pendingAttachmentFiles.value = []
       await loadRepairAttachments()
-      showSnackbar('Dateien hochgeladen')
+      toast.success('Dateien hochgeladen')
     } else {
-      showSnackbar('Fehler beim Hochladen', 'error')
+      toast.error('Fehler beim Hochladen')
     }
   } catch (err) {
-    showSnackbar('Fehler beim Hochladen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Hochladen: ' + (err as Error).message)
   } finally {
     attachmentsUploading.value = false
   }
@@ -1255,12 +1239,12 @@ async function deleteRepairAttachment(attachmentId: number) {
     })
     if (res.ok) {
       await loadRepairAttachments()
-      showSnackbar('Anhang gelöscht')
+      toast.success('Anhang gelöscht')
     } else {
-      showSnackbar('Fehler beim Löschen', 'error')
+      toast.error('Fehler beim Löschen')
     }
   } catch (err) {
-    showSnackbar('Fehler beim Löschen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Löschen: ' + (err as Error).message)
   }
 }
 
@@ -1293,7 +1277,7 @@ async function addLogEntry() {
         await loadRepairAttachments()
       }
 
-      showSnackbar('Logeintrag erfolgreich hinzugefügt')
+      toast.success('Logeintrag erfolgreich hinzugefügt')
 
       // Close dialog
       closeLogDialog()
@@ -1301,14 +1285,11 @@ async function addLogEntry() {
       // Reload logs
       await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
-      showSnackbar(
-        'Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler'),
-        'error'
-      )
+      toast.error('Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler'))
     }
   } catch (err) {
     console.error('Error adding log entry:', err)
-    showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Speichern: ' + (err as Error).message)
   } finally {
     saving.value = false
   }
@@ -1346,7 +1327,7 @@ async function downloadVdePdf(testId: number) {
     a.click()
     URL.revokeObjectURL(url)
   } catch {
-    showSnackbar('Fehler beim Erzeugen des PDF')
+    toast.error('Fehler beim Erzeugen des PDF')
   }
 }
 
@@ -1374,14 +1355,14 @@ async function saveEditLog() {
       }
     )
     if (response.reply === 'done') {
-      showSnackbar('Logeintrag aktualisiert')
+      toast.success('Logeintrag aktualisiert')
       editLogDialog.value = false
       await Promise.all([loadRepairRecord(), loadRepairLogs()])
     } else {
-      showSnackbar(response.error || 'Fehler beim Speichern', 'error')
+      toast.error(response.error || 'Fehler beim Speichern')
     }
   } catch (err) {
-    showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Speichern: ' + (err as Error).message)
   } finally {
     editLogSaving.value = false
   }
@@ -1444,7 +1425,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
     const vdeResponse = await VdeTestsService.createVdeTest(repairRecord.value.id, vdePayload)
 
     if (vdeResponse.reply !== 'done') {
-      showSnackbar('Fehler beim Speichern des VDE Tests', 'error')
+      toast.error('Fehler beim Speichern des VDE Tests')
       return
     }
 
@@ -1452,24 +1433,21 @@ async function handleVdeSubmit(payload: VdeFormData) {
     vdeDialog.value = false
 
     if (vdeDialogMode.value === 'manual') {
-      showSnackbar('VDE-Test erfolgreich protokolliert')
+      toast.success('VDE-Test erfolgreich protokolliert')
       return
     }
 
     if (!payload.gesamtergebnis) {
       selectedRepairStatus.value = repairRecord.value.status || 'In Bearbeitung'
-      showSnackbar(
-        'VDE-Test nicht bestanden. Die Reparatur kann nicht als repariert abgeschlossen werden. ' +
-          'Bitte weiterarbeiten oder den Status auf "Nicht Repariert" setzen.',
-        'warning'
-      )
+      toast.warning('VDE-Test nicht bestanden. Die Reparatur kann nicht als repariert abgeschlossen werden. ' +
+          'Bitte weiterarbeiten oder den Status auf "Nicht Repariert" setzen.')
       return
     }
 
     await closeRepair('Repariert')
   } catch (err) {
     console.error('Error saving VDE test:', err)
-    showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Speichern: ' + (err as Error).message)
   } finally {
     saving.value = false
   }

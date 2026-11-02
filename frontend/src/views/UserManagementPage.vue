@@ -140,9 +140,6 @@ v-model="form.is_admin" label="Administrator" hide-details
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-            {{ snackbarText }}
-        </v-snackbar>
     </v-container>
 </template>
 
@@ -151,6 +148,9 @@ import { computed, onMounted, ref } from "vue";
 import { sessionFetch } from "@/api/session";
 import type { UserResponse } from "@/api/types";
 import { useAuthStore } from "@/stores/authStore";
+import { useToast } from "@/composables/useToast";
+
+const toast = useToast();
 
 const authStore = useAuthStore();
 
@@ -169,9 +169,6 @@ const formError = ref("");
 const showPassword = ref(false);
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("success");
 
 const emptyForm = () => ({
     username: "",
@@ -226,12 +223,6 @@ const minLen8 = (v: string) => v?.length >= 8 || "Mindestens 8 Zeichen";
 const minLen8IfSet = (v: string) => !v || v.length >= 8 || "Mindestens 8 Zeichen";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
-function showMsg(text: string, color = "success") {
-    snackbarText.value = text;
-    snackbarColor.value = color;
-    snackbar.value = true;
-}
-
 async function fetchUsers() {
     loading.value = true;
     try {
@@ -311,7 +302,7 @@ async function saveUser() {
 
         formDialog.value = false;
         await fetchUsers();
-        showMsg(editingUser.value ? "Benutzer aktualisiert" : "Benutzer erstellt");
+        toast.success(editingUser.value ? "Benutzer aktualisiert" : "Benutzer erstellt");
     } finally {
         saving.value = false;
     }
@@ -333,10 +324,10 @@ async function doDeactivate() {
         if (res.ok) {
             deactivateDialog.value = false;
             await fetchUsers();
-            showMsg("Benutzer deaktiviert", "warning");
+            toast.warning("Benutzer deaktiviert");
         } else {
             const d = await res.json();
-            showMsg(d.error ?? "Fehler", "error");
+            toast.error(d.error ?? "Fehler");
         }
     } finally {
         saving.value = false;
@@ -354,10 +345,10 @@ async function reactivate(user: UserResponse) {
         });
         if (res.ok) {
             await fetchUsers();
-            showMsg("Benutzer reaktiviert");
+            toast.success("Benutzer reaktiviert");
         } else {
             const d = await res.json();
-            showMsg(d.error ?? "Fehler", "error");
+            toast.error(d.error ?? "Fehler");
         }
     } finally {
         saving.value = false;

@@ -406,9 +406,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { sessionFetch } from '@/api/session'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 import { ConfigService } from '@/api/services/ConfigService'
 import { RepairsService } from '@/api/services/RepairsService'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
@@ -433,9 +434,7 @@ const disclaimerUrl = computed(() =>
   createdRepairId.value !== null ? `/api/repairs/${createdRepairId.value}/disclaimer` : null
 )
 
-const showToast = inject('showToast') as
-  | undefined
-  | ((message: string, options?: { color?: string; timeout?: number }) => void)
+const toast = useToast()
 
 // Repair types loaded from settings API
 const repairTypes = ref<Array<{ id: number; name: string }>>([])
@@ -747,18 +746,18 @@ async function submitForm() {
           })
         }
 
-        showToast?.('Reparatur erfolgreich erstellt', { color: 'success' })
+        toast.show('Reparatur erfolgreich erstellt', { color: 'success' })
         // Move to confirmation step
         step.value = 5
       } else {
         console.error('Error creating repair:', response)
-        showToast?.('Fehler beim Speichern der Reparatur', { color: 'error' })
+        toast.show('Fehler beim Speichern der Reparatur', { color: 'error' })
       }
     } catch (error) {
       console.error('Error submitting repair:', error)
       const errorMessage =
         (error as any)?.body?.error || (error as Error).message || 'Unbekannter Fehler'
-      showToast?.(`Fehler beim Speichern der Reparatur: ${errorMessage}`, { color: 'error' })
+      toast.show(`Fehler beim Speichern der Reparatur: ${errorMessage}`, { color: 'error' })
     } finally {
       submitting.value = false
     }
@@ -806,15 +805,15 @@ async function printLabel() {
   try {
     const result = await RepairsService.printLabel(createdRepairId.value)
     if (result.reply === 'done') {
-      showToast?.('Etikett erfolgreich gedruckt', { color: 'success' })
+      toast.show('Etikett erfolgreich gedruckt', { color: 'success' })
     } else {
       printLabelError.value = result.error ?? 'Drucken fehlgeschlagen'
-      showToast?.(printLabelError.value, { color: 'error' })
+      toast.show(printLabelError.value, { color: 'error' })
     }
   } catch (error) {
     printLabelError.value =
       (error as any)?.body?.error ?? (error as Error).message ?? 'Unbekannter Fehler'
-    showToast?.(`Fehler beim Drucken: ${printLabelError.value}`, { color: 'error' })
+    toast.show(`Fehler beim Drucken: ${printLabelError.value}`, { color: 'error' })
   } finally {
     printingLabel.value = false
   }
@@ -824,7 +823,7 @@ async function printLabel() {
 async function startCamera() {
   const started = await startCameraStream()
   if (!started && cameraPermissionDenied.value) {
-    showToast?.('Fehler beim Zugriff auf die Kamera', { color: 'error' })
+    toast.show('Fehler beim Zugriff auf die Kamera', { color: 'error' })
   }
 }
 
@@ -847,13 +846,13 @@ function capturePhoto() {
     const photoData = canvas.toDataURL('image/jpeg', 0.8)
     devicePhotos.value.push(photoData)
 
-    showToast?.('Foto aufgenommen', { color: 'success', timeout: 2000 })
+    toast.show('Foto aufgenommen', { color: 'success', timeout: 2000 })
   }
 }
 
 function deletePhoto(index: number) {
   devicePhotos.value.splice(index, 1)
-  showToast?.('Foto gelöscht', { color: 'info', timeout: 2000 })
+  toast.show('Foto gelöscht', { color: 'info', timeout: 2000 })
 }
 
 function viewPhoto(photo: string) {

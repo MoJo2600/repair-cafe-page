@@ -247,10 +247,6 @@ v-model="form.name" label="Name *"
       </v-card>
     </v-dialog>
 
-    <!-- Snackbar -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="bottom right">
-      {{ snackbar.text }}
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -260,6 +256,9 @@ import { sessionFetch } from '@/api/session'
 import type { SettingResponse } from '../api/generated/data-contracts'
 import { ConfigService } from '../api/services/ConfigService'
 import { SettingsService } from '../api/services/SettingsService'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 // ── Table column definitions ─────────────────────────────────────────────────
 
@@ -295,16 +294,10 @@ const form = ref({ name: '', serial_number: '', is_active: true })
 const deleteDialog = ref(false)
 const deletingItem = ref<SettingResponse | null>(null)
 
-const snackbar = ref({ show: false, text: '', color: 'success' })
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function required(v: string) {
   return (v && v.trim().length > 0) || 'Pflichtfeld'
-}
-
-function showMsg(text: string, color: 'success' | 'error' = 'success') {
-  snackbar.value = { show: true, text, color }
 }
 
 function byCategory(category: string): SettingResponse[] {
@@ -362,7 +355,7 @@ async function loadSettings() {
     const res = await SettingsService.getAll()
     settings.value = res.data
   } catch {
-    showMsg('Fehler beim Laden der Einstellungen', 'error')
+    toast.error('Fehler beim Laden der Einstellungen')
   } finally {
     loading.value = false
   }
@@ -411,7 +404,7 @@ async function saveItem() {
       })
       const idx = settings.value.findIndex((s) => s.id === editingItem.value!.id)
       if (idx !== -1) settings.value[idx] = res.data
-      showMsg('Eintrag gespeichert')
+      toast.success('Eintrag gespeichert')
     } else {
       const res = await SettingsService.create({
         category: formCategory.value,
@@ -419,7 +412,7 @@ async function saveItem() {
         serial_number: form.value.serial_number || null,
       })
       settings.value.push(res.data)
-      showMsg('Eintrag hinzugefügt')
+      toast.success('Eintrag hinzugefügt')
     }
     closeDialog()
   } catch (err: unknown) {
@@ -443,13 +436,13 @@ async function doDelete() {
   try {
     await SettingsService.delete(deletingItem.value.id)
     settings.value = settings.value.filter((s) => s.id !== deletingItem.value!.id)
-    showMsg('Eintrag gelöscht')
+    toast.success('Eintrag gelöscht')
     deleteDialog.value = false
   } catch (err: unknown) {
     const msg =
       (err as { body?: { error?: string } })?.body?.error ??
       'Fehler beim Löschen'
-    showMsg(msg, 'error')
+    toast.error(msg)
   } finally {
     saving.value = false
   }

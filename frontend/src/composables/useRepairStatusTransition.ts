@@ -11,6 +11,7 @@ import {
 import { RepairLogsService } from '@/api/services/RepairLogsService'
 import { RepairsService } from '@/api/services/RepairsService'
 import confetti from 'canvas-confetti'
+import { useToast } from '@/composables/useToast'
 import type { Repair } from '@/api/types'
 
 export interface UseRepairStatusTransitionOptions {
@@ -22,7 +23,6 @@ export interface UseRepairStatusTransitionOptions {
   lastVdeTestPassed: ComputedRef<boolean>
   suggestedRepairDuration: ComputedRef<number>
   selectedAssigneeId: Ref<number | null>
-  showSnackbar: (msg: string, color?: string) => void
   loadRepairLogs: () => Promise<void>
   /** Called when a status transition requires a VDE test first. */
   onNeedsVdeTest: (preFilledUserId?: number | null) => void
@@ -32,6 +32,7 @@ export interface UseRepairStatusTransitionOptions {
 
 export function useRepairStatusTransition(options: UseRepairStatusTransitionOptions) {
   const repairStore = useRepairStore()
+  const toast = useToast()
 
   const savingStatus = ref(false)
   const transitionDialog = ref(false)
@@ -227,7 +228,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         })
       }
 
-      options.showSnackbar(`Status update erfolgreich: ${toStatus}`)
+      toast.success(`Status update erfolgreich: ${toStatus}`)
       if (toStatus === 'Repariert') {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
       }
@@ -242,7 +243,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       await options.loadRepairLogs()
     } catch (err) {
       console.error('Error closing repair:', err)
-      options.showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+      toast.error('Fehler beim Speichern: ' + (err as Error).message)
     } finally {
       savingStatus.value = false
     }
@@ -276,10 +277,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       await options.onCancellationSigned?.()
     } catch (err) {
       console.error('Error saving cancellation PDF:', err)
-      options.showSnackbar(
-        'Fehler beim Erstellen der Abbruchbestätigung: ' + (err as Error).message,
-        'error'
-      )
+      toast.error('Fehler beim Erstellen der Abbruchbestätigung: ' + (err as Error).message)
       return
     }
 
@@ -307,7 +305,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         status_from: fromStatus,
         status_to: 'Nicht Repariert',
       })
-      options.showSnackbar('Reparatur als nicht reparierbar abgeschlossen')
+      toast.success('Reparatur als nicht reparierbar abgeschlossen')
       options.repairRecord.value.status = 'Nicht Repariert'
       options.repairRecord.value.status_detail = payload.statusDetail
       options.repairRecord.value.reparatur_besch = payload.description
@@ -316,7 +314,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       await options.loadRepairLogs()
     } catch (err) {
       console.error('Error closing repair as not repairable:', err)
-      options.showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+      toast.error('Fehler beim Speichern: ' + (err as Error).message)
     } finally {
       savingStatus.value = false
     }

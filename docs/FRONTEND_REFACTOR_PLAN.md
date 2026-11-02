@@ -75,7 +75,7 @@ stale fetches with a revision counter.
 | **P0 – bugs** | Items 1–5 | done – needs manual browser check (camera, QR, PIN lock) |
 | **Build fixes** | Lockfile + Docker after Dependabot bumps (see below) | done |
 | **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
-| **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | open |
+| **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | in progress: 8 done |
 | **UI rework** | Redesign on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | open |
 | **P2 – API layer** | Item 6, item 11 (backend writes the status log) | open |
 | **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |

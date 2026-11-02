@@ -249,9 +249,6 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-      {{ snackbarText }}
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -272,6 +269,9 @@ import {
   isClosedRepairStatus,
   type RepairStatus,
 } from '@/stores/repairStore'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
   status?: RepairStatus
@@ -290,15 +290,7 @@ const totalCount = ref(0)
 const labelPrinterEnabled = ref(false)
 const printingLabelId = ref<number | null>(null)
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-const snackbarColor = ref('success')
 
-function showMsg(text: string, color = 'success') {
-  snackbarText.value = text
-  snackbarColor.value = color
-  snackbar.value = true
-}
 const filterStatus = ref<'open' | 'closed' | 'all'>('open')
 const search = ref('')
 const customerFilter = ref<{ id: number; name: string } | null>(null)
@@ -397,7 +389,7 @@ const loadRepairs = async (customerId?: number) => {
     totalCount.value = response.count || 0
   } catch (err: any) {
     console.error('Error loading repairs:', err)
-    showMsg(err.message || 'Fehler beim Laden der Reparaturen', 'error')
+    toast.error(err.message || 'Fehler beim Laden der Reparaturen')
   } finally {
     loading.value = false
   }
@@ -424,7 +416,7 @@ const saveRepair = async () => {
     const data = await RepairsService.updateRepair(editedItem.value.id, editedItem.value)
 
     if (data.reply === 'done') {
-      showMsg('Reparatur gespeichert')
+      toast.success('Reparatur gespeichert')
       closeEditDialog()
       await loadRepairs(customerFilter.value?.id)
     } else {
@@ -432,7 +424,7 @@ const saveRepair = async () => {
     }
   } catch (err: any) {
     console.error('Error updating repair:', err)
-    showMsg(err.message || 'Fehler beim Speichern', 'error')
+    toast.error(err.message || 'Fehler beim Speichern')
   } finally {
     saving.value = false
   }
@@ -458,10 +450,10 @@ const confirmDelete = async () => {
   try {
     await RepairsService.deleteRepair(deleteTargetId.value)
     deleteDialog.value = false
-    showMsg('Reparatur gelöscht')
+    toast.success('Reparatur gelöscht')
     await loadRepairs(customerFilter.value?.id)
   } catch (err) {
-    showMsg('Fehler beim Löschen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Löschen: ' + (err as Error).message)
   } finally {
     deleting.value = false
     deleteTargetId.value = null
@@ -495,10 +487,10 @@ const printLabel = async (id: number) => {
   printingLabelId.value = id
   try {
     const result = await RepairsService.printLabel(id)
-    showMsg(result.message || 'Label gedruckt')
+    toast.success(result.message || 'Label gedruckt')
   } catch (err: any) {
     const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
-    showMsg(msg, 'error')
+    toast.error(msg)
   } finally {
     printingLabelId.value = null
   }
