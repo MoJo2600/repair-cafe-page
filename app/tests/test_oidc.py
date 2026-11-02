@@ -91,6 +91,41 @@ def test_login_behind_cloudflare_access_skips_prompt(client, sso):
     }
 
 
+def test_callback_keeps_pin_and_admin_when_claims_are_missing(client, sso):
+    _sso_login(client, sso, repaircafe_admin=True)
+    user = User.query.filter_by(oidc_sub="hashed-sub-1").one()
+    assert user.is_admin is True and user.pin_code_hash == hash_pin_code("123456")
+    client.post("/api/auth/logout")
+
+    sso.claims = _claims()
+    del sso.claims["door_code"], sso.claims["repaircafe_admin"]
+    client.get("/api/auth/oidc/callback")
+    db.session.refresh(user)
+    assert user.is_admin is True
+    assert user.pin_code_hash == hash_pin_code("123456")
+
+
+def test_empty_claim_names_disable_admin_and_pin_mapping(app, client, sso):
+    app.config.update(OIDC_ADMIN_CLAIM="", OIDC_PIN_CLAIM="")
+    _sso_login(client, sso, repaircafe_admin=True)
+    user = User.query.filter_by(oidc_sub="hashed-sub-1").one()
+    assert user.is_admin is False
+    assert user.pin_code_hash is None
+
+
+def test_callback_updates_and_clears_present_claims(client, sso):
+    _sso_login(client, sso, repaircafe_admin=True)
+    client.post("/api/auth/logout")
+    _sso_login(client, sso, door_code="654321", repaircafe_admin=False)
+    user = User.query.filter_by(oidc_sub="hashed-sub-1").one()
+    assert user.is_admin is False
+    assert user.pin_code_hash == hash_pin_code("654321")
+    client.post("/api/auth/logout")
+    _sso_login(client, sso, door_code=None)
+    db.session.refresh(user)
+    assert user.pin_code_hash is None
+
+
 def test_callback_creates_user_and_logs_in(client, sso):
     client.get("/api/auth/oidc/login?next=/repairs")
     resp = _sso_login(client, sso)

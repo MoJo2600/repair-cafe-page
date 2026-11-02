@@ -55,7 +55,10 @@ Login requests fresh authentication (`prompt=login`) for shared PCs on the works
 | `PIN_MODE` | `oidc` | `oidc` or `local`, never both |
 
 Claim mappings refer to top-level claims. Optional mappings can be disabled
-with an empty name. Standard `sub`, `email`, `name`, and `preferred_username`
+with an empty name. If a configured admin or PIN claim is missing from the
+token (typically because its scope is not in `OIDC_SCOPES`), the stored admin
+flag and PIN are kept and a warning is logged; a present but empty or invalid
+PIN claim removes the stored PIN. Standard `sub`, `email`, `name`, and `preferred_username`
 claims retain their normal meaning. An admin claim must be boolean `true`
 or the string `true`; arbitrary nonempty strings never grant admin rights.
 Changing to another issuer for an existing database requires a deliberate
@@ -72,8 +75,9 @@ retries prevent duplicate PINs. Provider PIN claims are ignored in this mode.
 **OIDC PIN mode:** set `PIN_MODE=oidc`. PINs are refreshed from the configured
 claim at each SSO login. Profile generation/replacement is disabled, including
 through the API. Users retrieve their PIN from their identity provider, such
-as their easyVerein profile. Missing/invalid claims clear the previous PIN but
-do not block normal SSO login. A reassigned provider PIN is removed from its
+as their easyVerein profile. An empty or invalid claim clears the previous
+PIN; a missing claim (scope not granted) keeps it and logs a warning. Neither
+blocks normal SSO login. A reassigned provider PIN is removed from its
 previous holder, preserving one owner per PIN. There is no local fallback.
 
 For the existing easyVerein integration through Authentik, explicitly set:
@@ -122,9 +126,25 @@ PIN hashes as well as sessions. Treat changes to the PIN claim's meaning as
 a credential migration, not a cosmetic rename. Profile PIN responses are
 uncacheable and PINs are never included in user-list or normal profile data.
 
-This release prepares PIN storage and profile management only. A PIN login
-endpoint, lock screen, and unlock flow are not implemented yet.
+### PIN Unlock (Workshop Only)
 
+A locked browser session can be switched to another helper by entering their
+PIN. Because the PIN may be a member's door code, PIN lock and unlock are only
+offered inside the workshop network. Requests that arrive through Cloudflare
+(headers `Cf-Ray`, `Cf-Connecting-Ip` or `Cf-Access-Jwt-Assertion`) get no
+lock button, no idle lock and no PIN unlock; a session that was locked in the
+workshop and is opened from outside has to log in again via SSO.
+
+Wrong PINs are limited:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PIN_MAX_FAILED_PER_SESSION` | `5` | Wrong PINs per browser session before it is logged out (60 s pause after every 3) |
+| `PIN_MAX_FAILED_PER_ACCOUNT` | `5` | Wrong PINs per primary login account within the window, across all its browsers |
+| `PIN_MAX_FAILED_GLOBAL` | `15` | Wrong PINs across all sessions within the window; PIN unlock is then paused for everyone |
+| `PIN_RATE_WINDOW_MINUTES` | `15` | Window for the account and global limits |
+
+While a limit applies, even a correct PIN is rejected. SSO login keeps working.
 
 ### Deploy with Docker Compose
 

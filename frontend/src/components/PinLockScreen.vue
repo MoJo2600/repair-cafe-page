@@ -25,9 +25,16 @@
             <v-chip color="warning" variant="tonal" size="small" prepend-icon="mdi-lock">
               Bildschirm gesperrt
             </v-chip> -->
-            <v-btn color="primary" variant="elevated" prepend-icon="mdi-lock-open-outline" @click="openUnlock">
+            <v-btn v-if="authStore.pinUnlockAvailable" color="primary" variant="elevated"
+              prepend-icon="mdi-lock-open-outline" @click="openUnlock">
               Entsperren
             </v-btn>
+            <template v-else>
+              <span class="text-body-2 text-medium-emphasis">PIN-Entsperrung nur im Werkstattnetz</span>
+              <v-btn color="primary" variant="elevated" prepend-icon="mdi-login" href="/api/auth/oidc/login">
+                Mit SSO anmelden
+              </v-btn>
+            </template>
             <v-btn icon="mdi-logout" variant="text" aria-label="Vollständig abmelden" title="Vollständig abmelden"
               :loading="loggingOut" @click="logout" />
           </div>
@@ -527,6 +534,11 @@ async function unlock() {
   pinCode.value = ''
   submitting.value = false
   if (!result.success) {
+    if (result.sessionEnded) {
+      unlockDialog.value = false
+      await router.replace({ name: 'Login', query: { error: 'pin_locked' } })
+      return
+    }
     error.value = result.error ?? 'PIN ungültig'
     return
   }

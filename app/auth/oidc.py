@@ -13,7 +13,7 @@ from app.extensions import db
 from app.models import User
 from app.schemas import AuthConfigResponse
 from app.services.pin_service import PinError, pin_transaction, require_pin_mode, sync_provider_pin
-from app.services.pin_unlock_service import arm_pin_unlock_session
+from app.services.pin_unlock_service import arm_pin_unlock_session, request_via_cloudflare
 
 oidc_bp = Blueprint("oidc", __name__)
 
@@ -108,10 +108,10 @@ def oidc_login():
         )
     session["oidc_next"] = _safe_next(request.args.get("next"))
     # Shared workshop PCs must re-authenticate (prompt=login). Requests that
-    # passed Cloudflare Access already logged in at the provider moments ago,
-    # so reuse that session instead of asking for the password twice. A forged
-    # header only skips the prompt in the forger's own browser.
-    kwargs = {} if request.headers.get("Cf-Access-Jwt-Assertion") else {"prompt": "login"}
+    # came through Cloudflare (Access) already logged in at the provider moments
+    # ago, so reuse that session instead of asking for the password twice. A
+    # forged header only skips the prompt in the forger's own browser.
+    kwargs = {} if request_via_cloudflare() else {"prompt": "login"}
     return current_app.extensions["oidc_client"].authorize_redirect(
         _redirect_uri(), **kwargs
     )
@@ -216,10 +216,26 @@ def _upsert_user(claims: dict) -> Optional[User]:
     if email and email != (user.email or "").lower():
         if not User.query.filter(db.func.lower(User.email) == email, User.id != user.id).first():
             user.email = email
-    admin = claims.get(current_app.config["OIDC_ADMIN_CLAIM"])
-    user.is_admin = admin is True or (
-        isinstance(admin, str) and admin.lower() == "true")
-    sync_provider_pin(user, claims.get(current_app.config["OIDC_PIN_CLAIM"]))
+    # A configured but missing claim means the scope was not granted (e.g. wrong
+    # OIDC_SCOPES): keep the stored values instead of wiping admin rights and
+    # PINs. An empty claim name disables the mapping as before.
+    admin_claim = current_app.config["OIDC_ADMIN_CLAIM"]
+    if not admin_claim or admin_claim in claims:
+        admin = claims.get(admin_claim)
+        user.is_admin = admin is True or (
+            isinstance(admin, str) and admin.lower() == "true")
+    else:
+        current_app.logger.warning(
+            "OIDC claim '%s' missing; admin role unchanged (check OIDC_SCOPES)",
+            admin_claim,
+        )
+    pin_claim = current_app.config["OIDC_PIN_CLAIM"]
+    if not pin_claim or pin_claim in claims:
+        sync_provider_pin(user, claims.get(pin_claim))
+    else:
+        current_app.logger.warning(
+            "OIDC claim '%s' missing; PIN unchanged (check OIDC_SCOPES)", pin_claim
+        )
 
     db.session.commit()
     return user

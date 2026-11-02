@@ -140,6 +140,13 @@ class BaseConfig:
         if g.strip()
     ]
 
+    # PIN unlock limits (wrong PINs). Per session: the session is logged out on
+    # reaching the limit. Per account / global: counted within the rate window.
+    PIN_MAX_FAILED_PER_SESSION = int(os.environ.get("PIN_MAX_FAILED_PER_SESSION", "5"))
+    PIN_MAX_FAILED_PER_ACCOUNT = int(os.environ.get("PIN_MAX_FAILED_PER_ACCOUNT", "5"))
+    PIN_MAX_FAILED_GLOBAL = int(os.environ.get("PIN_MAX_FAILED_GLOBAL", "15"))
+    PIN_RATE_WINDOW_MINUTES = int(os.environ.get("PIN_RATE_WINDOW_MINUTES", "15"))
+
     # Label printer (CUPS via mounted socket /run/cups/cups.sock)
     LABEL_PRINTER_ENABLED = os.environ.get(
         "LABEL_PRINTER_ENABLED", "false"

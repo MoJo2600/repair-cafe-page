@@ -11,7 +11,7 @@
       <v-btn icon @click="openQrScanner">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>
-      <v-btn icon aria-label="Bildschirm sperren" @click="lockNow">
+      <v-btn v-if="authStore.pinUnlockAvailable" icon aria-label="Bildschirm sperren" @click="lockNow">
         <v-icon>mdi-lock-outline</v-icon>
       </v-btn>
       <v-btn icon>
@@ -252,7 +252,8 @@ function clearIdleTimer() {
 
 function scheduleIdleLock() {
   clearIdleTimer()
-  if (!canUseApp.value) return
+  // No idle lock outside the workshop: the PIN pad only works there
+  if (!canUseApp.value || !authStore.pinUnlockAvailable) return
   idleTimer = window.setTimeout(() => void lockNow(), IDLE_TIMEOUT_MS)
 }
 
@@ -275,7 +276,7 @@ function handleUserActivity() {
 
 async function lockNow() {
   clearIdleTimer()
-  if (!authStore.pinSessionEligible || authStore.isLocked) return
+  if (!authStore.pinSessionEligible || authStore.isLocked || !authStore.pinUnlockAvailable) return
   const locked = await authStore.lockSession()
   if (locked) {
     closeQrScanner()

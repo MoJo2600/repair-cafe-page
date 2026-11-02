@@ -132,6 +132,7 @@ const SSO_ERRORS: Record<string, string> = {
     'Deine E-Mail-Adresse ist bereits einem lokalen Admin-Konto zugeordnet. Bitte wende dich an einen Admin.',
   sso_failed: 'Die SSO-Anmeldung ist fehlgeschlagen. Bitte erneut versuchen.',
   sso_unavailable: 'Die SSO-Anmeldung ist derzeit nicht verfügbar.',
+  pin_locked: 'Zu viele falsche PINs. Bitte erneut anmelden.',
 }
 const errorCode = route.query.error as string | undefined
 const errorMessage = ref(errorCode ? (SSO_ERRORS[errorCode] ?? SSO_ERRORS.sso_failed) : '')

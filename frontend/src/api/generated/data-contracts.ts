@@ -153,6 +153,7 @@ export interface PinSessionActionResponse {
 export interface PinSessionStatusResponse {
   eligible: boolean
   locked: boolean
+  pin_unlock_available?: boolean
   user?: UserResponse
 }
 

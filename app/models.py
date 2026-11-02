@@ -54,6 +54,9 @@ class PinUnlockSession(db.Model):
     active_user_id: Mapped[int] = mapped_column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    # User of the primary (SSO/password) login; unlike active_user_id it never
+    # changes, so PIN failures can be limited per account across browsers.
+    primary_user_id: Mapped[Optional[int]] = mapped_column(db.Integer, index=True)
     is_locked: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )
@@ -70,6 +73,17 @@ class PinUnlockSession(db.Model):
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )
+
+
+class PinUnlockFailure(db.Model):
+    """One wrong PIN; counted per account and globally within a time window."""
+
+    __tablename__ = "pin_unlock_failures"
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(db.DateTime, nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(db.String(64), nullable=False)
+    primary_user_id: Mapped[Optional[int]] = mapped_column(db.Integer, index=True)
 
 
 class AppConfig(db.Model):

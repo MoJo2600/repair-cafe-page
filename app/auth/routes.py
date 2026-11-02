@@ -31,10 +31,13 @@ from app.schemas import (
 from app.schemas import UserResponse as UserResponseSchema
 from app.services.pin_service import PinError, generate_pin, require_pin_mode
 from app.services.pin_unlock_service import (
+    PinSessionRevoked,
     arm_pin_unlock_session,
     current_pin_session,
+    end_browser_session,
     expire_pin_session_if_idle,
     lock_pin_session,
+    pin_unlock_available,
     record_pin_activity,
     revoke_pin_unlock_session,
     unlock_pin_session,
@@ -216,10 +219,12 @@ def api_pin_session_status():
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
-    locked = expire_pin_session_if_idle(grant)
+    available = pin_unlock_available()
+    locked = available and expire_pin_session_if_idle(grant)
     result = PinSessionStatusResponse(
         eligible=True,
         locked=locked,
+        pin_unlock_available=available,
         user=(
             None
             if locked
@@ -249,6 +254,8 @@ def api_pin_lock():
     """
     if not _same_origin_request():
         return _pin_error("Cross-site session changes are not allowed", 403)
+    if not pin_unlock_available():
+        return _pin_error(_WORKSHOP_ONLY, 403)
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
@@ -279,6 +286,9 @@ def api_pin_activity():
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
+    if not pin_unlock_available():
+        # Personal devices outside the workshop are not idle-locked
+        return _pin_response(PinSessionActionResponse(locked=False))
     if not record_pin_activity():
         return _pin_error("Session locked", 423)
     return _pin_response(PinSessionActionResponse(locked=False))
@@ -314,6 +324,8 @@ def api_pin_unlock():
     """
     if not _same_origin_request():
         return _pin_error("Cross-site session changes are not allowed", 403)
+    if not pin_unlock_available():
+        return _pin_error(_WORKSHOP_ONLY, 403)
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
@@ -327,6 +339,10 @@ def api_pin_unlock():
     assert body is not None
     try:
         user = unlock_pin_session(body.pin_code)
+    except PinSessionRevoked as error:
+        db.session.rollback()
+        flask_login.logout_user()
+        return _pin_error(str(error), error.status)
     except PinError as error:
         db.session.rollback()
         return _pin_error(str(error), error.status)
@@ -452,7 +468,15 @@ def _get_pin_session():
     grant = current_pin_session()
     if not grant or grant.active_user_id != flask_login.current_user.id:
         return _pin_error("Primary login required", 401)
+    if grant.is_locked and not pin_unlock_available():
+        # Locked in the workshop, opened from outside: no PIN pad here, so the
+        # browser has to log in again via SSO.
+        end_browser_session()
+        return _pin_error("Primary login required", 401)
     return grant
+
+
+_WORKSHOP_ONLY = "PIN unlock is only available in the workshop network"
 
 
 def _same_origin_request() -> bool:

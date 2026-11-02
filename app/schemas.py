@@ -152,6 +152,7 @@ class PinGeneratedResponse(BaseModel):
 class PinSessionStatusResponse(BaseModel):
     eligible: bool
     locked: bool
+    pin_unlock_available: bool = True
     user: Optional[UserResponse] = None
 
 

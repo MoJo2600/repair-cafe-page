@@ -255,7 +255,9 @@ def register_auth_guard(app):
     from flask import Response, request
     from app.services.pin_unlock_service import (
         current_pin_session,
+        end_browser_session,
         expire_pin_session_if_idle,
+        pin_unlock_available,
     )
 
     lock_screen_endpoints = {
@@ -291,6 +293,16 @@ def register_auth_guard(app):
                 status=401,
                 mimetype="application/json",
             )
+        if not pin_unlock_available():
+            if grant.is_locked:
+                # Locked in the workshop, opened from outside: re-login via SSO
+                end_browser_session()
+                return Response(
+                    json.dumps({"reply": "error", "error": "Primary login required"}),
+                    status=401,
+                    mimetype="application/json",
+                )
+            return None  # no idle lock outside the workshop
         if expire_pin_session_if_idle(grant):
             return Response(
                 json.dumps({"reply": "error", "error": "Session locked"}),

@@ -14,7 +14,15 @@ from flask import Flask
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Customer, PinState, PinUnlockSession, Repair, Setting, User
+from app.models import (
+    Customer,
+    PinState,
+    PinUnlockFailure,
+    PinUnlockSession,
+    Repair,
+    Setting,
+    User,
+)
 from app.services.pin_service import (
     PinError,
     generate_pin,
@@ -188,29 +196,134 @@ def test_locked_pin_session_expires_after_sixty_seconds(helper_client, helper_us
     assert grant.is_locked is True
 
 
-def test_pin_unlock_attempts_enter_server_side_cooldown(
-    helper_client, helper_user, local_pins
-):
-    helper_user.pin_code_hash = hash_pin_code("123456")
-    db.session.commit()
-    helper_client.post("/api/auth/pin-session/lock", json={})
+def _grant(client):
+    with client.session_transaction() as browser_session:
+        session_id = browser_session.get("pin_unlock_session_id")
+    return PinUnlockSession.query.filter_by(session_id=session_id).first()
 
+
+def _wrong_pin(client):
+    grant = _grant(client)
+    if grant is not None:
+        grant.locked_until = None  # skip the short cooldown between tries
+        db.session.commit()
+    return client.post("/api/auth/pin-session/unlock", json={"pin_code": "000000"})
+
+
+def test_pin_unlock_pauses_after_three_wrong_pins(helper_client, helper_user):
+    helper_client.post("/api/auth/pin-session/lock", json={})
     responses = [
         helper_client.post("/api/auth/pin-session/unlock", json={"pin_code": "000000"})
-        for _ in range(5)
+        for _ in range(3)
     ]
-    assert all(response.status_code == 401 for response in responses)
+    assert [response.status_code for response in responses] == [401, 401, 401]
     assert (
         helper_client.post(
             "/api/auth/pin-session/unlock", json={"pin_code": "000000"}
         ).status_code
         == 429
     )
-    with helper_client.session_transaction() as browser_session:
-        session_id = browser_session["pin_unlock_session_id"]
-    grant = PinUnlockSession.query.filter_by(session_id=session_id).one()
+    grant = _grant(helper_client)
     assert grant.cooldown_level == 1
     assert grant.locked_until is not None
+
+
+def test_fifth_wrong_pin_logs_the_browser_out(helper_client, helper_user):
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    statuses = [_wrong_pin(helper_client).status_code for _ in range(5)]
+    assert statuses == [401] * 5
+    assert _grant(helper_client) is None
+    assert helper_client.get("/api/auth/pin-session").status_code == 401
+    assert helper_client.get("/api/auth/me").status_code == 401
+    assert PinUnlockFailure.query.count() == 5
+
+
+def test_account_limit_spans_all_browsers_of_the_primary_login(app, helper_user):
+    browsers = [app.test_client(), app.test_client()]
+    for browser in browsers:
+        browser.post("/api/auth/login", json={"username": "helfer", "password": "secret"})
+        browser.post("/api/auth/pin-session/lock", json={})
+    assert [_wrong_pin(browsers[0]).status_code for _ in range(3)] == [401] * 3
+    assert [_wrong_pin(browsers[1]).status_code for _ in range(2)] == [401] * 2
+    assert _wrong_pin(browsers[1]).status_code == 429
+    assert _grant(browsers[1]).failed_attempts == 2
+
+
+def test_global_limit_rejects_even_a_correct_pin(app, helper_client, helper_user):
+    helper_user.pin_code_hash = hash_pin_code("123456")
+    db.session.add_all(
+        PinUnlockFailure(created_at=utc_now(), session_id=f"other-{n}", primary_user_id=None)
+        for n in range(app.config["PIN_MAX_FAILED_GLOBAL"])
+    )
+    db.session.commit()
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    response = helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    )
+    assert response.status_code == 429
+    assert _grant(helper_client).is_locked is True
+
+
+def test_old_failures_do_not_count(app, helper_client, helper_user):
+    helper_user.pin_code_hash = hash_pin_code("123456")
+    db.session.add_all(
+        PinUnlockFailure(
+            created_at=utc_now() - timedelta(minutes=16), session_id=f"old-{n}"
+        )
+        for n in range(app.config["PIN_MAX_FAILED_GLOBAL"])
+    )
+    db.session.commit()
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    response = helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}
+    )
+    assert response.status_code == 200
+
+
+CLOUDFLARE = {"Cf-Ray": "8c1a2b3c4d5e6f70-FRA"}
+
+
+def test_pin_lock_and_unlock_are_workshop_only(helper_client, helper_user):
+    assert (
+        helper_client.post(
+            "/api/auth/pin-session/lock", json={}, headers=CLOUDFLARE
+        ).status_code
+        == 403
+    )
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    response = helper_client.post(
+        "/api/auth/pin-session/unlock", json={"pin_code": "123456"}, headers=CLOUDFLARE
+    )
+    assert response.status_code == 403
+    assert PinUnlockFailure.query.count() == 0
+
+
+def test_status_reports_pin_unlock_availability(helper_client):
+    assert helper_client.get("/api/auth/pin-session").get_json()[
+        "pin_unlock_available"
+    ] is True
+    external = helper_client.get("/api/auth/pin-session", headers=CLOUDFLARE)
+    assert external.get_json()["pin_unlock_available"] is False
+    assert external.get_json()["locked"] is False
+
+
+def test_no_idle_lock_outside_the_workshop(helper_client):
+    grant = _grant(helper_client)
+    grant.last_activity_at = utc_now() - timedelta(minutes=10)
+    db.session.commit()
+    assert helper_client.get("/api/list", headers=CLOUDFLARE).status_code == 200
+    assert helper_client.get(
+        "/api/auth/pin-session", headers=CLOUDFLARE
+    ).get_json()["locked"] is False
+    db.session.refresh(grant)
+    assert grant.is_locked is False
+
+
+def test_locked_session_opened_from_outside_must_log_in_again(helper_client):
+    helper_client.post("/api/auth/pin-session/lock", json={})
+    assert helper_client.get("/api/list", headers=CLOUDFLARE).status_code == 401
+    assert _grant(helper_client) is None
+    assert helper_client.get("/api/auth/me").status_code == 401
 
 
 def test_pin_unlock_fails_closed_on_runtime_mode_mismatch(
@@ -258,6 +371,35 @@ def test_pin_unlock_session_migration_round_trips():
             assert "pin_unlock_sessions" in sa.inspect(connection).get_table_names()
             migration.downgrade()
             assert "pin_unlock_sessions" not in sa.inspect(connection).get_table_names()
+        finally:
+            monkeypatch.undo()
+    engine.dispose()
+
+
+def test_pin_unlock_failures_migration_round_trips():
+    engine = sa.create_engine("sqlite://")
+    previous = import_module("app.migrations.versions.013_pin_unlock_sessions")
+    migration = import_module("app.migrations.versions.014_pin_unlock_failures")
+    with engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE users (id INTEGER PRIMARY KEY)"))
+        monkeypatch = pytest.MonkeyPatch()
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(previous, "op", operations)
+        monkeypatch.setattr(migration, "op", operations)
+        try:
+            previous.upgrade()
+            migration.upgrade()
+            inspector = sa.inspect(connection)
+            assert "pin_unlock_failures" in inspector.get_table_names()
+            assert "primary_user_id" in {
+                column["name"] for column in inspector.get_columns("pin_unlock_sessions")
+            }
+            migration.downgrade()
+            inspector = sa.inspect(connection)
+            assert "pin_unlock_failures" not in inspector.get_table_names()
+            assert "primary_user_id" not in {
+                column["name"] for column in inspector.get_columns("pin_unlock_sessions")
+            }
         finally:
             monkeypatch.undo()
     engine.dispose()

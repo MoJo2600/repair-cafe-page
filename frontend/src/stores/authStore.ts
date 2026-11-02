@@ -16,6 +16,8 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const pinSessionEligible = ref(false)
   const isLocked = ref(false)
+  /** PIN lock/unlock is only offered inside the workshop network. */
+  const pinUnlockAvailable = ref(true)
   const sessionChecked = ref(false)
 
   const isAuthenticated = computed(() => currentUser.value !== null)
@@ -27,6 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await AuthService.pinSessionStatus()
       pinSessionEligible.value = data.eligible
       isLocked.value = data.locked
+      pinUnlockAvailable.value = data.pin_unlock_available ?? true
       currentUser.value = data.locked ? null : (data.user ?? null)
       sessionChecked.value = true
       return data.eligible
@@ -89,7 +92,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function unlock(pin_code: string): Promise<{ success: boolean; error?: string }> {
+  async function unlock(
+    pin_code: string
+  ): Promise<{ success: boolean; error?: string; sessionEnded?: boolean }> {
     try {
       const data = await AuthService.unlockPinSession({ pin_code })
       currentUser.value = data.data ?? null
@@ -98,10 +103,10 @@ export const useAuthStore = defineStore('auth', () => {
       sessionChecked.value = true
       return { success: currentUser.value !== null }
     } catch (err: unknown) {
-      return {
-        success: false,
-        error: messageFromError(err, 'PIN ungültig'),
-      }
+      const error = messageFromError(err, 'PIN ungültig')
+      // Too many wrong PINs end the whole browser session on the server
+      const stillEligible = await fetchMe()
+      return { success: false, error, sessionEnded: !stillEligible }
     }
   }
 
@@ -112,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     pinSessionEligible,
     isLocked,
+    pinUnlockAvailable,
     sessionChecked,
     fetchMe,
     login,
