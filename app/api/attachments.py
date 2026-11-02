@@ -451,6 +451,8 @@ def api_delete_repair_attachment(repair_id, attachment_id):
     responses:
       200:
         description: Attachment deleted
+        schema:
+          $ref: '#/definitions/APIResponse'
       403:
         description: Not an admin and not the creator
       404:

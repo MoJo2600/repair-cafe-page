@@ -36,26 +36,35 @@ def pydantic_to_swagger(model: Type[BaseModel]) -> dict:
     return swagger_schema
 
 
+def _definition_ref(pydantic_ref: str) -> str:
+    """Pydantic's "#/$defs/Model" -> Swagger 2.0 "#/definitions/Model"."""
+    return pydantic_ref.replace("#/$defs/", "#/definitions/")
+
+
 def _convert_field_schema(field_schema: dict) -> dict:
     """Convert a Pydantic field schema to Swagger format."""
     swagger_field = {}
 
-    # Handle $ref (nested Pydantic model) — rewrite Pydantic $defs path to OpenAPI components path
+    # Handle $ref (nested Pydantic model)
     if "$ref" in field_schema:
-        ref = field_schema["$ref"].replace("#/$defs/", "#/components/schemas/")
-        return {"$ref": ref}
+        return {"$ref": _definition_ref(field_schema["$ref"])}
 
     # Handle anyOf (Optional[T] or Union types)
     if "anyOf" in field_schema:
-        # Optional[SomeModel] produces anyOf: [{$ref: ...}, {type: null}]
-        refs = [item for item in field_schema["anyOf"] if "$ref" in item]
+        variants = field_schema["anyOf"]
+        nullable = any(item.get("type") == "null" for item in variants)
+        refs = [item for item in variants if "$ref" in item]
         if refs:
-            ref = refs[0]["$ref"].replace("#/$defs/", "#/components/schemas/")
-            return {"$ref": ref}
-        types = [item.get("type")
-                 for item in field_schema["anyOf"] if "type" in item]
-        if types:
-            swagger_field["type"] = types[0]
+            ref = {"$ref": _definition_ref(refs[0]["$ref"])}
+            # Swagger 2.0 ignores siblings of $ref, so wrap it to mark it nullable
+            return {"allOf": [ref], "x-nullable": True} if nullable else ref
+        non_null = [item for item in variants if item.get("type") != "null"]
+        if non_null:
+            # Optional[list[T]] etc.: convert the non-null variant fully
+            swagger_field.update(_convert_field_schema(non_null[0]))
+        if nullable:
+            # Swagger 2.0 has no null type; swagger-typescript-api reads x-nullable
+            swagger_field["x-nullable"] = True
 
     # Handle type
     if "type" in field_schema:

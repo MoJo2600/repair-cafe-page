@@ -77,7 +77,7 @@ stale fetches with a revision counter.
 | **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
 | **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | done (+ VForm refs and `markLocked` from 12), checked in the browser |
 | **UI rework** | Redesign on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | open |
-| **P2 – API layer** | Item 6, item 11 (backend writes the status log) | open |
+| **P2 – API layer** | Item 6, item 11 (backend writes the status log); see P2 plan below | in progress |
 | **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |
 | **Housekeeping** | Dependabot: group frontend npm updates into one PR so the lockfile is updated once; run CI on Node 26 like the Docker image | open |
 
@@ -146,3 +146,28 @@ Goal: working app on Vuetify 4 defaults; the look changes and is reworked afterw
   - deleting a log entry now asks for confirmation (the old confirmation dialog was
     never opened); a failed photo upload after a saved entry is reported as a warning
     instead of "save failed"
+
+## P2 plan (API layer)
+
+Findings (2026-11-03): the backend spec (flasgger, Swagger 2.0, schemas converted from
+Pydantic) types only 27 of 52 operations, including none of `GET /api/list`,
+`GET /api/repairs/by-token/{token}`, `POST /api/repairs/{id}/logs`, `GET /api/settings`.
+The Pydantic→Swagger converter drops nullability and rewrites nested `$ref`s to the
+OpenAPI 3 path `#/components/schemas/…`, which doesn't exist in a 2.0 document.
+
+Decisions: stay on Swagger 2.0 (OpenAPI 3 would mean rewriting every docstring); keep
+`swagger-typescript-api` (supports 2.0 and `x-nullable`); drop `openapi-typescript-codegen`
+(unmaintained, its `core/` + axios), `openapi-typescript` and `axios`.
+
+1. **Backend spec:** converter emits `x-nullable` and `#/definitions/` refs; response
+   schemas for all JSON endpoints (binary/redirect ones stay untyped); a script dumps the
+   spec without a running server; CI fails when the generated client is out of date.
+2. **Backend behavior:** `PUT /api/repairs/{id}` writes the `status_change` /
+   `assignee_change` log in the same transaction; `GET /api/list` returns each repair's
+   latest log. Tests for both.
+3. **Frontend client:** regenerate; one `api` instance with session handling (401/423)
+   built in; replace hand-written services with it; delete `core/`, axios and the
+   `RepairUpdate` nullability workaround.
+4. **Frontend domain:** status constants/helpers from `repairStore.ts` to
+   `domain/repairStatus.ts`; remove the client-side log writes; overview uses the
+   latest log from the list instead of N requests per refresh.

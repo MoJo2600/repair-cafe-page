@@ -21,6 +21,14 @@ jobs:
           cache-dependency-path: app/requirements.txt
       - run: pip install -r app/requirements.txt pytest
       - run: python -m pytest app/tests -v
+      # The frontend client is generated from frontend/openapi.json; it must match the code
+      - run: python scripts/dump_openapi_spec.py
+      - name: OpenAPI spec is up to date
+        run: |
+          git diff --exit-code frontend/openapi.json || {
+            echo "::error::frontend/openapi.json is outdated. Run: python scripts/dump_openapi_spec.py"
+            exit 1
+          }
 
   frontend:
     runs-on: ubuntu-latest

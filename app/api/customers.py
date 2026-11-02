@@ -38,7 +38,7 @@ def api_list_customers():
             data:
               type: array
               items:
-                $ref: '#/components/schemas/CustomerWithRepairCountResponse'
+                $ref: '#/definitions/CustomerWithRepairCountResponse'
             count:
               type: integer
       500:

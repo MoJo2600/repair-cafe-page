@@ -38,6 +38,8 @@ def api_list_repairs():
     responses:
       200:
         description: List of all repairs
+        schema:
+          $ref: '#/definitions/RepairListResponse'
       500:
         description: Internal Server Error - database query failed
     """
@@ -96,6 +98,8 @@ def api_get_repair_by_token(token):
     responses:
       200:
         description: Repair record found
+        schema:
+          $ref: '#/definitions/RepairSingleResponse'
       404:
         description: Repair not found
       500:
@@ -151,7 +155,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
         in: body
         required: true
         schema:
-          $ref: '#/components/schemas/RepairUpdate'
+          $ref: '#/definitions/RepairUpdate'
     responses:
       200:
         description: Repair record updated successfully
@@ -162,7 +166,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
               type: string
               example: "done"
             data:
-              $ref: '#/components/schemas/RepairResponse'
+              $ref: '#/definitions/RepairResponse'
       404:
         description: Repair not found
       500:
@@ -296,12 +300,12 @@ def api_create_repair(validated_data: RepairCreate):
         in: body
         required: true
         schema:
-          $ref: '#/components/schemas/RepairCreate'
+          $ref: '#/definitions/RepairCreate'
     responses:
       201:
         description: Repair record created successfully
         schema:
-          $ref: '#/components/schemas/RepairCreateResponse'
+          $ref: '#/definitions/RepairCreateResponse'
       400:
         description: Bad request - missing required fields
       500:
@@ -559,6 +563,8 @@ def api_create_or_upload_cancellation(id: int):
     responses:
       201:
         description: Signed cancellation PDF stored
+        schema:
+          $ref: '#/definitions/APIResponse'
       400:
         description: Missing or invalid signature / file
       404:
@@ -734,6 +740,8 @@ def api_print_label(id: int):
     responses:
       200:
         description: Label printed successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       404:
         description: Repair not found
       503:

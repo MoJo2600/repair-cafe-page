@@ -40,7 +40,7 @@ def api_list_vde_tests(repair_id):
       200:
         description: List of VDE test entries
         schema:
-          $ref: '#/components/schemas/VdeTestListResponse'
+          $ref: '#/definitions/VdeTestListResponse'
       404:
         description: Repair not found
       500:
@@ -103,12 +103,12 @@ def api_create_vde_test(repair_id):
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/VdeTestCreate'
+            $ref: '#/definitions/VdeTestCreate'
     responses:
       201:
         description: VDE test created successfully
         schema:
-          $ref: '#/components/schemas/VdeTestCreateResponse'
+          $ref: '#/definitions/VdeTestCreateResponse'
       400:
         description: Invalid input
       404:
@@ -198,6 +198,8 @@ def api_get_vde_test(repair_id, test_id):
     responses:
       200:
         description: VDE test details
+        schema:
+          $ref: '#/definitions/VdeTestSingleResponse'
       404:
         description: VDE test not found
       500:

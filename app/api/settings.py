@@ -32,6 +32,8 @@ def api_list_settings():
     responses:
       200:
         description: Settings grouped by category
+        schema:
+          $ref: '#/definitions/SettingsGroupedResponse'
     """
     rows = (
         Setting.query.filter_by(is_active=True)
@@ -227,6 +229,8 @@ def api_delete_setting(setting_id):
     responses:
       200:
         description: Deleted
+        schema:
+          $ref: '#/definitions/APIResponse'
       404:
         description: Not found
     """

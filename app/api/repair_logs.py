@@ -40,7 +40,7 @@ def api_list_repair_logs(repair_id):
       200:
         description: List of repair log entries
         schema:
-          $ref: '#/components/schemas/RepairLogListResponse'
+          $ref: '#/definitions/RepairLogListResponse'
       404:
         description: Repair not found
       500:
@@ -104,10 +104,12 @@ def api_create_repair_log(validated_data, repair_id):
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/RepairLogCreate'
+            $ref: '#/definitions/RepairLogCreate'
     responses:
       201:
         description: Repair log created successfully
+        schema:
+          $ref: '#/definitions/RepairLogCreateResponse'
       400:
         description: Invalid input
       404:
@@ -195,6 +197,8 @@ def api_get_repair_log(repair_id, log_id):
     responses:
       200:
         description: Repair log details
+        schema:
+          $ref: '#/definitions/RepairLogSingleResponse'
       404:
         description: Repair log not found
       500:
@@ -299,6 +303,8 @@ def api_delete_repair_log(repair_id, log_id):
     responses:
       200:
         description: Repair log deleted successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       403:
         description: Not an admin and not the creator
       404:

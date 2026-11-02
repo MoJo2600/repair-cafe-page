@@ -381,10 +381,11 @@ class RepairResponse(RepairBase):
 
 
 class RepairListResponse(BaseModel):
-    """Schema for listing repairs"""
+    """GET /api/list"""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[RepairResponse]
-    total: int = Field(..., description="Total number of repairs")
+    count: int = Field(..., description="Number of repairs returned")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -461,6 +462,7 @@ class RepairLogResponse(RepairLogBase):
 class RepairLogListResponse(BaseModel):
     """Schema for listing repair logs"""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[RepairLogResponse]
     total: int = Field(..., description="Total number of repair logs")
 
@@ -548,6 +550,7 @@ class VdeTestResponse(VdeTestBase):
 class VdeTestListResponse(BaseModel):
     """Schema for listing VDE tests"""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[VdeTestResponse]
     total: int = Field(..., description="Total number of VDE tests")
 
@@ -730,7 +733,50 @@ class RepairAttachmentResponse(BaseModel):
 class RepairAttachmentListResponse(BaseModel):
     """Schema for listing repair attachments."""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[RepairAttachmentResponse] = []
     total: int = Field(..., description="Total number of attachments")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ── Response envelopes for single objects and lookups ─────────────────────────
+
+
+class RepairSingleResponse(APIResponse):
+    """A single repair (e.g. GET /api/repairs/by-token/{token})"""
+
+    data: RepairResponse
+
+
+class RepairLogSingleResponse(APIResponse):
+    """A single repair log (GET/PUT /api/repairs/{id}/logs/{log_id})"""
+
+    data: RepairLogResponse
+
+
+class RepairLogCreateResponse(APIResponse):
+    """POST /api/repairs/{id}/logs"""
+
+    id: int = Field(..., description="Created repair log ID")
+    data: RepairLogResponse
+
+
+class VdeTestSingleResponse(APIResponse):
+    """GET /api/repairs/{id}/vde-tests/{test_id}"""
+
+    data: VdeTestResponse
+
+
+class SettingOption(BaseModel):
+    """Active setting as offered in dropdowns"""
+
+    id: int
+    name: str
+    serial_number: Optional[str] = Field(None, description="Only set for testing devices")
+
+
+class DropdownConfigResponse(BaseModel):
+    """GET /api/config/dropdowns"""
+
+    repair_type: list[SettingOption]
