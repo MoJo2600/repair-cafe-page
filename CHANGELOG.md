@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.4.0...v1.4.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* harden pin unlock ([7a0ac62](https://github.com/MoJo2600/repair-cafe-page/commit/7a0ac6240b04376abda6238d5f4247524782ebab))
+
 ## [1.4.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.3.0...v1.4.0) (2026-11-02)
 
 
