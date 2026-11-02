@@ -141,11 +141,11 @@ cd app && python run_migrations.py
 The initial admin user is created **automatically on first app startup**.
 The generated password is printed to the backend logs at startup.
 
-**Forgot the admin password?** Set `RESET_ADMIN_PASSWORD=true` in the
-container environment and restart the backend. A new random password will
-be generated, applied to the first admin account, and printed prominently
-to the logs. Remove or unset the variable after you have logged in and
-changed the password, otherwise it resets again on every restart.
+**Forgot the admin password?** Open a shell in the backend container (Dockge:
+terminal icon of the `backend` service, or `docker compose exec backend sh`)
+and run `reset-admin-password`. It prompts for a new password for the local
+account `admin`; use `--generate` to print a random one instead and
+`--user NAME` for another local admin. Nothing is logged.
 
 ---
 

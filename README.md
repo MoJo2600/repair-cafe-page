@@ -245,9 +245,21 @@ step is needed.
 
 An **initial admin account** (`admin`) is created automatically on first
 startup if no admin exists. The generated password is printed to the backend
-logs. To reset a forgotten admin password, set `RESET_ADMIN_PASSWORD=true`
-in the backend environment and restart — a new password will be logged.
-Remove the variable afterwards.
+logs.
+
+To reset a forgotten admin password, open a shell in the backend container
+(in Dockge: the terminal icon of the `backend` service, or
+`docker compose exec backend sh`) and run:
+
+```sh
+reset-admin-password                 # account "admin", password is prompted
+reset-admin-password --generate      # print a random password instead
+reset-admin-password --user NAME     # another local admin account
+```
+
+The account is reactivated (and recreated if it was deleted). SSO accounts are
+refused. Nothing is written to the logs. The former `RESET_ADMIN_PASSWORD`
+variable is ignored.
 
 ### Update
 

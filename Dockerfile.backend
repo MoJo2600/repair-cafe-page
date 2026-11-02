@@ -23,6 +23,10 @@ COPY config/ /config/
 COPY entrypoint.backend.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Break-glass admin password reset, callable from a container shell (e.g. Dockge)
+RUN chmod +x /srv/app/reset_admin_password.py \
+  && ln -s /srv/app/reset_admin_password.py /usr/local/bin/reset-admin-password
+
 # Persistent data & config directory defaults for container runtime
 ENV DATA_DIR=/data \
     CONFIG_DIR=/config
