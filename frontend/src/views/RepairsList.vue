@@ -1,9 +1,9 @@
 <template>
   <v-container fluid class="pa-4">
     <!-- Header -->
-    <v-row align="center" class="mb-4">
+    <v-row class="mb-4 align-center">
       <v-col>
-        <h1 class="text-h5 font-weight-bold">Reparaturliste</h1>
+        <h1 class="text-headline-small font-weight-bold">Reparaturliste</h1>
       </v-col>
       <v-col cols="auto">
         <v-btn color="success" prepend-icon="mdi-plus" class="mr-2" @click="createNewRepair">
@@ -37,7 +37,7 @@
         />
       </v-col>
       <v-spacer />
-      <v-col cols="auto" class="text-body-2 text-medium-emphasis align-self-center">
+      <v-col cols="auto" class="text-body-medium text-medium-emphasis align-self-center">
         {{ filteredRepairs.length }} von {{ totalCount }}
       </v-col>
     </v-row>
@@ -119,7 +119,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="deleteDialog" max-width="420">
       <v-card>
-        <v-card-title class="text-h6">
+        <v-card-title class="text-title-large">
           <v-icon color="error" class="mr-2">mdi-delete-alert</v-icon>
           Reparatur löschen?
         </v-card-title>
@@ -138,13 +138,13 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
     <!-- Edit Dialog -->
     <v-dialog v-model="editDialog" max-width="800" persistent>
       <v-card>
-        <v-card-title class="text-h5">
+        <v-card-title class="text-headline-small">
           <v-icon icon="mdi-pencil" class="mr-2" />
           Reparatur bearbeiten #{{ editedItem.id }}
         </v-card-title>
         <v-card-text>
           <v-form ref="editForm">
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12" sm="6">
                 <v-text-field v-model="editedItem.datum" label="Datum" type="date" />
               </v-col>

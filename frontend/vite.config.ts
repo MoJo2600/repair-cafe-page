@@ -7,6 +7,16 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig({
   plugins: [vue(), vuetify({ autoImport: true })],
   publicDir: "public",
+  // Vuetify 4: avoid duplicate useStack instances in dev, which break overlay z-index
+  optimizeDeps: {
+    include: [
+      "vuetify/components/VOverlay",
+      "vuetify/components/VDialog",
+      "vuetify/components/VMenu",
+      "vuetify/components/VSelect",
+      "vuetify/components/VTooltip",
+    ],
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

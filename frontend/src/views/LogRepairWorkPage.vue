@@ -11,7 +11,7 @@
       </v-card-text>
 
       <v-card-text v-else-if="repairRecord">
-        <v-row align="start">
+        <v-row class="align-start">
           <!-- Left column: summary + logs + attachments -->
           <v-col cols="12" md="8">
             <RepairSummaryCard
@@ -23,7 +23,7 @@
 
             <!-- Repair Logs Section -->
             <div>
-              <h3 class="text-h6 mb-4">Reparatur Logeinträge</h3>
+              <h3 class="text-title-large mb-4">Reparatur Logeinträge</h3>
 
               <!-- Unified Activity Thread -->
               <v-timeline v-if="threadEntries.length > 0" density="compact" side="end" class="mb-4">
@@ -102,13 +102,13 @@
                       <template v-else-if="entry.type === 'repair'">
                         <div
                           v-if="entry.description"
-                          class="text-body-2 text-high-emphasis mb-1"
+                          class="text-body-medium text-high-emphasis mb-1"
                           style="white-space: normal"
                         >
                           {{ entry.description }}
                         </div>
                         <div class="d-flex align-center ga-2 flex-wrap">
-                          <!-- <span class="text-caption text-grey-darken-1"
+                          <!-- <span class="text-body-small text-grey-darken-1"
                         >Dauer: {{ entry.duration }} Min.</span
                       > -->
                           <template v-if="entry.status_from || entry.status_to">
@@ -135,7 +135,7 @@
                       <template v-else-if="entry.type === 'vde'">
                         <div class="d-flex align-center ga-2 flex-wrap">
                           <span
-                            class="text-body-2 text-high-emphasis"
+                            class="text-body-medium text-high-emphasis"
                             style="white-space: normal"
                             >{{ entry.description }}</span
                           >
@@ -166,11 +166,11 @@
                       <template v-else-if="entry.type === 'assignee_change'">
                         <div class="d-flex align-center ga-1 flex-wrap">
                           <v-icon size="14" color="blue-lighten-1">mdi-account-arrow-right</v-icon>
-                          <span class="text-body-2">{{ entry.description }}</span>
+                          <span class="text-body-medium">{{ entry.description }}</span>
                         </div>
                       </template>
                     </div>
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       {{
                         entry.dateOnly
                           ? formatDate(entry.created_at)
@@ -190,7 +190,7 @@
 
             <!-- Attachments Section -->
             <div class="mt-6">
-              <h3 class="text-h6 mb-3">Anhänge</h3>
+              <h3 class="text-title-large mb-3">Anhänge</h3>
 
               <!-- Disclaimer & Cancellation PDFs – static read-only items -->
               <v-card class="mb-3">
@@ -341,7 +341,7 @@
               <!-- Assignee -->
               <div>
                 <div class="d-flex align-center mb-2">
-                  <span class="text-subtitle-1 text-grey-darken-1">Zuständig</span>
+                  <span class="text-body-large text-grey-darken-1">Zuständig</span>
                   <v-spacer></v-spacer>
                   <v-btn
                     v-if="authStore.currentUser && selectedAssigneeId !== authStore.currentUser.id"
@@ -370,7 +370,7 @@
 
               <!-- Actions -->
               <div class="d-flex flex-column ga-2 mt-6">
-                <span class="text-subtitle-1 text-grey-darken-1">Quick Actions</span>
+                <span class="text-body-large text-grey-darken-1">Quick Actions</span>
                 <v-btn
                   variant="tonal"
                   color="primary"
@@ -422,7 +422,7 @@
     <!-- Log Entry Dialog -->
     <v-dialog v-model="logDialog" max-width="600px">
       <v-card>
-        <v-card-title class="text-h5">Neue Notiz</v-card-title>
+        <v-card-title class="text-headline-small">Neue Notiz</v-card-title>
 
         <v-card-text>
           <v-form ref="logForm" v-model="logFormValid">
@@ -454,7 +454,7 @@
             </v-text-field>
 
             <v-divider class="my-4"></v-divider>
-            <div class="text-subtitle-2 mb-3">Fotos &amp; Dateien (optional)</div>
+            <div class="text-title-small mb-3">Fotos &amp; Dateien (optional)</div>
 
             <!-- Camera preview -->
             <div v-if="logCameraActive" class="mb-3">
@@ -576,7 +576,7 @@
     <!-- Delete Log Confirmation Dialog -->
     <v-dialog v-model="deleteLogDialog" max-width="400px">
       <v-card>
-        <v-card-title class="text-h5">Logeintrag löschen</v-card-title>
+        <v-card-title class="text-headline-small">Logeintrag löschen</v-card-title>
         <v-card-text
           >Soll dieser Logeintrag wirklich gelöscht werden? Diese Aktion kann nicht rückgängig
           gemacht werden.</v-card-text
@@ -594,7 +594,7 @@
     <!-- Edit Log Entry Dialog -->
     <v-dialog v-model="editLogDialog" max-width="600px">
       <v-card>
-        <v-card-title class="text-h5">Logeintrag bearbeiten</v-card-title>
+        <v-card-title class="text-headline-small">Logeintrag bearbeiten</v-card-title>
         <v-card-text>
           <v-form ref="editLogForm" v-model="editLogFormValid">
             <v-autocomplete
@@ -625,7 +625,7 @@
 
           <template v-if="editingLogId && (logAttachments[editingLogId]?.length ?? 0) > 0">
             <v-divider class="my-4"></v-divider>
-            <div class="text-subtitle-2 mb-1">Anhänge</div>
+            <div class="text-title-small mb-1">Anhänge</div>
             <v-list density="compact" class="pa-0">
               <v-list-item
                 v-for="att in logAttachments[editingLogId]"

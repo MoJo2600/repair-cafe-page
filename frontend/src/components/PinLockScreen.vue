@@ -11,10 +11,10 @@
               <v-icon v-else icon="mdi-tools" size="26" color="primary" />
             </v-avatar>
             <div>
-              <div class="text-overline text-medium-emphasis lh-tight">
+              <div class="text-label-medium text-medium-emphasis lh-tight">
                 Repair Café · Kundenübersicht
               </div>
-              <h1 class="text-h5 font-weight-bold">Reparaturen im Überblick</h1>
+              <h1 class="text-headline-small font-weight-bold">Reparaturen im Überblick</h1>
             </div>
           </div>
 
@@ -30,7 +30,7 @@
               Entsperren
             </v-btn>
             <template v-else>
-              <span class="text-body-2 text-medium-emphasis">PIN-Entsperrung nur im Werkstattnetz</span>
+              <span class="text-body-medium text-medium-emphasis">PIN-Entsperrung nur im Werkstattnetz</span>
               <v-btn color="primary" variant="elevated" prepend-icon="mdi-login" href="/api/auth/oidc/login">
                 Mit SSO anmelden
               </v-btn>
@@ -48,8 +48,8 @@
       <!-- <div class="d-flex align-center ga-3">
           <v-icon icon="mdi-view-dashboard" color="primary" size="32" />
           <div>
-            <h1 class="text-h5 font-weight-bold">Kunden-Dashboard</h1>
-            <div class="text-caption text-medium-emphasis">
+            <h1 class="text-headline-small font-weight-bold">Kunden-Dashboard</h1>
+            <div class="text-body-small text-medium-emphasis">
               Wandprojektion · Automatisch aktualisierte Übersicht ohne sensible Kundendaten
             </div>
           </div>
@@ -94,8 +94,8 @@
               <div class="d-flex align-center">
                 <v-icon size="42" class="mr-3">mdi-tools</v-icon>
                 <div>
-                  <div class="text-h5 font-weight-bold">Nächste Reparatur</div>
-                  <div class="text-caption opacity-80">
+                  <div class="text-headline-small font-weight-bold">Nächste Reparatur</div>
+                  <div class="text-body-small opacity-80">
                     Bitte diese Reparatur-ID bereithalten
                   </div>
                 </div>
@@ -117,7 +117,7 @@
                   </div>
                 </div>
                 <!-- <v-divider class="my-3 opacity-50" /> -->
-                <div class="d-flex align-right justify-space-between text-body-1">
+                <div class="d-flex align-right justify-space-between text-body-large">
                   <!-- <span>Als Nächstes an der Reihe</span> -->
                   <v-chip v-if="summary.next_repair_category" color="white" variant="flat" size="large"
                     prepend-icon="mdi-tag-outline" class="font-weight-bold text-primary">
@@ -125,7 +125,7 @@
                   </v-chip>
                 </div>
               </div>
-              <div v-else class="text-h5 font-weight-medium py-4">
+              <div v-else class="text-headline-small font-weight-medium py-4">
                 Keine offenen Reparaturen vorhanden
               </div>
             </v-card-text>
@@ -138,8 +138,8 @@
               <div class="d-flex align-center">
                 <v-icon size="42" class="mr-3" color="warning">mdi-progress-wrench</v-icon>
                 <div>
-                  <div class="text-h5 font-weight-bold">In Bearbeitung</div>
-                  <div class="text-caption text-medium-emphasis">
+                  <div class="text-headline-small font-weight-bold">In Bearbeitung</div>
+                  <div class="text-body-small text-medium-emphasis">
                     Aktive Reparaturen in der Werkstatt
                   </div>
                 </div>
@@ -153,19 +153,19 @@
               <div v-if="initialLoading" class="text-center py-6">
                 <v-progress-circular indeterminate color="warning" size="40" />
               </div>
-              <div v-else-if="!inProgressItems.length" class="text-body-1 text-medium-emphasis py-4">
+              <div v-else-if="!inProgressItems.length" class="text-body-large text-medium-emphasis py-4">
                 Keine aktiven Reparaturen
               </div>
               <div v-else class="in-progress-grid">
                 <v-sheet v-for="item in inProgressItems" :key="item.id" rounded="lg" border
                   class="px-3 py-2 d-flex align-center justify-space-between ga-2">
-                  <span class="text-h5 font-weight-bold text-high-emphasis">
+                  <span class="text-headline-small font-weight-bold text-high-emphasis">
                     #{{ item.id }}
                   </span>
                   <v-chip v-if="item.category" size="small" color="warning" variant="tonal" class="font-weight-medium">
                     {{ item.category }}
                   </v-chip>
-                  <span v-else class="text-caption text-medium-emphasis">
+                  <span v-else class="text-body-small text-medium-emphasis">
                     In Arbeit
                   </span>
                 </v-sheet>
@@ -182,15 +182,15 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-clipboard-list</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">Gesamt</div>
-                <div class="text-caption text-truncate">Erfasste Reparaturen</div>
+                <div class="text-title-large font-weight-bold text-truncate">Gesamt</div>
+                <div class="text-body-small text-truncate">Erfasste Reparaturen</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary?.total_repairs ?? '–' }}
               </div>
             </v-card-text>
@@ -202,18 +202,18 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-percent</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">Erfolgsquote</div>
-                <div class="text-caption text-truncate">Repariert / Beendet</div>
+                <div class="text-title-large font-weight-bold text-truncate">Erfolgsquote</div>
+                <div class="text-body-small text-truncate">Repariert / Beendet</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else-if="summary?.success_rate == null" class="text-h3 font-weight-bold">
+              <div v-else-if="summary?.success_rate == null" class="text-display-medium font-weight-bold">
                 –
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary.success_rate }} %
               </div>
             </v-card-text>
@@ -225,15 +225,15 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-clipboard-text-clock</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">Offen</div>
-                <div class="text-caption text-truncate">Wartet auf Start</div>
+                <div class="text-title-large font-weight-bold text-truncate">Offen</div>
+                <div class="text-body-small text-truncate">Wartet auf Start</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary?.open_repairs ?? '–' }}
               </div>
             </v-card-text>
@@ -245,15 +245,15 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-wrench-clock</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">In Bearbeitung</div>
-                <div class="text-caption text-truncate">Wird gerade repariert</div>
+                <div class="text-title-large font-weight-bold text-truncate">In Bearbeitung</div>
+                <div class="text-body-small text-truncate">Wird gerade repariert</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary?.in_progress_repairs ?? '–' }}
               </div>
             </v-card-text>
@@ -265,15 +265,15 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-check-circle</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">Abgeschlossen</div>
-                <div class="text-caption text-truncate">Erfolgreich beendet</div>
+                <div class="text-title-large font-weight-bold text-truncate">Abgeschlossen</div>
+                <div class="text-body-small text-truncate">Erfolgreich beendet</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary?.repaired_repairs ?? '–' }}
               </div>
             </v-card-text>
@@ -285,15 +285,15 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="36" class="mr-3">mdi-close-circle</v-icon>
               <div class="overflow-hidden">
-                <div class="text-h6 font-weight-bold text-truncate">Nicht Repariert</div>
-                <div class="text-caption text-truncate">Nicht möglich</div>
+                <div class="text-title-large font-weight-bold text-truncate">Nicht Repariert</div>
+                <div class="text-body-small text-truncate">Nicht möglich</div>
               </div>
             </v-card-title>
             <v-card-text>
               <div v-if="initialLoading" class="text-center">
                 <v-progress-circular indeterminate color="white" size="28" />
               </div>
-              <div v-else class="text-h3 font-weight-bold">
+              <div v-else class="text-display-medium font-weight-bold">
                 {{ summary?.not_repaired_repairs ?? '–' }}
               </div>
             </v-card-text>
@@ -308,8 +308,8 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="38" class="mr-3" color="primary">mdi-chart-line</v-icon>
               <div>
-                <div class="text-h5 font-weight-bold">Reparaturen über Zeit</div>
-                <div class="text-caption text-medium-emphasis">Kumulativer Verlauf</div>
+                <div class="text-headline-small font-weight-bold">Reparaturen über Zeit</div>
+                <div class="text-body-small text-medium-emphasis">Kumulativer Verlauf</div>
               </div>
             </v-card-title>
             <v-card-text>
@@ -329,8 +329,8 @@
             <v-card-title class="d-flex align-center">
               <v-icon size="38" class="mr-3" color="primary">mdi-podium</v-icon>
               <div>
-                <div class="text-h5 font-weight-bold">Top Kategorien</div>
-                <div class="text-caption text-medium-emphasis">Häufigste Reparaturarten</div>
+                <div class="text-headline-small font-weight-bold">Top Kategorien</div>
+                <div class="text-body-small text-medium-emphasis">Häufigste Reparaturarten</div>
               </div>
             </v-card-title>
             <v-card-text>
@@ -364,14 +364,14 @@
 
     <!-- PIN Unlock Dialog -->
     <v-dialog v-model="unlockDialog" max-width="420" transition="dialog-transition">
-      <v-card class="pa-6" rounded="lg" elevation="8">
+      <v-card class="pa-6" rounded="lg" elevation="5">
         <div class="d-flex align-center ga-3 mb-5">
           <v-avatar color="primary" variant="tonal" size="42" rounded="lg">
             <v-icon icon="mdi-dialpad" size="22" />
           </v-avatar>
           <div>
-            <div class="text-overline text-medium-emphasis lh-tight">Helferwechsel</div>
-            <h2 class="text-h6 font-weight-bold">PIN eingeben</h2>
+            <div class="text-label-medium text-medium-emphasis lh-tight">Helferwechsel</div>
+            <h2 class="text-title-large font-weight-bold">PIN eingeben</h2>
           </div>
           <v-spacer />
           <v-btn icon="mdi-close" variant="text" aria-label="PIN-Eingabe schließen" @click="closeUnlock" />

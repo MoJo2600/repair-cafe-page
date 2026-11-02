@@ -1,8 +1,8 @@
 <template>
     <v-container fluid class="pa-4">
-        <v-row align="center" class="mb-4">
+        <v-row class="mb-4 align-center">
             <v-col>
-                <h1 class="text-h5 font-weight-bold">Benutzerverwaltung</h1>
+                <h1 class="text-headline-small font-weight-bold">Benutzerverwaltung</h1>
             </v-col>
             <v-col cols="auto">
                 <v-btn color="primary" prepend-icon="mdi-account-plus" @click="openCreateDialog">
@@ -75,7 +75,7 @@ v-else icon="mdi-account-check" size="small" variant="text" density="compact" co
                         {{ formError }}
                     </v-alert>
                     <v-form ref="formRef" @submit.prevent="saveUser">
-                        <v-row dense>
+                        <v-row density="compact">
                             <v-col cols="12">
                                 <v-text-field
 v-model="form.username" label="Benutzername *"

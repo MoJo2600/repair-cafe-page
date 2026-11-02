@@ -3,24 +3,11 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
-import { VIconBtn } from 'vuetify/labs/VIconBtn'
-import {
-  VFileUpload,
-  VFileUploadDropzone,
-  VFileUploadItem,
-  VFileUploadList,
-} from 'vuetify/labs/VFileUpload'
 import '@mdi/font/css/materialdesignicons.css'
 
 export default createVuetify({
-  components: {
-    ...components,
-    VIconBtn,
-    VFileUpload,
-    VFileUploadDropzone,
-    VFileUploadItem,
-    VFileUploadList,
-  },
+  // VIconBtn and VFileUpload are core components since Vuetify 4
+  components,
   defaults: {
     VAutocomplete: {
       variant: 'outlined',

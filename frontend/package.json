@@ -23,7 +23,7 @@
     "vue": "^3.5.44",
     "vue-chartjs": "^5.3.4",
     "vue-router": "^5.4.0",
-    "vuetify": "^3.13.7"
+    "vuetify": "^4.3.1"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

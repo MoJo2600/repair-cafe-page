@@ -28,11 +28,11 @@
                         <template #item="{ props: itemProps, item }">
                             <v-list-item
                                 v-bind="itemProps"
-                                :title="`${item.raw.vorname} ${item.raw.nachname}`"
-                                :subtitle="item.raw.email"></v-list-item>
+                                :title="`${item.vorname} ${item.nachname}`"
+                                :subtitle="item.email"></v-list-item>
                         </template>
                         <template #selection="{ item }">
-                            {{ item.raw.vorname }} {{ item.raw.nachname }}
+                            {{ item.vorname }} {{ item.nachname }}
                         </template>
                     </v-autocomplete>
                 </v-form>

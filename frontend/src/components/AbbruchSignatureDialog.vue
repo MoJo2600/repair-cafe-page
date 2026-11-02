@@ -15,7 +15,7 @@
 
                 <v-divider class="my-4" />
 
-                <p class="text-body-2 text-medium-emphasis mb-3">
+                <p class="text-body-medium text-medium-emphasis mb-3">
                     Bitte hier unterschreiben zur Bestätigung:
                 </p>
 
@@ -26,7 +26,7 @@ ref="signatureCanvas" width="600" height="180"
                         @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing" @mouseleave="stopDrawing"
                         @touchstart="startDrawingTouch" @touchmove="drawTouch" @touchend="stopDrawing"></canvas>
                 </div>
-                <div v-if="signatureError" class="text-error text-caption mt-1">
+                <div v-if="signatureError" class="text-error text-body-small mt-1">
                     {{ signatureError }}
                 </div>
 

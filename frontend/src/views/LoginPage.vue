@@ -1,10 +1,10 @@
 <template>
   <section class="login-page bg-surface-variant d-flex align-center">
     <v-container fluid>
-      <v-row align="center" justify="center">
+      <v-row class="align-center justify-center">
         <v-col cols="12" sm="8" md="5" lg="4">
           <v-card elevation="4" rounded="lg">
-            <v-card-title class="text-h5 pa-6 pb-2">
+            <v-card-title class="text-headline-small pa-6 pb-2">
               <v-icon class="mr-2" color="primary">mdi-wrench</v-icon>
               RepairCafe
             </v-card-title>

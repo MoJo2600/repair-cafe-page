@@ -30,25 +30,25 @@
         <v-list-item :to="'/dashboard'" value="dashboard" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-view-dashboard" class="mb-1" />
-            <span class="text-caption">Dashboard</span>
+            <span class="text-body-small">Dashboard</span>
           </div>
         </v-list-item>
         <v-list-item :to="'/'" value="home" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-home" class="mb-1" />
-            <span class="text-caption">Reparaturen</span>
+            <span class="text-body-small">Reparaturen</span>
           </div>
         </v-list-item>
         <v-list-item :to="'/repairs'" value="list" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-format-list-bulleted" class="mb-1" />
-            <span class="text-caption">Reparaturliste</span>
+            <span class="text-body-small">Reparaturliste</span>
           </div>
         </v-list-item>
         <v-list-item :to="'/customers'" value="customers" class="text-center" min-height="64">
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-account-group" class="mb-1" />
-            <span class="text-caption">Kunden</span>
+            <span class="text-body-small">Kunden</span>
           </div>
         </v-list-item>
         <v-list-item
@@ -60,7 +60,7 @@
         >
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-account-cog" class="mb-1" />
-            <span class="text-caption">Benutzerverwaltung</span>
+            <span class="text-body-small">Benutzerverwaltung</span>
           </div>
         </v-list-item>
         <v-list-item
@@ -72,7 +72,7 @@
         >
           <div class="d-flex flex-column align-center justify-center py-1">
             <v-icon icon="mdi-cog" class="mb-1" />
-            <span class="text-caption">Einstellungen</span>
+            <span class="text-body-small">Einstellungen</span>
           </div>
         </v-list-item>
       </v-list>
@@ -84,7 +84,7 @@
             prepend-icon="mdi-account-circle"
             aria-label="Mein Profil"
           >
-            <v-list-item-title class="text-body-2 text-wrap">{{
+            <v-list-item-title class="text-body-medium text-wrap">{{
               currentUserName
             }}</v-list-item-title>
             <v-list-item-subtitle class="text-wrap">{{

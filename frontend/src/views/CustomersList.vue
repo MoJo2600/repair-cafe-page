@@ -1,9 +1,9 @@
 <template>
     <v-container fluid class="pa-4">
         <!-- Header -->
-        <v-row align="center" class="mb-4">
+        <v-row class="mb-4 align-center">
             <v-col>
-                <h1 class="text-h5 font-weight-bold">Kunden</h1>
+                <h1 class="text-headline-small font-weight-bold">Kunden</h1>
             </v-col>
             <v-col cols="auto">
                 <v-btn color="success" prepend-icon="mdi-account-plus" class="mr-2" @click="openCreateDialog">
@@ -16,14 +16,14 @@
         </v-row>
 
         <!-- Filter row -->
-        <v-row class="mb-2" align="center">
+        <v-row class="mb-2 align-center">
             <v-col cols="12" sm="4">
                 <v-text-field
 v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
                     clearable hide-details />
             </v-col>
             <v-spacer />
-            <v-col cols="auto" class="text-body-2 text-medium-emphasis">
+            <v-col cols="auto" class="text-body-medium text-medium-emphasis">
                 Gesamt: {{ customers.length }}
             </v-col>
         </v-row>
@@ -69,13 +69,13 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
         <!-- Create / Edit Dialog -->
         <v-dialog v-model="editDialog" max-width="500" persistent>
             <v-card>
-                <v-card-title class="text-h5">
+                <v-card-title class="text-headline-small">
                     <v-icon :icon="editedCustomer.id ? 'mdi-account-edit' : 'mdi-account-plus'" class="mr-2" />
                     {{ editedCustomer.id ? 'Kunde bearbeiten' : 'Neuer Kunde' }}
                 </v-card-title>
                 <v-card-text>
                     <v-form ref="editForm" v-model="editFormValid">
-                        <v-row dense>
+                        <v-row density="compact">
                             <v-col cols="12">
                                 <v-text-field
 v-model="editedCustomer.vorname" label="Vorname *"
@@ -112,7 +112,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
         <!-- Delete Confirmation Dialog -->
         <v-dialog v-model="deleteDialog" max-width="420">
             <v-card>
-                <v-card-title class="text-h6">
+                <v-card-title class="text-title-large">
                     <v-icon color="error" class="mr-2">mdi-account-remove</v-icon>
                     Kunden löschen?
                 </v-card-title>

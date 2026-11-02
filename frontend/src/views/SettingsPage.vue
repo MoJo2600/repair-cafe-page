@@ -1,8 +1,8 @@
 <template>
   <v-container fluid class="pa-4">
-    <v-row align="center" class="mb-4">
+    <v-row class="mb-4 align-center">
       <v-col>
-        <h1 class="text-h5 font-weight-bold">Einstellungen</h1>
+        <h1 class="text-headline-small font-weight-bold">Einstellungen</h1>
       </v-col>
     </v-row>
 
@@ -10,7 +10,7 @@
     <v-card class="mb-6">
       <v-card-title>Organisation</v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Name und Website der Organisation werden auf gedruckten Etiketten angezeigt.
         </p>
         <v-row class="ga-4">
@@ -49,13 +49,13 @@ v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
         <span>Haftungserklärung (Vorlage)</span>
       </v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie eine eigene PDF-Vorlage hoch. Die Datei muss die AcroForm-Felder
           <strong>date</strong> und <strong>signature</strong> enthalten. Feld
           <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
 color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
@@ -87,13 +87,13 @@ v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,applica
         <span>Abbruchbestätigung (Vorlage)</span>
       </v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie eine eigene PDF-Vorlage für den Reparaturabbruch hoch. Die Datei muss die
           AcroForm-Felder <strong>date</strong> und <strong>signature</strong> enthalten. Feld
           <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
 color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
@@ -123,11 +123,11 @@ v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,appli
     <v-card class="mb-6">
       <v-card-title>Logo / Icon</v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="auto">
             <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg" class="border" />
           </v-col>
@@ -230,7 +230,7 @@ v-model="form.name" label="Name *"
         <v-card-text>
           <span v-if="deletingItem?.category === 'repair_type'">
             Soll <strong>{{ deletingItem?.name }}</strong> wirklich gelöscht werden?<br />
-            <span class="text-caption text-medium-emphasis">
+            <span class="text-body-small text-medium-emphasis">
               Reparaturarten die bereits Reparaturen zugewiesen sind, können nicht gelöscht werden.
               Deaktivieren Sie diese stattdessen.
             </span>

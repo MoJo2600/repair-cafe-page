@@ -1,7 +1,7 @@
 <template>
   <v-container class="d-flex justify-center align-center" style="min-height: 80vh">
     <v-card max-width="800px" width="100%">
-      <v-card-title class="text-h5">Neue Reparatur erfassen</v-card-title>
+      <v-card-title class="text-headline-small">Neue Reparatur erfassen</v-card-title>
       <v-card-text>
         <v-stepper v-model="step" alt-labels>
           <v-stepper-header>
@@ -30,7 +30,7 @@
                 <!-- Customer search -->
                 <v-card variant="tonal" color="primary" class="mb-4">
                   <v-card-text>
-                    <div class="text-subtitle-2 mb-2">Bestehenden Kunden suchen</div>
+                    <div class="text-title-small mb-2">Bestehenden Kunden suchen</div>
                     <v-autocomplete
                       v-model:search="customerSearchQuery"
                       :items="customerSearchResults"
@@ -54,11 +54,11 @@
                       @update:search="onCustomerSearchInput"
                       @update:model-value="selectCustomer"
                     ></v-autocomplete>
-                    <div v-if="selectedCustomerId" class="text-caption text-success">
+                    <div v-if="selectedCustomerId" class="text-body-small text-success">
                       <v-icon size="x-small">mdi-check-circle</v-icon>
                       Kunde verknüpft · Felder wurden ausgefüllt
                     </div>
-                    <div v-else class="text-caption text-medium-emphasis">
+                    <div v-else class="text-body-small text-medium-emphasis">
                       Kein Kunde ausgewählt — beim Speichern wird ein neuer Eintrag erstellt
                     </div>
                   </v-card-text>
@@ -122,12 +122,12 @@
 
                 <!-- Photo Capture Section -->
                 <v-card class="mt-4">
-                  <v-card-title class="text-subtitle-1">
+                  <v-card-title class="text-body-large">
                     <v-icon class="mr-2">mdi-camera</v-icon>
                     Fotos des Geräts
                   </v-card-title>
                   <v-card-text>
-                    <p class="text-caption mb-3">
+                    <p class="text-body-small mb-3">
                       Nehmen Sie Fotos des Geräts auf, um den Zustand zu dokumentieren.
                     </p>
 
@@ -179,7 +179,7 @@
                     <!-- Captured photos gallery -->
                     <div v-if="devicePhotos.length > 0">
                       <v-divider class="mb-3"></v-divider>
-                      <div class="text-subtitle-2 mb-2">
+                      <div class="text-title-small mb-2">
                         Aufgenommene Fotos ({{ devicePhotos.length }})
                       </div>
                       <v-row>
@@ -199,7 +199,7 @@
                               @click="viewPhoto(photo)"
                             >
                               <template #placeholder>
-                                <v-row class="fill-height ma-0" align="center" justify="center">
+                                <v-row class="fill-height ma-0 align-center justify-center">
                                   <v-progress-circular
                                     indeterminate
                                     color="grey-lighten-5"
@@ -230,7 +230,7 @@
             <v-stepper-window-item :value="3">
               <v-form ref="step3Form" v-model="step3Valid">
                 <v-card class="mb-4">
-                  <v-card-title class="text-h6">Bedingungen</v-card-title>
+                  <v-card-title class="text-title-large">Bedingungen</v-card-title>
                   <v-card-text>
                     <iframe
                       src="/api/config/disclaimer"
@@ -258,7 +258,7 @@
 
                 <!-- Signature card -->
                 <v-card v-if="disclaimerMode === 'sign'" class="mb-4">
-                  <v-card-title class="text-h6">Unterschrift</v-card-title>
+                  <v-card-title class="text-title-large">Unterschrift</v-card-title>
                   <v-card-text>
                     <p class="mb-3">
                       Mit meiner Unterschrift bestätige ich die Bedingungen und bestätige die
@@ -288,7 +288,7 @@
                     <v-btn size="small" class="mt-2" @click="clearSignature">
                       Unterschrift löschen
                     </v-btn>
-                    <div v-if="signatureError" class="text-error text-caption mt-1">
+                    <div v-if="signatureError" class="text-error text-body-small mt-1">
                       {{ signatureError }}
                     </div>
                   </v-card-text>
@@ -296,7 +296,7 @@
 
                 <!-- Upload card -->
                 <v-card v-else class="mb-4">
-                  <v-card-title class="text-h6">PDF hochladen</v-card-title>
+                  <v-card-title class="text-title-large">PDF hochladen</v-card-title>
                   <v-card-text>
                     <p class="mb-3">
                       Laden Sie eine bereits unterschriebene Haftungsausschluss-PDF hoch:
@@ -326,18 +326,18 @@
               <v-card class="mb-4">
                 <v-card-text class="text-center pa-8">
                   <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>
-                  <h2 class="text-h4 mb-4">Reparatur erfolgreich erstellt!</h2>
+                  <h2 class="text-headline-large mb-4">Reparatur erfolgreich erstellt!</h2>
                   <v-divider class="my-4"></v-divider>
-                  <div class="text-h5 mb-2">Reparatur ID:</div>
-                  <div class="text-h3 font-weight-bold primary--text mb-4">
+                  <div class="text-headline-small mb-2">Reparatur ID:</div>
+                  <div class="text-display-medium font-weight-bold primary--text mb-4">
                     <router-link :to="`/edit/${createdRepairQrToken}`">{{ createdRepairId }}</router-link>
                   </div>
-                  <p class="text-body-1 mb-4">
+                  <p class="text-body-large mb-4">
                     Die Reparatur wurde erfolgreich im System erfasst. Sie können diese ID
                     verwenden, um den Status der Reparatur zu verfolgen.
                   </p>
                   <v-card class="mt-4 pa-4">
-                    <div class="text-subtitle-1 font-weight-bold mb-2">Nächste Schritte:</div>
+                    <div class="text-body-large font-weight-bold mb-2">Nächste Schritte:</div>
                     <v-list density="compact">
                       <v-list-item prepend-icon="mdi-printer">
                         <v-list-item-title
@@ -378,7 +378,7 @@
                     >
                       Etikett drucken
                     </v-btn>
-                    <div v-if="printLabelError" class="text-error text-caption mt-1">
+                    <div v-if="printLabelError" class="text-error text-body-small mt-1">
                       {{ printLabelError }}
                     </div>
                   </div>

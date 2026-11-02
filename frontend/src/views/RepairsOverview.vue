@@ -10,7 +10,7 @@
             <div class="d-flex align-center">
               <v-icon size="40" class="mr-3">mdi-tools</v-icon>
               <div>
-                <div class="text-h5">Nächste Reparatur</div>
+                <div class="text-headline-small">Nächste Reparatur</div>
               </div>
             </div>
             <v-btn
@@ -27,9 +27,9 @@
               <v-progress-circular indeterminate color="white"></v-progress-circular>
             </div>
             <div v-else-if="repairStore.nextRepair">
-              <div class="text-h3 font-weight-bold mb-2">ID: {{ repairStore.nextRepair.id }}</div>
+              <div class="text-display-medium font-weight-bold mb-2">ID: {{ repairStore.nextRepair.id }}</div>
               <v-divider class="my-3 opacity-50"></v-divider>
-              <div class="text-body-1">
+              <div class="text-body-large">
                 <div><strong>Gerät:</strong> {{ repairStore.nextRepair.geraet_art }}</div>
                 <div>
                   <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
@@ -38,7 +38,7 @@
                 <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}</div>
               </div>
             </div>
-            <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
+            <div v-else class="text-title-large">Keine offenen Reparaturen vorhanden</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -66,7 +66,7 @@
             </div>
             <div v-else-if="repairStore.inProgressRepairs.length === 0" class="text-center py-8">
               <v-icon size="64" color="grey">mdi-wrench-clock-outline</v-icon>
-              <p class="text-h6 mt-4">Keine Reparaturen in Bearbeitung</p>
+              <p class="text-title-large mt-4">Keine Reparaturen in Bearbeitung</p>
             </div>
             <v-list v-else>
               <v-list-item
@@ -77,10 +77,10 @@
               >
                 <template #prepend>
                   <v-avatar color="warning" class="mr-3">
-                    <span class="text-h6">{{ repair.id }}</span>
+                    <span class="text-title-large">{{ repair.id }}</span>
                   </v-avatar>
                 </template>
-                <v-list-item-title class="text-h6 mb-2">
+                <v-list-item-title class="text-title-large mb-2">
                   {{ repair.geraet_art }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
@@ -101,7 +101,7 @@
                     </div>
                     <div v-if="repairLogsMap[repair.id]?.length > 0" class="mt-2">
                       <v-divider class="mb-2"></v-divider>
-                      <div class="text-caption font-weight-bold mb-1">
+                      <div class="text-body-small font-weight-bold mb-1">
                         <v-icon size="small" class="mr-1">mdi-history</v-icon>
                         Letzter Eintrag:
                       </div>
@@ -164,7 +164,7 @@
             </div>
             <div v-else-if="repairStore.openRepairs.length === 0" class="text-center py-8">
               <v-icon size="64" color="grey">mdi-clipboard-text-off</v-icon>
-              <p class="text-h6 mt-4">Keine offenen Reparaturen</p>
+              <p class="text-title-large mt-4">Keine offenen Reparaturen</p>
             </div>
             <v-list v-else>
               <v-list-item
@@ -175,10 +175,10 @@
               >
                 <template #prepend>
                   <v-avatar color="primary" class="mr-3">
-                    <span class="text-h6">{{ repair.id }}</span>
+                    <span class="text-title-large">{{ repair.id }}</span>
                   </v-avatar>
                 </template>
-                <v-list-item-title class="text-h6 mb-2">
+                <v-list-item-title class="text-title-large mb-2">
                   {{ repair.geraet_art }}
                 </v-list-item-title>
                 <v-list-item-subtitle>

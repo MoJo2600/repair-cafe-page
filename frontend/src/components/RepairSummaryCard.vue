@@ -1,6 +1,6 @@
 <template>
   <v-card class="mb-4">
-    <v-card-title class="text-h5">
+    <v-card-title class="text-headline-small">
       <div class="d-flex justify-space-between align-center">
         <span>{{ repairData.geraet_art }} ({{ repairData.id }})</span>
         <div class="d-flex align-center gap-2">
@@ -16,39 +16,39 @@
     <v-card-text>
       <v-row>
         <v-col cols="12">
-          <div class="text-subtitle-2 text-grey-darken-1">Beschreibung des Defekts</div>
+          <div class="text-title-small text-grey-darken-1">Beschreibung des Defekts</div>
           <div>{{ repairData.defekt_besch }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Kategorie</div>
+          <div class="text-title-small text-grey-darken-1">Kategorie</div>
           <div>{{ repairData.repair_type?.name }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Geräte Art / Bezeichnung</div>
+          <div class="text-title-small text-grey-darken-1">Geräte Art / Bezeichnung</div>
           <div>{{ repairData.geraet_art }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Datum</div>
+          <div class="text-title-small text-grey-darken-1">Datum</div>
           <div>{{ formatDate(repairData.datum) }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Name</div>
+          <div class="text-title-small text-grey-darken-1">Name</div>
           <div>{{ repairData.customer?.vorname }} {{ repairData.customer?.nachname }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Telefon</div>
+          <div class="text-title-small text-grey-darken-1">Telefon</div>
           <div>{{ repairData.customer?.telefon || '-' }}</div>
         </v-col>
         <v-col cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Email</div>
+          <div class="text-title-small text-grey-darken-1">Email</div>
           <div>{{ repairData.customer?.email || '-' }}</div>
         </v-col>
         <v-col v-if="repairData.reparatur_dauer" cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Reparaturdauer</div>
+          <div class="text-title-small text-grey-darken-1">Reparaturdauer</div>
           <div>{{ repairData.reparatur_dauer }} Min.</div>
         </v-col>
         <v-col v-else-if="loggedDuration > 0" cols="6">
-          <div class="text-subtitle-2 text-grey-darken-1">Protokollierte Zeit</div>
+          <div class="text-title-small text-grey-darken-1">Protokollierte Zeit</div>
           <div>{{ loggedDuration }} Min.</div>
         </v-col>
         <template v-if="repairData.status === 'Repariert' || repairData.status === 'Nicht Repariert'">
@@ -56,20 +56,20 @@
             <v-divider class="my-3"></v-divider>
           </v-col>
           <v-col v-if="repairData.reparatur_besch" cols="6">
-            <div class="text-subtitle-2 text-grey-darken-1">
+            <div class="text-title-small text-grey-darken-1">
               {{ repairData.status === 'Repariert' ? 'Reparaturergebnis' : 'Begründung' }}
             </div>
             <div>{{ repairData.reparatur_besch }}</div>
           </v-col>
           <v-col v-if="repairData.status_detail" cols="6">
-            <div class="text-subtitle-2 text-grey-darken-1">Abschlussgrund</div>
+            <div class="text-title-small text-grey-darken-1">Abschlussgrund</div>
             <div>{{ repairData.status_detail }}</div>
           </v-col>
 
         </template>
         <v-col v-if="vdeTests && vdeTests.length > 0" cols="12">
           <v-divider class="my-3"></v-divider>
-          <div class="text-subtitle-2 text-grey-darken-1 mb-2">Letztes Test Ergebnis nach VDE</div>
+          <div class="text-title-small text-grey-darken-1 mb-2">Letztes Test Ergebnis nach VDE</div>
           <v-alert
 v-for="test in vdeTests" :key="test.id" :type="test.gesamtergebnis === true ? 'success' : 'error'"
             variant="tonal" density="compact" class="mb-2">
@@ -78,11 +78,11 @@ v-for="test in vdeTests" :key="test.id" :type="test.gesamtergebnis === true ? 's
                 <strong>{{
                   test.gesamtergebnis === true ? '✓ Bestanden' : '⚠ Nicht bestanden'
                 }}</strong>
-                <span class="ml-2 text-caption">{{ formatDateTime(test.created_at) }}</span>
-                <div class="text-caption mt-1">
+                <span class="ml-2 text-body-small">{{ formatDateTime(test.created_at) }}</span>
+                <div class="text-body-small mt-1">
                   Prüfer: {{ test.prufer }} | Gerät: {{ test.pruefgeraet_name || '-' }}
                 </div>
-                <div v-if="test.bemerkungen" class="text-caption mt-1">
+                <div v-if="test.bemerkungen" class="text-body-small mt-1">
                   {{ test.bemerkungen }}
                 </div>
               </div>
