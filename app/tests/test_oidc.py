@@ -81,6 +81,16 @@ def test_login_redirects_with_prompt_login(client, sso):
     }
 
 
+def test_login_behind_cloudflare_access_skips_prompt(client, sso):
+    resp = client.get(
+        "/api/auth/oidc/login", headers={"Cf-Access-Jwt-Assertion": "eyJ.x.y"}
+    )
+    assert resp.status_code == 302
+    assert sso.last_authorize_kwargs == {
+        "redirect_uri": "https://reparaturen.example/api/auth/oidc/callback",
+    }
+
+
 def test_callback_creates_user_and_logs_in(client, sso):
     client.get("/api/auth/oidc/login?next=/repairs")
     resp = _sso_login(client, sso)

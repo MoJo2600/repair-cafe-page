@@ -107,8 +107,13 @@ def oidc_login():
             mimetype="application/json",
         )
     session["oidc_next"] = _safe_next(request.args.get("next"))
+    # Shared workshop PCs must re-authenticate (prompt=login). Requests that
+    # passed Cloudflare Access already logged in at the provider moments ago,
+    # so reuse that session instead of asking for the password twice. A forged
+    # header only skips the prompt in the forger's own browser.
+    kwargs = {} if request.headers.get("Cf-Access-Jwt-Assertion") else {"prompt": "login"}
     return current_app.extensions["oidc_client"].authorize_redirect(
-        _redirect_uri(), prompt="login"
+        _redirect_uri(), **kwargs
     )
 
 
