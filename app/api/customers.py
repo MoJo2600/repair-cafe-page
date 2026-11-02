@@ -7,6 +7,7 @@ import json
 from flask import Blueprint, Response, current_app, request
 from sqlalchemy import func, or_
 
+from app.auth.decorators import admin_required
 from app.extensions import db
 from app.models import Customer, Repair
 from app.schemas import (
@@ -66,7 +67,7 @@ def api_list_customers():
     except Exception as e:
         current_app.logger.error(f"Error listing customers: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -114,7 +115,7 @@ def api_search_customers():
     except Exception as e:
         current_app.logger.error(f"Error searching customers: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -143,7 +144,7 @@ def api_create_customer(validated_data: CustomerCreate):
         db.session.rollback()
         current_app.logger.error(f"Error creating customer: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -165,7 +166,7 @@ def api_get_customer(customer_id: int):
             f"Error getting customer {customer_id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -194,13 +195,14 @@ def api_update_customer(validated_data: CustomerCreate, customer_id: int):
             f"Error updating customer {customer_id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
 
 
 @customers_bp.route("/customers/<int:customer_id>", methods=["DELETE"])
+@admin_required
 def api_delete_customer(customer_id: int):
     """Delete a customer (sets customer_id to NULL on linked repairs)."""
     try:
@@ -220,7 +222,7 @@ def api_delete_customer(customer_id: int):
             f"Error deleting customer {customer_id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

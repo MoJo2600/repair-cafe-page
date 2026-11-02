@@ -147,6 +147,13 @@ class BaseConfig:
     PIN_MAX_FAILED_GLOBAL = int(os.environ.get("PIN_MAX_FAILED_GLOBAL", "15"))
     PIN_RATE_WINDOW_MINUTES = int(os.environ.get("PIN_RATE_WINDOW_MINUTES", "15"))
 
+    # Password login limits (failed attempts within the rate window). Checked
+    # per client IP and per username; kept in memory, so with several gunicorn
+    # workers each worker counts separately.
+    LOGIN_MAX_FAILED_PER_IP = int(os.environ.get("LOGIN_MAX_FAILED_PER_IP", "10"))
+    LOGIN_MAX_FAILED_PER_USER = int(os.environ.get("LOGIN_MAX_FAILED_PER_USER", "5"))
+    LOGIN_RATE_WINDOW_MINUTES = int(os.environ.get("LOGIN_RATE_WINDOW_MINUTES", "15"))
+
     # Label printer (CUPS via mounted socket /run/cups/cups.sock)
     LABEL_PRINTER_ENABLED = os.environ.get(
         "LABEL_PRINTER_ENABLED", "false"

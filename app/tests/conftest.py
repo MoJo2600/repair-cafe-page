@@ -71,3 +71,13 @@ def helper_client(client, helper_user):
     )
     assert resp.status_code == 200
     return client
+
+
+
+def login_as(client, username, password="secret"):
+    """Log the client in as another user. Tests share one app context, and
+    Flask-Login caches the user in it, so switch users on one client instead
+    of using several clients side by side."""
+    resp = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert resp.status_code == 200
+    return client

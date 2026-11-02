@@ -51,3 +51,17 @@ def admin_required(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+def may_delete(owner_id):
+    """Admins may delete any record, other users only the ones they created."""
+    user = flask_login.current_user
+    return user.is_admin or (owner_id is not None and owner_id == user.id)
+
+
+def forbidden(message):
+    return Response(
+        json.dumps({"reply": "error", "error": message}),
+        status=403,
+        mimetype="application/json",
+    )

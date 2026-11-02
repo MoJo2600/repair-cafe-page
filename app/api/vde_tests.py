@@ -77,7 +77,7 @@ def api_list_vde_tests(repair_id):
     except Exception as e:
         current_app.logger.error(f"Error listing VDE tests: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -168,7 +168,7 @@ def api_create_vde_test(repair_id):
         db.session.rollback()
         current_app.logger.error(f"Error creating VDE test: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -224,7 +224,7 @@ def api_get_vde_test(repair_id, test_id):
     except Exception as e:
         current_app.logger.error(f"Error getting VDE test: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -264,7 +264,7 @@ def api_get_vde_test_pdf(repair_id, test_id):
     except Exception as e:
         current_app.logger.error(f"Error generating VDE PDF: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

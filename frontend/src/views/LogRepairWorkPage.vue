@@ -268,6 +268,7 @@
                         @click.stop
                       ></v-btn>
                       <v-btn
+                        v-if="canDelete(att.uploaded_by_id)"
                         icon="mdi-delete"
                         variant="text"
                         size="small"
@@ -653,6 +654,7 @@
         </v-card-text>
         <v-card-actions>
           <v-btn
+            v-if="canDelete(repairLogs.find((l) => l.id === editingLogId)?.user_id)"
             color="error"
             variant="text"
             prepend-icon="mdi-delete"
@@ -865,6 +867,11 @@ const editLogDialog = ref(false)
 const editLogFormValid = ref(false)
 const editLogSaving = ref(false)
 const editingLogId = ref<number | null>(null)
+
+// Same rule as the API: admins delete everything, others only their own entries.
+function canDelete(ownerId?: number | null) {
+  return authStore.isAdmin || (ownerId != null && ownerId === authStore.currentUser?.id)
+}
 const editLogForm = ref<{
   validate: () => Promise<{ valid: boolean }>
   resetValidation?: () => void

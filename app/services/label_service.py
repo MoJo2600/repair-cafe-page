@@ -179,7 +179,8 @@ class LabelService:
         except FileNotFoundError:
             return {"reply": "error", "error": "lp not found — install cups-client: sudo apt-get install cups-client"}
         except Exception as exc:
-            return {"reply": "error", "error": str(exc)}
+            logger.warning("Label printing for repair %s failed: %s", repair_id, exc)
+            return {"reply": "error", "error": "Label printing failed, see the server log"}
         finally:
             if tmp_path:
                 try:

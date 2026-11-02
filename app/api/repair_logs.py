@@ -6,6 +6,7 @@ import json
 
 from flask import Blueprint, Response, current_app
 
+from app.auth.decorators import forbidden, may_delete
 from app.extensions import db
 from app.models import Repair, RepairLog
 from app.schemas import (
@@ -76,7 +77,7 @@ def api_list_repair_logs(repair_id):
     except Exception as e:
         current_app.logger.error(f"Error listing repair logs: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -156,7 +157,7 @@ def api_create_repair_log(validated_data, repair_id):
         db.session.rollback()
         current_app.logger.error(f"Error creating repair log: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -220,7 +221,7 @@ def api_get_repair_log(repair_id, log_id):
     except Exception as e:
         current_app.logger.error(f"Error getting repair log: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -270,7 +271,7 @@ def api_update_repair_log(validated_data, repair_id, log_id):
             f"Error updating repair log {log_id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -298,6 +299,8 @@ def api_delete_repair_log(repair_id, log_id):
     responses:
       200:
         description: Repair log deleted successfully
+      403:
+        description: Not an admin and not the creator
       404:
         description: Repair log not found
       500:
@@ -311,6 +314,8 @@ def api_delete_repair_log(repair_id, log_id):
                 status=404,
                 mimetype="application/json",
             )
+        if not may_delete(log.user_id):
+            return forbidden("Only admins can delete other users' log entries")
 
         # Subtract this log's duration from the repair total
         if log.reparatur_dauer:
@@ -334,7 +339,7 @@ def api_delete_repair_log(repair_id, log_id):
             f"Error deleting repair log {log_id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

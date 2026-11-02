@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw
 
 from app.extensions import db
 from app.models import Repair, Setting
-from app.tests.conftest import _make_user
+from app.tests.conftest import _make_user, login_as
 
 
 def _make_signature_b64() -> str:
@@ -192,8 +192,9 @@ def test_attachments_unified_log_link_svg_blocked_and_delete_cleanup(
     attach_dir = Path(app.config["DATA_DIR"]) / "attachments" / str(repair_id)
     assert attach_dir.exists()
 
-    # Deleting the repair removes the attachment directory on disk
-    del_resp = helper_client.delete(f"/api/repairs/{repair_id}")
+    # Deleting the repair (admins only) removes the attachment directory on disk
+    _make_user("admin_user", is_admin=True)
+    del_resp = login_as(helper_client, "admin_user").delete(f"/api/repairs/{repair_id}")
     assert del_resp.status_code == 200
     assert not attach_dir.exists()
 

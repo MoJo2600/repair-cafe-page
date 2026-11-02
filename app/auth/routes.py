@@ -3,7 +3,6 @@ Authentication routes blueprint — DB-backed Flask-Login with session cookies.
 """
 
 import json
-from urllib.parse import urlsplit
 
 import flask_login
 from flask import Blueprint, Response, current_app, request
@@ -29,6 +28,7 @@ from app.schemas import (
     RepairsTimelinePoint,
 )
 from app.schemas import UserResponse as UserResponseSchema
+from app.services.login_rate_limit import client_ip, login_limiter
 from app.services.pin_service import PinError, generate_pin, require_pin_mode
 from app.services.pin_unlock_service import (
     PinSessionRevoked,
@@ -81,19 +81,37 @@ def api_login():
         description: Invalid credentials
       403:
         description: Account disabled
+      429:
+        description: Too many failed logins
     """
     body, err = parse_request(LoginRequest)
     if err:
         return err
     assert body is not None
 
+    # Checked before the password, so a blocked attempt reveals nothing.
+    limiter, ip = login_limiter(), client_ip()
+    retry_after = limiter.retry_after(ip, body.username)
+    if retry_after:
+        current_app.logger.warning(
+            "Password login blocked for '%s' from %s (too many failures)", body.username, ip
+        )
+        return Response(
+            json.dumps({"reply": "error", "error": "Too many failed logins, try again later"}),
+            status=429,
+            mimetype="application/json",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     user = DBUser.query.filter_by(username=body.username).first()
     if not user or not check_password_hash(user.password_hash, body.password):
+        limiter.record_failure(ip, body.username)
         return Response(
             json.dumps({"reply": "error", "error": "Invalid credentials"}),
             status=401,
             mimetype="application/json",
         )
+    limiter.reset_user(body.username)
 
     if not user.is_active:
         return Response(
@@ -182,8 +200,6 @@ def api_logout():
       401:
         description: Not authenticated
     """
-    if not _same_origin_request():
-        return _pin_error("Cross-site session changes are not allowed", 403)
     username = (
         flask_login.current_user.username
         if flask_login.current_user.is_authenticated
@@ -252,8 +268,6 @@ def api_pin_lock():
       401:
         description: Primary login required
     """
-    if not _same_origin_request():
-        return _pin_error("Cross-site session changes are not allowed", 403)
     if not pin_unlock_available():
         return _pin_error(_WORKSHOP_ONLY, 403)
     grant = _get_pin_session()
@@ -281,8 +295,6 @@ def api_pin_activity():
       423:
         description: Session has expired and is locked
     """
-    if not _same_origin_request():
-        return _pin_error("Cross-site session changes are not allowed", 403)
     grant = _get_pin_session()
     if isinstance(grant, Response):
         return grant
@@ -322,8 +334,6 @@ def api_pin_unlock():
       423:
         description: Session is not locked
     """
-    if not _same_origin_request():
-        return _pin_error("Cross-site session changes are not allowed", 403)
     if not pin_unlock_available():
         return _pin_error(_WORKSHOP_ONLY, 403)
     grant = _get_pin_session()
@@ -479,29 +489,6 @@ def _get_pin_session():
 _WORKSHOP_ONLY = "PIN unlock is only available in the workshop network"
 
 
-def _same_origin_request() -> bool:
-    origin = request.headers.get("Origin")
-    if origin:
-        source = urlsplit(origin)
-        allowed = [urlsplit(request.host_url)]
-        if current_app.config.get("PUBLIC_URL"):
-            allowed.append(urlsplit(current_app.config["PUBLIC_URL"]))
-        if not any(
-            (source.scheme, source.netloc) == (target.scheme, target.netloc)
-            for target in allowed
-        ):
-            request_origin = urlsplit(request.host_url)
-            development_proxy = (
-                current_app.debug
-                and source.scheme == request_origin.scheme
-                and source.hostname == request_origin.hostname
-                and source.hostname in {"localhost", "127.0.0.1", "::1"}
-            )
-            if not development_proxy:
-                return False
-    return request.headers.get("Sec-Fetch-Site") != "cross-site"
-
-
 @auth_bp.route("/auth/me/pin", methods=["GET"])
 @login_required_api
 def api_pin_status():
@@ -571,8 +558,6 @@ def api_generate_pin():
       503:
         description: PIN allocation unavailable
     """
-    if not _same_origin_request():
-        return _pin_error("Cross-site PIN changes are not allowed", 403)
     if not request.is_json:
         return _pin_error("A JSON request body is required", 400)
     if not isinstance(request.get_json(silent=True), dict):

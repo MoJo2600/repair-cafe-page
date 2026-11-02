@@ -13,7 +13,10 @@ RUN pnpm build
 # Vite outputs to dist/ (the standard location) inside the WORKDIR /build.
 
 # ── Stage 2: nginx serves the SPA ─────────────────────────────────────────────
-FROM nginx:alpine
+# Runs as the unprivileged nginx user. Port 80 still works without root because
+# Docker sets net.ipv4.ip_unprivileged_port_start=0 in containers, so NPM keeps
+# forwarding to frontend:80.
+FROM nginxinc/nginx-unprivileged:alpine
 
 # Copy Vite output to nginx's default html root
 COPY --from=frontend-builder /build/dist /usr/share/nginx/html
@@ -21,5 +24,6 @@ COPY --from=frontend-builder /build/dist /usr/share/nginx/html
 # Replace nginx default site config with ours.
 # The official nginx:alpine Docker image loads from conf.d/ (not http.d/).
 COPY nginx.frontend.conf /etc/nginx/conf.d/default.conf
+COPY nginx.security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 EXPOSE 80

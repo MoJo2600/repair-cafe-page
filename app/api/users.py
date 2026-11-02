@@ -30,7 +30,7 @@ def api_list_users():
     except Exception as e:
         current_app.logger.error(f"Error listing users: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -102,7 +102,7 @@ def api_create_user():
         db.session.rollback()
         current_app.logger.error(f"Error creating user: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -172,7 +172,7 @@ def api_update_user(user_id):
         db.session.rollback()
         current_app.logger.error(f"Error updating user: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -201,7 +201,7 @@ def api_delete_user(user_id):
         db.session.rollback()
         current_app.logger.error(f"Error deactivating user: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

@@ -48,7 +48,7 @@ def parse_request(schema_class):
     except Exception as e:
         logger.error(f"Unexpected validation error: {e}", exc_info=True)
         return None, Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -110,7 +110,7 @@ def validate_request(schema_class):
                     f"Unexpected error in validation decorator: {e}", exc_info=True
                 )
                 return Response(
-                    json.dumps({"reply": "error", "error": str(e)}),
+                    json.dumps({"reply": "error", "error": "Internal Server Error"}),
                     status=500,
                     mimetype="application/json",
                 )
@@ -152,7 +152,7 @@ def serialize_response(data, schema_class=None, status=200):
     except Exception as e:
         logger.error(f"Error serializing response: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": f"Serialization error: {str(e)}"}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

@@ -149,8 +149,9 @@ def _handle_pdf_template_upload(store_path: Path, pdf_service, label: str) -> Re
         field_names = {w.field_name for w in (page.widgets() or [])}
         doc.close()
     except Exception as e:
+        current_app.logger.warning("Uploaded PDF template could not be read: %s", e)
         return Response(
-            json.dumps({"reply": "error", "error": f"Could not read PDF: {e}"}),
+            json.dumps({"reply": "error", "error": "Could not read PDF"}),
             status=400,
             mimetype="application/json",
         )

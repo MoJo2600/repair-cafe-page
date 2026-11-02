@@ -6,7 +6,6 @@ where stored_filename is a UUID + original extension (guaranteed unique).
 """
 
 import json
-import mimetypes
 import shutil
 import uuid
 from pathlib import Path
@@ -16,15 +15,28 @@ from flask import Blueprint, Response, current_app, request
 from flask import send_file as flask_send_file
 from werkzeug.utils import secure_filename
 
+from app.auth.decorators import forbidden, may_delete
 from app.extensions import db
 from app.models import ATTACHMENT_TYPES, Repair, RepairAttachment, RepairLog
 from app.schemas import RepairAttachmentListResponse, RepairAttachmentResponse
 
 attachments_bp = Blueprint("attachments", __name__)
 
-# Allowed MIME types — SVG is excluded to prevent stored XSS when served inline
-_ALLOWED_MIME_PREFIXES = ("image/", "application/pdf", "video/")
-_DISALLOWED_MIMES = {"image/svg+xml"}
+# Allowed types with the extension used on disk. The type is detected from the
+# file content; the client's Content-Type and file name are not trusted.
+_ALLOWED_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/heic": ".heic",
+    "application/pdf": ".pdf",
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+    "video/webm": ".webm",
+}
+# Served inline; everything else is sent as a download.
+_INLINE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+_HEIC_BRANDS = {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"mif1", b"msf1"}
 _MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB per file
 
 
@@ -45,17 +57,32 @@ def cleanup_repair_attachments(repair_id: int) -> None:
             )
 
 
-def _make_stored_filename(original: str) -> str:
-    """Return a UUID-based filename with the original extension."""
-    ext = Path(secure_filename(original)).suffix.lower()
-    return f"{uuid.uuid4().hex}{ext}"
+def _make_stored_filename(content_type: str) -> str:
+    """Return a UUID-based filename with the extension of the detected type."""
+    return f"{uuid.uuid4().hex}{_ALLOWED_TYPES[content_type]}"
 
 
-def _is_allowed_mime(content_type: str) -> bool:
-    normalized = content_type.split(";")[0].strip().lower()
-    if normalized in _DISALLOWED_MIMES:
-        return False
-    return any(normalized.startswith(p) for p in _ALLOWED_MIME_PREFIXES)
+def _detect_type(head: bytes) -> str | None:
+    """Return the allowed MIME type matching the file's magic bytes, or None."""
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    if head.startswith(b"%PDF-"):
+        return "application/pdf"
+    if head.startswith(b"\x1a\x45\xdf\xa3"):
+        return "video/webm"
+    if head[4:8] == b"ftyp":
+        brand = head[8:12]
+        if brand in _HEIC_BRANDS:
+            return "image/heic"
+        if brand == b"qt  ":
+            return "video/quicktime"
+        if not brand.startswith(b"M4A") and not brand.startswith(b"M4B"):
+            return "video/mp4"
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +164,7 @@ def api_list_repair_attachments(repair_id):
     except Exception as e:
         current_app.logger.error(f"Error listing attachments: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -246,29 +273,39 @@ def api_upload_repair_attachments(repair_id):
         dest_dir = _attachment_dir(repair_id)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        created = []
+        # Check every file before saving any, so a rejected upload stores nothing.
+        uploads = []
         for f in files:
             if f.filename == "":
                 continue
-
-            # Detect content type — fall back to stream sniff if absent
-            ct = f.content_type or mimetypes.guess_type(f.filename)[0] or "application/octet-stream"
-            if not _is_allowed_mime(ct):
+            ct = _detect_type(f.stream.read(16))
+            f.stream.seek(0)
+            if ct is None:
                 return Response(
-                    json.dumps({"reply": "error", "error": f"File type not allowed: {ct}"}),
+                    json.dumps({
+                        "reply": "error",
+                        "error": "File type not allowed (JPEG, PNG, WebP, HEIC, PDF, MP4, MOV, WebM)",
+                    }),
                     status=400,
                     mimetype="application/json",
                 )
+            uploads.append((f, ct))
 
+        created = []
+        saved_paths = []
+        for f, ct in uploads:
             original = secure_filename(f.filename)
-            stored = _make_stored_filename(original)
+            stored = _make_stored_filename(ct)
             dest_path = dest_dir / stored
 
             f.save(str(dest_path))
+            saved_paths.append(dest_path)
             size = dest_path.stat().st_size
 
             if size > _MAX_FILE_SIZE:
-                dest_path.unlink(missing_ok=True)
+                db.session.rollback()
+                for path in saved_paths:
+                    path.unlink(missing_ok=True)
                 return Response(
                     json.dumps({"reply": "error", "error": f"File too large (max {_MAX_FILE_SIZE // (1024*1024)} MB)"}),
                     status=400,
@@ -303,7 +340,7 @@ def api_upload_repair_attachments(repair_id):
         db.session.rollback()
         current_app.logger.error(f"Error uploading attachments: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -362,16 +399,24 @@ def api_get_repair_attachment(repair_id, attachment_id):
                 mimetype="application/json",
             )
 
-        return flask_send_file(
+        # Older rows hold the client-supplied type; serve anything unexpected
+        # as an opaque download.
+        content_type = attachment.content_type
+        if content_type not in _ALLOWED_TYPES:
+            content_type = "application/octet-stream"
+        response = flask_send_file(
             str(file_path),
-            mimetype=attachment.content_type,
-            as_attachment=False,
+            mimetype=content_type,
+            as_attachment=content_type not in _INLINE_TYPES,
             download_name=attachment.original_filename,
         )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Security-Policy"] = "sandbox"
+        return response
     except Exception as e:
         current_app.logger.error(f"Error serving attachment: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -406,6 +451,8 @@ def api_delete_repair_attachment(repair_id, attachment_id):
     responses:
       200:
         description: Attachment deleted
+      403:
+        description: Not an admin and not the creator
       404:
         description: Attachment not found
       500:
@@ -421,6 +468,8 @@ def api_delete_repair_attachment(repair_id, attachment_id):
                 status=404,
                 mimetype="application/json",
             )
+        if not may_delete(attachment.uploaded_by_id):
+            return forbidden("Only admins can delete other users' attachments")
 
         file_path = _attachment_dir(repair_id) / attachment.stored_filename
         try:
@@ -440,7 +489,7 @@ def api_delete_repair_attachment(repair_id, attachment_id):
         db.session.rollback()
         current_app.logger.error(f"Error deleting attachment: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

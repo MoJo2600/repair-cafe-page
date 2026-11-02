@@ -69,3 +69,37 @@ def test_admin_endpoints_reject_helpers(helper_client, method, url):
 def test_cors_disabled_by_default(client):
     resp = client.get("/api/healthz", headers={"Origin": "https://evil.example"})
     assert "Access-Control-Allow-Origin" not in resp.headers
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Origin": "https://wiki.repaircafe-hemau.de"},
+        {"Origin": "null"},
+        {"Sec-Fetch-Site": "cross-site"},
+    ],
+)
+@pytest.mark.parametrize(
+    "method,url",
+    [("POST", "/api/repairs"), ("PUT", "/api/repairs/1"), ("DELETE", "/api/repairs/1")],
+)
+def test_cross_site_writes_are_rejected(helper_client, method, url, headers):
+    resp = helper_client.open(url, method=method, json={}, headers=headers)
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "Cross-site requests are not allowed"
+
+
+def test_cross_site_login_is_rejected(client, helper_user):
+    resp = client.post(
+        "/api/auth/login",
+        json={"username": "helfer", "password": "secret"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert resp.status_code == 403
+
+
+def test_same_origin_write_and_cross_site_read_are_allowed(helper_client):
+    origin = {"Origin": "http://localhost"}
+    assert helper_client.post("/api/repairs", json={}, headers=origin).status_code == 400
+    cross = {"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"}
+    assert helper_client.get("/api/list", headers=cross).status_code == 200

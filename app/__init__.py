@@ -22,6 +22,10 @@ from app.extensions import (
     scheduler,
 )
 from app.imports.lokilogger import lokilog
+from app.services.login_rate_limit import LoginRateLimiter
+
+MIN_SECRET_KEY_LENGTH = 32
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 def create_app(config_name=None):
@@ -58,6 +62,17 @@ def create_app(config_name=None):
                 "SECRET_KEY environment variable must be set in production. "
                 "Set FLASK_SECRET_KEY in your .env file."
             )
+    # Production must not run with the .env.example placeholder or a short key:
+    # it signs sessions and keys the PIN hashes.
+    elif not config.DEBUG and (
+        app.config["SECRET_KEY"].startswith("change_me")
+        or len(app.config["SECRET_KEY"]) < MIN_SECRET_KEY_LENGTH
+    ):
+        raise RuntimeError(
+            f"FLASK_SECRET_KEY must be a random value of at least "
+            f"{MIN_SECRET_KEY_LENGTH} characters in production. "
+            "Generate one with: openssl rand -hex 32"
+        )
 
     # Configure logging
     log_level = logging.DEBUG if config.DEBUG else logging.INFO
@@ -167,6 +182,7 @@ def create_app(config_name=None):
     # Register blueprints
     register_blueprints(app)
     register_auth_guard(app)
+    app.extensions["login_rate_limiter"] = LoginRateLimiter()
 
     # Register error handlers
     register_error_handlers(app)
@@ -253,6 +269,7 @@ def register_auth_guard(app):
 
     import flask_login
     from flask import Response, request
+    from app.auth.csrf import same_origin_request
     from app.services.pin_unlock_service import (
         current_pin_session,
         end_browser_session,
@@ -268,6 +285,18 @@ def register_auth_guard(app):
         "auth.api_pin_dashboard_summary",
         "auth.api_logout",
     }
+
+    @app.before_request
+    def reject_cross_site_writes():
+        if request.method not in UNSAFE_METHODS or not request.path.startswith("/api/"):
+            return None
+        if same_origin_request():
+            return None
+        return Response(
+            json.dumps({"reply": "error", "error": "Cross-site requests are not allowed"}),
+            status=403,
+            mimetype="application/json",
+        )
 
     @app.before_request
     def require_login_for_api():

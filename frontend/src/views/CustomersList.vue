@@ -50,7 +50,7 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
 icon="mdi-pencil" size="small" variant="text" density="compact"
                         @click.stop="openEditDialog(item)" />
                     <v-btn
-icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="compact" color="error"
                         @click.stop="openDeleteDialog(item.id)" />
                 </template>
 
@@ -139,8 +139,10 @@ import { ref, onMounted } from 'vue'
 import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const customers = ref<CustomerResponse[]>([])
 const loading = ref(false)

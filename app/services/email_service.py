@@ -94,4 +94,4 @@ class EmailService:
             return {"reply": "done", "recipient": self.receiver}
         except Exception as e:
             print(f"Error sending email: {e}")
-            return {"reply": "error", "error": str(e)}
+            return {"reply": "error", "error": "Sending the email failed"}

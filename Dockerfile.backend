@@ -30,7 +30,13 @@ RUN chmod +x /srv/app/reset_admin_password.py \
 # Persistent data & config directory defaults for container runtime
 ENV DATA_DIR=/data \
     CONFIG_DIR=/config
-RUN mkdir -p /data
+
+# Run without root. uid 1000 matches the host owner of the bind-mounted data
+# directory; an existing directory with root-owned files needs a one-time
+# `chown -R 1000:1000` on the host.
+RUN useradd --uid 1000 --user-group --create-home --shell /usr/sbin/nologin app \
+  && mkdir -p /data && chown app:app /data
+USER app
 
 # Gunicorn listens on 5000; only exposed to the internal Docker network.
 EXPOSE 5000

@@ -11,6 +11,7 @@ from flask import Blueprint, Response, current_app, request, send_file
 from sqlalchemy.orm import joinedload
 
 from app.api.attachments import cleanup_repair_attachments
+from app.auth.decorators import admin_required
 from app.extensions import db
 from app.models import Customer, Repair, Setting
 from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate, RepairsTimelinePoint, RepairsTimelineResponse
@@ -72,7 +73,7 @@ def api_list_repairs():
         current_app.logger.error(f"Error in /api/list endpoint: {e}", exc_info=True)
 
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -125,7 +126,7 @@ def api_get_repair_by_token(token):
     except Exception as e:
         current_app.logger.error(f"Error getting repair by token: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -244,13 +245,14 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
         db.session.rollback()
         current_app.logger.error(f"Error updating repair {id}: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
 
 
 @repairs_bp.route("/repairs/<int:id>", methods=["DELETE"])
+@admin_required
 def api_delete_repair(id: int):
     """Delete a repair record and its associated files on disk."""
     try:
@@ -274,7 +276,7 @@ def api_delete_repair(id: int):
         db.session.rollback()
         current_app.logger.error(f"Error deleting repair {id}: {e}", exc_info=True)
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -412,7 +414,7 @@ def api_create_repair(validated_data: RepairCreate):
         # except Exception:
         #     pass
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -463,7 +465,7 @@ def api_upload_disclaimer(id: int):
             f"Error uploading disclaimer for repair {id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -534,7 +536,7 @@ def api_get_disclaimer(id: int):
             f"Error serving disclaimer for repair {id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -647,7 +649,7 @@ def api_create_or_upload_cancellation(id: int):
             exc_info=True,
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -703,7 +705,7 @@ def api_get_cancellation(id: int):
             f"Error serving cancellation PDF for repair {id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )
@@ -776,7 +778,7 @@ def api_print_label(id: int):
             f"Error printing label for repair {id}: {e}", exc_info=True
         )
         return Response(
-            json.dumps({"reply": "error", "error": str(e)}),
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,
             mimetype="application/json",
         )

@@ -102,7 +102,7 @@
 v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
             :loading="printingLabelId === item.id" @click.stop="printLabel(item.id)" />
           <v-btn
-icon="mdi-delete" size="small" variant="text" density="compact" color="error"
+v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="compact" color="error"
             @click.stop="deleteRepair(item.id)" />
         </template>
 
@@ -261,6 +261,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { RepairsService } from '@/api/services/RepairsService'
 import { ConfigService } from '@/api/services/ConfigService'
 import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 import type { Repair } from '@/api/types'
 import { formatDate, formatDateTime } from '@/utils/date'
 import {
@@ -280,6 +281,7 @@ type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const repairs = ref<Repair[]>([])
 const loading = ref(false)

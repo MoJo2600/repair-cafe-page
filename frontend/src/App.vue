@@ -426,8 +426,6 @@ function scanQRCode() {
 }
 
 function handleQRCodeDetected(data: string) {
-  console.log('QR Code detected:', data)
-
   // Extract token from URL or use data directly
   let token = data
 
