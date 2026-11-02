@@ -43,7 +43,7 @@ configured with `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and
 `<PUBLIC_URL>/api/auth/oidc/callback` as the redirect URI. Use HTTPS and
 `SESSION_COOKIE_SECURE=true` in production. While SSO is enabled, password
 login remains available only to local administrators as a break-glass option.
-Login always requests fresh authentication (`prompt=login`) for shared PCs.
+Login requests fresh authentication (`prompt=login`) for shared PCs on the workshop network. Requests that already passed Cloudflare Access (header `Cf-Access-Jwt-Assertion`) reuse the Authentik session, so there is only one login from outside.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
