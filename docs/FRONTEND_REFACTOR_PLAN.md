@@ -42,20 +42,22 @@ stale fetches with a revision counter.
 7. **`defineModel` in dialogs.** Four dialogs copy props into local refs and sync with
    watchers in both directions (the root cause of bug 1).
 8. **One typed toast.** Replace string-key `provide('showToast')` + per-page snackbars
-   with a single `useToast()` (InjectionKey or small store).
+   with a single `useToast()` that pushes onto one `VSnackbarQueue` in `App.vue`
+   (rewritten in Vuetify 4 to show several messages at once).
 9. **Split `App.vue`.** `useIdleLock()` (activity listeners, timer, BroadcastChannel) and a
    `QrScannerDialog` component owning its cleanup.
 10. **Split `LogRepairWorkPage.vue` (~1500 lines).** `useRepairDetail(qrToken)`,
-    `useRepairAttachments`, `useCameraCapture` (shared with `CreateRepairPage`) and a
-    `LogEntryDialog` component.
+    `useRepairAttachments` and a `LogEntryDialog` component (camera via the existing
+    `useCameraStream` from P0).
 11. **Status rules out of the store.** Move constants and pure helpers from
     `repairStore.ts` to `domain/repairStatus.ts`. The client writes the `status_change`
     log as a second request in three places — move that into the backend so status
     change + log are atomic.
-12. **Smaller items.** `request.ts` mutates `authStore` directly → store actions
-    (`markLocked()`, `markLoggedOut()`); `useRepairThread` should take
-    `MaybeRefOrGetter` + `toValue`; `ref<any>` form refs → `useTemplateRef` with `VForm`;
-    `setTimeout` form resets after dialog close → `@after-leave`.
+12. **Smaller items.** ~~`request.ts` mutates `authStore` directly~~ (done in P0:
+    `markLocked()` / `markSessionEnded()`); `useRepairThread` should take
+    `MaybeRefOrGetter` + `toValue`; `ref<any>` form refs → `useTemplateRef` typed as
+    `VForm` from `vuetify/components`; `setTimeout` form resets after dialog close →
+    `@after-leave`.
 13. **One `SignaturePad` component** with pointer events, replacing the duplicated
     mouse/touch code in `CreateRepairPage` and `AbbruchSignatureDialog`.
 
@@ -64,16 +66,20 @@ stale fetches with a revision counter.
 - `shallowRef` for primitives and `<script>` before `<template>`: apply only in files
   touched anyway.
 - Magnifier button in the app bar has no action; `/dashboard` renders `PinLockScreen`.
-- Idle lock is 60 s (`IDLE_TIMEOUT_MS`) while the go-live plan states 30 s — confirm.
+- Idle lock stays at 60 s (`IDLE_TIMEOUT_MS`), confirmed 2026-11-02.
 
 ## Plan
 
 | Phase | Work | Status |
 |---|---|---|
 | **P0 – bugs** | Items 1–5 | done – needs manual browser check (camera, QR, PIN lock) |
-| **P1 – structure** | Items 7, 8, 9, 13, then 10 | open |
+| **Build fixes** | Lockfile + Docker after Dependabot bumps (see below) | done |
+| **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
+| **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | open |
+| **UI rework** | Redesign on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | open |
 | **P2 – API layer** | Item 6, item 11 (backend writes the status log) | open |
-| **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs); clear `any` warnings; lint rule for SFC block order | open |
+| **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |
+| **Housekeeping** | Dependabot: group frontend npm updates into one PR so the lockfile is updated once; run CI on Node 26 like the Docker image | open |
 
 ## P0 changes
 
@@ -93,3 +99,28 @@ stale fetches with a revision counter.
   `core/request.ts` and every former raw `fetch()`; `authStore` got `markLocked()` /
   `markSessionEnded()` instead of being mutated from outside. `userStore.fetchUsers`
   no longer marks users as loaded on an error response.
+
+## Build fixes
+
+- `frontend/pnpm-lock.yaml` regenerated: separately merged Dependabot PRs left a dangling
+  `vite@8.3.5` entry, so `pnpm install --frozen-lockfile` failed.
+- `Dockerfile.frontend`: `node:26-alpine` no longer bundles corepack; it is installed via
+  npm so pnpm still follows `packageManager`.
+- Vite 8, vue-router 5 and `@types/node` 26 needed no code changes.
+
+## Vuetify 4 upgrade
+
+Goal: working app on Vuetify 4 defaults; the look changes and is reworked afterwards.
+
+- `VIconBtn` / `VFileUpload` are core components; labs imports removed.
+- VAutocomplete `#item` / `#selection` slots: `item` is the raw item (`item.raw.x` → `item.x`).
+- MD2 typography classes no longer exist; all 144 usages mapped with the official table
+  (`text-h5` → `text-headline-small`, `text-caption` → `text-body-small`, …).
+- VRow: deprecated `dense` / `align` / `justify` → `density="compact"` and
+  `align-*` / `justify-*` classes.
+- Elevation is 0–5 (PinLockScreen 8 → 5).
+- `vite.config.ts`: `optimizeDeps.include` for overlay components (upgrade-guide
+  workaround for duplicate `useStack` instances in dev).
+- Accepted defaults: no uppercase buttons, gap-based grid, smaller breakpoints, no global
+  CSS reset (no raw `<button>`/`<input>` or Sass overrides affected), theme stays `light`.
+- Form slot values are unwrapped in v4 (`isValid.value` → `isValid`); not used in our templates.
