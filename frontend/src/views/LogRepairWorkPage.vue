@@ -1,805 +1,74 @@
-<template>
-  <v-container class="d-flex justify-center align-center" style="min-height: 80vh">
-    <v-card max-width="1200px" width="100%">
-      <v-card-text v-if="loading">
-        <v-progress-circular indeterminate color="primary"></v-progress-circular>
-        <span class="ml-3">Lade Reparaturdaten...</span>
-      </v-card-text>
-
-      <v-card-text v-else-if="error">
-        <v-alert type="error">{{ error }}</v-alert>
-      </v-card-text>
-
-      <v-card-text v-else-if="repairRecord">
-        <v-row class="align-start">
-          <!-- Left column: summary + logs + attachments -->
-          <v-col cols="12" md="8">
-            <RepairSummaryCard
-              :repair-data="repairRecord"
-              :vde-tests="summaryVdeTests"
-              :logged-duration="suggestedRepairDuration"
-              @updated="onRepairFieldsUpdated"
-            />
-
-            <!-- Repair Logs Section -->
-            <div>
-              <h3 class="text-title-large mb-4">Reparatur Logeinträge</h3>
-
-              <!-- Unified Activity Thread -->
-              <v-timeline v-if="threadEntries.length > 0" density="compact" side="end" class="mb-4">
-                <v-timeline-item
-                  v-for="entry in threadEntries"
-                  :key="entry.uniqueKey"
-                  :dot-color="
-                    entry.type === 'repair'
-                      ? 'primary'
-                      : entry.type === 'status_change'
-                        ? 'warning'
-                        : entry.type === 'created'
-                          ? 'grey'
-                          : entry.type === 'assignee_change'
-                            ? 'blue-lighten-1'
-                            : entry.vdePassed
-                              ? 'success'
-                              : 'error'
-                  "
-                  :icon="
-                    entry.type === 'repair'
-                      ? 'mdi-wrench'
-                      : entry.type === 'status_change'
-                        ? 'mdi-swap-horizontal'
-                        : entry.type === 'created'
-                          ? 'mdi-clipboard-plus-outline'
-                          : entry.type === 'assignee_change'
-                            ? 'mdi-account-arrow-right'
-                            : entry.vdePassed
-                              ? 'mdi-flash'
-                              : 'mdi-flash-off'
-                  "
-                  @click="entry.type === 'repair' ? openEditLogDialog(entry.id) : undefined"
-                >
-                  <div :class="entry.type === 'repair' ? 'repair-entry' : ''">
-                    <div>
-                      <!-- Header: person + timestamp -->
-                      <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-1">
-                        <div class="d-flex align-center ga-2 flex-wrap">
-                          <v-chip
-                            v-if="
-                              entry.type === 'repair' && (logAttachments[entry.id]?.length ?? 0) > 0
-                            "
-                            size="x-small"
-                            color="grey-darken-1"
-                            variant="tonal"
-                          >
-                            <v-icon size="12" start>mdi-paperclip</v-icon>
-                            {{ logAttachments[entry.id].length }}
-                          </v-chip>
-                        </div>
-                      </div>
-
-                      <!-- Status change entry: show from → to chips -->
-                      <template v-if="entry.type === 'status_change'">
-                        <div class="d-flex align-center ga-1 flex-wrap">
-                          <v-chip
-                            size="x-small"
-                            variant="tonal"
-                            :color="getRepairStatusColor(entry.status_from ?? '')"
-                          >
-                            {{ entry.status_from || '?' }}
-                          </v-chip>
-                          <v-icon size="14" color="grey">mdi-arrow-right</v-icon>
-                          <v-chip
-                            size="x-small"
-                            variant="tonal"
-                            :color="getRepairStatusColor(entry.status_to ?? '')"
-                          >
-                            {{ entry.status_to || '?' }}
-                          </v-chip>
-                        </div>
-                      </template>
-
-                      <!-- Work log entry -->
-                      <template v-else-if="entry.type === 'repair'">
-                        <div
-                          v-if="entry.description"
-                          class="text-body-medium text-high-emphasis mb-1"
-                          style="white-space: normal"
-                        >
-                          {{ entry.description }}
-                        </div>
-                        <div class="d-flex align-center ga-2 flex-wrap">
-                          <!-- <span class="text-body-small text-grey-darken-1"
-                        >Dauer: {{ entry.duration }} Min.</span
-                      > -->
-                          <template v-if="entry.status_from || entry.status_to">
-                            <v-chip
-                              size="x-small"
-                              variant="tonal"
-                              :color="getRepairStatusColor(entry.status_from ?? '')"
-                            >
-                              {{ entry.status_from || '?' }}
-                            </v-chip>
-                            <v-icon size="14" color="grey">mdi-arrow-right</v-icon>
-                            <v-chip
-                              size="x-small"
-                              variant="flat"
-                              :color="getRepairStatusColor(entry.status_to ?? '')"
-                            >
-                              {{ entry.status_to || '?' }}
-                            </v-chip>
-                          </template>
-                        </div>
-                      </template>
-
-                      <!-- VDE test entry -->
-                      <template v-else-if="entry.type === 'vde'">
-                        <div class="d-flex align-center ga-2 flex-wrap">
-                          <span
-                            class="text-body-medium text-high-emphasis"
-                            style="white-space: normal"
-                            >{{ entry.description }}</span
-                          >
-                          <v-btn
-                            size="small"
-                            variant="text"
-                            prepend-icon="mdi-file-pdf-box"
-                            color="error"
-                            @click="downloadVdePdf(entry.id)"
-                          >
-                            PDF herunterladen
-                          </v-btn>
-                        </div>
-                      </template>
-
-                      <!-- Repair created entry -->
-                      <template v-else-if="entry.type === 'created'">
-                        <v-chip
-                          size="x-small"
-                          variant="tonal"
-                          :color="getRepairStatusColor('Offen')"
-                        >
-                          Offen
-                        </v-chip>
-                      </template>
-
-                      <!-- Assignee change entry -->
-                      <template v-else-if="entry.type === 'assignee_change'">
-                        <div class="d-flex align-center ga-1 flex-wrap">
-                          <v-icon size="14" color="blue-lighten-1">mdi-account-arrow-right</v-icon>
-                          <span class="text-body-medium">{{ entry.description }}</span>
-                        </div>
-                      </template>
-                    </div>
-                    <div class="text-body-small text-medium-emphasis">
-                      {{
-                        entry.dateOnly
-                          ? formatDate(entry.created_at)
-                          : formatDateTime(entry.created_at)
-                      }}<template v-if="entry.person">
-                        - <strong>{{ entry.person }}</strong></template
-                      >
-                    </div>
-                  </div>
-                </v-timeline-item>
-              </v-timeline>
-
-              <v-alert v-else type="info" variant="tonal" class="mb-4">
-                Noch keine Logeinträge vorhanden.
-              </v-alert>
-            </div>
-
-            <!-- Attachments Section -->
-            <div class="mt-6">
-              <h3 class="text-title-large mb-3">Anhänge</h3>
-
-              <!-- Disclaimer & Cancellation PDFs – static read-only items -->
-              <v-card class="mb-3">
-                <v-list lines="one" class="py-0">
-                  <v-list-item
-                    prepend-icon="mdi-file-pdf-box"
-                    :href="disclaimerUrl"
-                    target="_blank"
-                    :disabled="!disclaimerExists"
-                    :subtitle="disclaimerExists ? 'PDF herunterladen' : 'Nicht vorhanden'"
-                  >
-                    <v-list-item-title>Haftungsausschluss</v-list-item-title>
-                    <template #append>
-                      <v-btn
-                        v-if="disclaimerExists"
-                        icon="mdi-download"
-                        variant="text"
-                        size="small"
-                        :href="disclaimerUrl"
-                        :download="`haftungsausschluss_${repairRecord?.id}.pdf`"
-                        @click.stop
-                      ></v-btn>
-                      <v-icon v-else color="grey" size="small">mdi-minus</v-icon>
-                    </template>
-                  </v-list-item>
-                  <template v-if="cancellationExists || repairRecord?.status_detail === 'Abbruch'">
-                    <v-divider />
-                    <v-list-item
-                      prepend-icon="mdi-file-pdf-box"
-                      :href="cancellationUrl"
-                      target="_blank"
-                      :disabled="!cancellationExists"
-                      :subtitle="cancellationExists ? 'PDF herunterladen' : 'Nicht vorhanden'"
-                    >
-                      <v-list-item-title>Abbruchbestätigung</v-list-item-title>
-                      <template #append>
-                        <v-btn
-                          v-if="cancellationExists"
-                          icon="mdi-download"
-                          variant="text"
-                          size="small"
-                          :href="cancellationUrl"
-                          :download="`abbruch_${repairRecord?.id}.pdf`"
-                          @click.stop
-                        ></v-btn>
-                        <v-icon v-else color="grey" size="small">mdi-minus</v-icon>
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-list>
-              </v-card>
-
-              <!-- Unified store attachments -->
-              <v-file-upload-list v-if="repairAttachments.length > 0" show-size class="mb-3">
-                <template #default>
-                  <v-file-upload-item
-                    v-for="att in repairAttachments"
-                    :key="att.id"
-                    :title="att.original_filename"
-                    :subtitle="formatFileSize(att.size)"
-                    :file-icon="getAttachmentIcon(att.content_type)"
-                  >
-                    <template #append>
-                      <v-btn
-                        :icon="
-                          att.content_type.startsWith('image/') ? 'mdi-open-in-new' : 'mdi-download'
-                        "
-                        variant="text"
-                        size="small"
-                        :href="`/api/repairs/${repairRecord?.id}/attachments/${att.id}`"
-                        :download="
-                          att.content_type.startsWith('image/') ? undefined : att.original_filename
-                        "
-                        :target="att.content_type.startsWith('image/') ? '_blank' : undefined"
-                        @click.stop
-                      ></v-btn>
-                      <v-btn
-                        v-if="canDelete(att.uploaded_by_id)"
-                        icon="mdi-delete"
-                        variant="text"
-                        size="small"
-                        color="error"
-                        @click.stop="deleteRepairAttachment(att.id)"
-                      ></v-btn>
-                    </template>
-                  </v-file-upload-item>
-                </template>
-              </v-file-upload-list>
-
-              <!-- Upload new files -->
-              <v-file-upload
-                v-model="pendingAttachmentFiles"
-                multiple
-                inset-file-list
-                show-size
-                clearable
-                title="Neue Anhänge hochladen"
-                subtitle="Bilder, PDFs oder andere Dateien ablegen"
-                browse-text="Durchsuchen"
-              ></v-file-upload>
-              <div v-if="pendingAttachmentFiles.length > 0" class="d-flex justify-end mt-2">
-                <v-btn
-                  color="primary"
-                  :loading="attachmentsUploading"
-                  prepend-icon="mdi-upload"
-                  @click="uploadRepairAttachments"
-                >
-                  Hochladen
-                </v-btn>
-              </div>
-            </div>
-          </v-col>
-
-          <!-- Right column: status + assignee -->
-          <v-col cols="12" md="4">
-            <div>
-              <!-- Status -->
-              <div class="d-flex align-center ga-3 flex-wrap mb-6">
-                <v-btn-group v-if="availableNextStatuses.length > 0" divided>
-                  <v-btn
-                    :color="getRepairStatusColor(bestNextStatus ?? '')"
-                    :prepend-icon="getRepairStatusIcon(bestNextStatus ?? '')"
-                    @click="bestNextStatus && handleCloseRepair(bestNextStatus)"
-                  >
-                    {{ bestNextStatus }}
-                  </v-btn>
-                  <v-menu v-if="otherNextStatuses.length > 0">
-                    <template #activator="{ props: menuProps }">
-                      <v-btn
-                        v-bind="menuProps"
-                        :color="getRepairStatusColor(bestNextStatus ?? '')"
-                        icon="mdi-chevron-down"
-                      ></v-btn>
-                    </template>
-                    <v-list density="compact">
-                      <v-list-item
-                        v-for="status in otherNextStatuses"
-                        :key="status"
-                        :prepend-icon="getRepairStatusIcon(status)"
-                        :title="status"
-                        @click="handleCloseRepair(status)"
-                      ></v-list-item>
-                    </v-list>
-                  </v-menu>
-                </v-btn-group>
-              </div>
-
-              <!-- Assignee -->
-              <div>
-                <div class="d-flex align-center mb-2">
-                  <span class="text-body-large text-grey-darken-1">Zuständig</span>
-                  <v-spacer></v-spacer>
-                  <v-btn
-                    v-if="authStore.currentUser && selectedAssigneeId !== authStore.currentUser.id"
-                    variant="text"
-                    size="x-small"
-                    prepend-icon="mdi-account-arrow-left"
-                    class="px-0"
-                    @click="assignToMe"
-                  >
-                    Mir zuweisen
-                  </v-btn>
-                </div>
-                <v-autocomplete
-                  v-model="selectedAssigneeId"
-                  :items="assigneeItems"
-                  item-value="value"
-                  item-title="title"
-                  :loading="assigneeLoading"
-                  density="compact"
-                  clearable
-                  hide-details
-                  placeholder="Niemand zugewiesen"
-                  @update:model-value="assignUser"
-                ></v-autocomplete>
-              </div>
-
-              <!-- Actions -->
-              <div class="d-flex flex-column ga-2 mt-6">
-                <span class="text-body-large text-grey-darken-1">Quick Actions</span>
-                <v-btn
-                  variant="tonal"
-                  color="primary"
-                  prepend-icon="mdi-plus"
-                  block
-                  @click="openLogDialog"
-                >
-                  Neuer Logeintrag
-                </v-btn>
-                <v-btn
-                  variant="tonal"
-                  color="primary"
-                  prepend-icon="mdi-flash"
-                  block
-                  @click="openVdeDialog"
-                >
-                  VDE Test protokollieren
-                </v-btn>
-                <v-btn
-                  v-if="labelPrinterEnabled"
-                  variant="tonal"
-                  color="primary"
-                  prepend-icon="mdi-printer"
-                  :loading="printingLabel"
-                  block
-                  @click="printLabel"
-                >
-                  Label drucken
-                </v-btn>
-              </div>
-            </div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-card-actions v-if="!loading && !error" class="flex-wrap ga-2">
-        <v-btn @click="goBack">
-          <v-icon start>mdi-arrow-left</v-icon>
-          Zurück
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-
-
-    <!-- Log Entry Dialog -->
-    <v-dialog v-model="logDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="text-headline-small">Neue Notiz</v-card-title>
-
-        <v-card-text>
-          <v-form ref="logForm" v-model="logFormValid">
-            <v-autocomplete
-              v-model="newLog.user_id"
-              :items="assigneeItems"
-              item-value="value"
-              item-title="title"
-              label="Reparateur"
-              required
-              :loading="userStore.loading"
-              :rules="[(v) => !!v || 'Reparateur ist erforderlich']"
-            ></v-autocomplete>
-
-            <v-textarea
-              v-model="newLog.reparatur_besch"
-              label="Was wurde gemacht?"
-              rows="3"
-              required
-              :rules="[(v) => !!v || 'Beschreibung ist erforderlich']"
-            >
-            </v-textarea>
-
-            <v-text-field
-              v-model.number="newLog.reparatur_dauer"
-              label="Dauer in Minuten (Optional)"
-              type="number"
-            >
-            </v-text-field>
-
-            <v-divider class="my-4"></v-divider>
-            <div class="text-title-small mb-3">Fotos &amp; Dateien (optional)</div>
-
-            <!-- Camera preview -->
-            <div v-if="logCameraActive" class="mb-3">
-              <video
-                ref="logVideoElement"
-                autoplay
-                playsinline
-                style="width: 100%; max-height: 200px; background: #000; border-radius: 4px"
-              ></video>
-              <canvas ref="logPhotoCanvas" style="display: none"></canvas>
-            </div>
-
-            <div class="d-flex ga-2 flex-wrap mb-3">
-              <v-btn
-                v-if="!logCameraActive"
-                size="small"
-                prepend-icon="mdi-camera"
-                :disabled="logCameraPermissionDenied"
-                @click="startLogCamera"
-              >
-                Foto aufnehmen
-              </v-btn>
-              <v-btn
-                v-if="logCameraActive"
-                color="success"
-                size="small"
-                prepend-icon="mdi-camera"
-                @click="captureLogPhoto"
-              >
-                Aufnehmen
-              </v-btn>
-              <v-btn
-                v-if="logCameraActive"
-                size="small"
-                prepend-icon="mdi-close"
-                @click="stopLogCamera"
-              >
-                Stop
-              </v-btn>
-            </div>
-
-            <v-alert v-if="logCameraPermissionDenied" type="error" density="compact" class="mb-3">
-              Kamerazugriff verweigert.
-            </v-alert>
-
-            <!-- File upload with inset list -->
-            <v-file-upload
-              v-model="pendingLogFiles"
-              multiple
-              inset-file-list
-              show-size
-              clearable
-              title="Fotos &amp; Dateien"
-              subtitle="Auswählen oder ablegen"
-              browse-text="Durchsuchen"
-            ></v-file-upload>
-          </v-form>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-btn @click="closeLogDialog">Abbrechen</v-btn>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" :disabled="!logFormValid" :loading="saving" @click="addLogEntry">
-            Speichern
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <ReparateurRequiredDialog
-      v-model="transitionDialog"
-      v-model:user-id="transitionUserId"
-      title="Reparatur starten"
-      message="Für den Wechsel von 'Offen' zu 'In Bearbeitung' muss ein Reparateur angegeben werden."
-      confirm-text="Weiter"
-      @confirm="confirmTransitionWithReparateur"
-    />
-
-    <RepairCompletionDialog
-      v-model="completionDialog"
-      v-model:description="completionData.description"
-      v-model:duration="completionData.duration"
-      v-model:needs-vde-test="completionData.needsVdeTest"
-      :suggested-duration="suggestedRepairDuration"
-      :has-any-vde-test="hasVdeTest"
-      :last-vde-test-passed="lastVdeTestPassed"
-      :loading="saving"
-      @confirm="confirmRepairCompletion"
-    />
-
-    <RepairNotRepairableDialog
-      v-model="notRepairableDialog"
-      :suggested-duration="suggestedRepairDuration"
-      :loading="savingStatus"
-      @confirm="confirmNotRepairable"
-    />
-
-    <AbbruchSignatureDialog
-      v-model="abbruchSignatureDialog"
-      :loading="savingStatus"
-      @confirm="confirmAbbruchSignature"
-    />
-
-    <VdeTestDialog
-      v-model="vdeDialog"
-      :saving="saving"
-      :repair-id="repairRecord?.id"
-      :selected-repair-status="selectedRepairStatus"
-      :required-for-status="vdeDialogMode === 'close'"
-      :confirm-text="
-        vdeDialogMode === 'close' ? 'VDE speichern & Reparatur abschliessen' : 'VDE speichern'
-      "
-      :initial-prufer-user-id="vdeInitialPruferUserId"
-      :users="userStore.users"
-      :pruefgeraete="pruefgeraete"
-      @submit="handleVdeSubmit"
-    />
-
-    <!-- Delete Log Confirmation Dialog -->
-    <v-dialog v-model="deleteLogDialog" max-width="400px">
-      <v-card>
-        <v-card-title class="text-headline-small">Logeintrag löschen</v-card-title>
-        <v-card-text
-          >Soll dieser Logeintrag wirklich gelöscht werden? Diese Aktion kann nicht rückgängig
-          gemacht werden.</v-card-text
-        >
-        <v-card-actions>
-          <v-btn @click="deleteLogDialog = false">Abbrechen</v-btn>
-          <v-spacer></v-spacer>
-          <v-btn color="error" :loading="deleteLogLoading" @click="confirmDeleteLog">
-            Löschen
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Edit Log Entry Dialog -->
-    <v-dialog v-model="editLogDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="text-headline-small">Logeintrag bearbeiten</v-card-title>
-        <v-card-text>
-          <v-form ref="editLogForm" v-model="editLogFormValid">
-            <v-autocomplete
-              v-model="editLog.user_id"
-              :items="assigneeItems"
-              item-value="value"
-              item-title="title"
-              label="Reparateur"
-              required
-              :loading="userStore.loading"
-              :rules="[(v) => !!v || 'Reparateur ist erforderlich']"
-            ></v-autocomplete>
-            <v-textarea
-              v-model="editLog.reparatur_besch"
-              label="Was wurde gemacht?"
-              rows="3"
-              required
-              :rules="[(v) => !!v || 'Beschreibung ist erforderlich']"
-            >
-            </v-textarea>
-            <v-text-field
-              v-model.number="editLog.reparatur_dauer"
-              label="Dauer in Minuten (Optional)"
-              type="number"
-            >
-            </v-text-field>
-          </v-form>
-
-          <template v-if="editingLogId && (logAttachments[editingLogId]?.length ?? 0) > 0">
-            <v-divider class="my-4"></v-divider>
-            <div class="text-title-small mb-1">Anhänge</div>
-            <v-list density="compact" class="pa-0">
-              <v-list-item
-                v-for="att in logAttachments[editingLogId]"
-                :key="att.url"
-                :prepend-icon="getAttachmentIcon(att.content_type)"
-                :href="att.url"
-                target="_blank"
-              >
-                <v-list-item-title>{{ att.name }}</v-list-item-title>
-                <template #append>
-                  <v-btn
-                    :icon="
-                      att.content_type.startsWith('image/') ? 'mdi-open-in-new' : 'mdi-download'
-                    "
-                    variant="text"
-                    size="small"
-                    :href="att.url"
-                    :download="att.content_type.startsWith('image/') ? undefined : att.name"
-                    :target="att.content_type.startsWith('image/') ? '_blank' : undefined"
-                    @click.stop
-                  ></v-btn>
-                </template>
-              </v-list-item>
-            </v-list>
-          </template>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn
-            v-if="canDelete(repairLogs.find((l) => l.id === editingLogId)?.user_id)"
-            color="error"
-            variant="text"
-            prepend-icon="mdi-delete"
-            :loading="deleteLogLoading"
-            @click="confirmDeleteFromEditDialog"
-          >
-            Löschen
-          </v-btn>
-          <v-spacer></v-spacer>
-          <v-btn @click="editLogDialog = false">Abbrechen</v-btn>
-          <v-btn
-            color="primary"
-            :disabled="!editLogFormValid"
-            :loading="editLogSaving"
-            @click="saveEditLog"
-          >
-            Speichern
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-container>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import type { VForm } from 'vuetify/components'
-import { sessionFetch } from '@/api/session'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted, ref, shallowRef, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { RepairsService } from '@/api/services/RepairsService'
-import {
-  normalizeRepairStatus,
-  getRepairStatusColor,
-  getRepairStatusIcon,
-  getRepairStatusDetailOptions,
-  calculateRepairDurationFromLogs,
-} from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
 import { VdeTestsService, type VdeTestCreate } from '@/api/services/VdeTestsService'
 import { ConfigService } from '@/api/services/ConfigService'
-import type { Repair, RepairLog, VdeTestResponse, PruefgeraetResponse } from '@/api/types'
-import type { VdeFormData } from '@/components/VdeTestDialog.vue'
+import { sessionFetch } from '@/api/session'
+import type { PruefgeraetResponse, Repair } from '@/api/types'
+import {
+  getRepairStatusColor,
+  getRepairStatusDetailOptions,
+  getRepairStatusIcon,
+  normalizeRepairStatus,
+} from '@/stores/repairStore'
+import { useUserStore } from '@/stores/userStore'
+import { useRepairDetail } from '@/composables/useRepairDetail'
+import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'
+import { useToast } from '@/composables/useToast'
+import { errorMessage } from '@/utils/errors'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
+import RepairActivityTimeline from '@/components/RepairActivityTimeline.vue'
+import RepairAttachmentsPanel from '@/components/RepairAttachmentsPanel.vue'
+import RepairAssigneeSelect from '@/components/RepairAssigneeSelect.vue'
+import LogEntryDialog from '@/components/LogEntryDialog.vue'
+import EditLogDialog from '@/components/EditLogDialog.vue'
 import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 import RepairCompletionDialog from '@/components/RepairCompletionDialog.vue'
 import RepairNotRepairableDialog from '@/components/RepairNotRepairableDialog.vue'
 import AbbruchSignatureDialog from '@/components/AbbruchSignatureDialog.vue'
-import VdeTestDialog from '@/components/VdeTestDialog.vue'
-import { useRepairThread } from '@/composables/useRepairThread'
-import { useCameraStream } from '@/composables/useCameraStream'
-import { useRepairStatusTransition } from '@/composables/useRepairStatusTransition'
-import { useUserStore } from '@/stores/userStore'
-import { useAuthStore } from '@/stores/authStore'
-import { formatDate, formatDateTime } from '@/utils/date'
-import { useToast } from '@/composables/useToast'
-
-const toast = useToast()
-
-interface NewLogFormData {
-  user_id: number | null
-  reparatur_dauer: number | null
-  reparatur_besch: string
-}
+import VdeTestDialog, { type VdeFormData } from '@/components/VdeTestDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const authStore = useAuthStore()
+const toast = useToast()
 
-const loading = ref(true)
-const error = ref('')
-const saving = ref(false)
-const logFormValid = ref(false)
-const logForm = ref<InstanceType<typeof VForm> | null>(null)
+// ── Repair data ───────────────────────────────────────────────────────────────
+const selectedRepairStatus = ref('')
+const selectedStatusDetail = ref('')
+const vdeInitialPruferUserId = ref<number | null>(null)
 
-const repairRecord = ref<Repair | null>(null)
-const repairLogs = ref<RepairLog[]>([])
-const vdeTests = ref<VdeTestResponse[]>([])
-const pruefgeraete = ref<PruefgeraetResponse[]>([])
-const disclaimerExists = ref(false)
-const disclaimerUrl = computed(() =>
-  repairRecord.value?.id ? `/api/repairs/${repairRecord.value.id}/disclaimer` : ''
-)
-const cancellationExists = ref(false)
-const cancellationUrl = computed(() =>
-  repairRecord.value?.id ? `/api/repairs/${repairRecord.value.id}/cancellation` : ''
-)
-
-// Unified repair attachments
-interface RepairAttachment {
-  id: number
-  repair_id: number
-  log_id: number | null
-  attachment_type: string
-  original_filename: string
-  stored_filename: string
-  content_type: string
-  size: number
-  uploaded_at: string
-  uploaded_by_id: number | null
-}
-const repairAttachments = ref<RepairAttachment[]>([])
-const pendingAttachmentFiles = ref<File[]>([])
-const attachmentsUploading = ref(false)
-
-// Per-log attachments derived from the unified repairAttachments list
-interface AttachmentInfo {
-  name: string
-  url: string
-  content_type: string
-  size: number
-}
-const logAttachments = computed<Record<number, AttachmentInfo[]>>(() => {
-  const mapped: Record<number, AttachmentInfo[]> = {}
-  const repairId = repairRecord.value?.id
-  if (!repairId) return mapped
-  for (const att of repairAttachments.value) {
-    if (att.log_id !== null) {
-      if (!mapped[att.log_id]) {
-        mapped[att.log_id] = []
-      }
-      mapped[att.log_id].push({
-        name: att.original_filename,
-        url: `/api/repairs/${repairId}/attachments/${att.id}`,
-        content_type: att.content_type,
-        size: att.size,
-      })
-    }
-  }
-  return mapped
+const {
+  loading,
+  error,
+  repair,
+  logs,
+  attachments,
+  disclaimerExists,
+  cancellationExists,
+  latestVdeTests,
+  lastVdeTestPassed,
+  threadEntries,
+  hasVdeTest,
+  loggedDuration,
+  logAttachments,
+  reloadRepair,
+  reloadLogs,
+  reloadVdeTests,
+  reloadAttachments,
+} = useRepairDetail(() => route.params.qrToken as string | undefined, {
+  onLoaded(loaded) {
+    selectedRepairStatus.value = loaded.status || 'Offen'
+    selectedStatusDetail.value = loaded.status_detail || ''
+    vdeInitialPruferUserId.value = loaded.user_id ?? null
+  },
 })
 
-// Camera state for log dialog
-const logVideoElement = ref<HTMLVideoElement | null>(null)
-const logPhotoCanvas = ref<HTMLCanvasElement | null>(null)
-const {
-  active: logCameraActive,
-  permissionDenied: logCameraPermissionDenied,
-  start: startLogCamera,
-  stop: stopLogCamera,
-} = useCameraStream(logVideoElement)
-
-// Pending files for the new log entry (shown in VFileUpload inset list)
-const pendingLogFiles = ref<File[]>([])
-
-// Repair status selection
-const selectedRepairStatus = ref<string>('')
-const selectedStatusDetail = ref<string>('')
-const currentRepairStatus = computed(() => normalizeRepairStatus(repairRecord.value?.status))
+const currentRepairStatus = computed(() => normalizeRepairStatus(repair.value?.status))
+const attachmentCounts = computed(() =>
+  Object.fromEntries(Object.entries(logAttachments.value).map(([id, list]) => [id, list.length]))
+)
 
 watch(selectedRepairStatus, (newStatus) => {
   const allowedDetails = getRepairStatusDetailOptions(newStatus)
@@ -808,213 +77,62 @@ watch(selectedRepairStatus, (newStatus) => {
   }
 })
 
-const { latestVdeTests, lastVdeTestPassed, threadEntries } = useRepairThread(
-  repairLogs,
-  vdeTests,
-  repairRecord
-)
+// ── Data that does not depend on the opened repair ────────────────────────────
+const pruefgeraete = ref<PruefgeraetResponse[]>([])
+const labelPrinterEnabled = shallowRef(false)
 
-const summaryVdeTests = computed(() => latestVdeTests.value)
-
-// Check if at least one VDE test exists
-const hasVdeTest = computed(() => vdeTests.value.length > 0)
-const suggestedRepairDuration = computed(() => calculateRepairDurationFromLogs(repairLogs.value))
-
-function getAttachmentIcon(contentType: string): string {
-  if (contentType.startsWith('image/')) return 'mdi-image'
-  if (contentType === 'application/pdf') return 'mdi-file-pdf-box'
-  return 'mdi-file-outline'
-}
-
-const newLog = ref<NewLogFormData>({
-  user_id: null,
-  reparatur_dauer: null,
-  reparatur_besch: '',
+onMounted(() => {
+  void Promise.all([
+    ConfigService.getPruefgeraete()
+      .then((devices) => {
+        pruefgeraete.value = devices
+      })
+      .catch((err) => console.error('Error loading testing devices:', err)),
+    userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
+    ConfigService.getFeatures()
+      .then((f) => {
+        labelPrinterEnabled.value = f.label_printer ?? false
+      })
+      .catch(() => {}),
+  ])
 })
 
-const logDialog = ref(false)
-// The log dialog can also be dismissed via scrim/Esc, not only closeLogDialog()
-watch(logDialog, (isOpen) => {
-  if (!isOpen) stopLogCamera()
-})
-
-const vdeDialog = ref(false)
-const vdeDialogMode = ref<'manual' | 'close'>('manual')
-const vdeInitialPruferUserId = ref<number | null>(null)
-
-const deleteLogDialog = ref(false)
-const deleteLogLoading = ref(false)
-const deletingLogId = ref<number | null>(null)
-
-async function confirmDeleteLog() {
-  if (!repairRecord.value || !deletingLogId.value) return
-  deleteLogLoading.value = true
-  try {
-    const response = await RepairLogsService.deleteRepairLog(
-      repairRecord.value.id,
-      deletingLogId.value
-    )
-    if (response.reply === 'done') {
-      toast.success('Logeintrag gelöscht')
-      deleteLogDialog.value = false
-      await Promise.all([loadRepairRecord(), loadRepairLogs()])
-    } else {
-      toast.error(response.error || 'Fehler beim Löschen')
-    }
-  } catch (err) {
-    toast.error('Fehler beim Löschen: ' + (err as Error).message)
-  } finally {
-    deleteLogLoading.value = false
-    deletingLogId.value = null
-  }
-}
-
-// Edit log dialog state
-const editLogDialog = ref(false)
-const editLogFormValid = ref(false)
-const editLogSaving = ref(false)
+// ── Dialogs ───────────────────────────────────────────────────────────────────
+const logDialog = shallowRef(false)
+const editLogDialog = shallowRef(false)
 const editingLogId = ref<number | null>(null)
+const editingLog = computed(() => logs.value.find((l) => l.id === editingLogId.value) ?? null)
+const vdeDialog = shallowRef(false)
+const vdeDialogMode = ref<'manual' | 'close'>('manual')
 
-// Same rule as the API: admins delete everything, others only their own entries.
-function canDelete(ownerId?: number | null) {
-  return authStore.isAdmin || (ownerId != null && ownerId === authStore.currentUser?.id)
-}
-const editLogForm = ref<InstanceType<typeof VForm> | null>(null)
-const editLog = ref({
-  user_id: null as number | null,
-  reparatur_besch: '',
-  reparatur_dauer: 0 as number | null,
-})
-const labelPrinterEnabled = ref(false)
-const printingLabel = ref(false)
-
-// Assignee
-const selectedAssigneeId = ref<number | null>(null)
-const assigneeLoading = ref(false)
-const assigneeItems = computed(() =>
-  userStore.users.map((u) => ({
-    value: u.id,
-    title: `${u.vorname} ${u.nachname}`,
-  }))
+// A different repair was opened (e.g. QR scan from this page)
+watch(
+  () => route.params.qrToken,
+  () => {
+    logDialog.value = false
+    editLogDialog.value = false
+    vdeDialog.value = false
+  }
 )
 
-function getErrorMessage(err: unknown, fallback: string): string {
-  const maybeError = err as { body?: { error?: string }; message?: string }
-  return maybeError.body?.error || maybeError.message || fallback
+function openEditLogDialog(logId: number) {
+  editingLogId.value = logId
+  editLogDialog.value = true
 }
 
-function onRepairFieldsUpdated(fields: {
-  datum: string
-  repair_type_id: number | undefined
-  geraet_art: string
-  defekt_besch: string
-}) {
-  if (repairRecord.value) {
-    repairRecord.value = { ...repairRecord.value, ...fields }
-  }
+function openVdeDialog() {
+  vdeDialogMode.value = 'manual'
+  vdeInitialPruferUserId.value = repair.value?.user_id ?? null
+  vdeDialog.value = true
 }
 
-async function loadRepairRecord() {
-  const qrToken = route.params.qrToken as string
-  if (!qrToken) return
-  try {
-    const response = await RepairsService.getRepairByQrToken(qrToken)
-    if (response?.data && route.params.qrToken === qrToken) {
-      repairRecord.value = response.data as Repair
-    }
-  } catch (err) {
-    console.error('Error reloading repair record:', err)
-  }
+function openVdeDialogForCloseFlow(preFilledPruferUserId?: number | null) {
+  vdeDialogMode.value = 'close'
+  vdeInitialPruferUserId.value = preFilledPruferUserId ?? repair.value?.user_id ?? null
+  vdeDialog.value = true
 }
 
-async function loadRepairLogs() {
-  if (!repairRecord.value?.id) return
-
-  try {
-    const repairId = repairRecord.value.id
-    const response = await RepairLogsService.listRepairLogs(repairId)
-    if (response.data && repairRecord.value?.id === repairId) {
-      repairLogs.value = response.data
-    }
-  } catch (err) {
-    console.error('Error loading repair logs:', err)
-  }
-}
-
-async function loadVdeTests() {
-  if (!repairRecord.value?.id) return
-
-  try {
-    const repairId = repairRecord.value.id
-    const response = await VdeTestsService.listVdeTests(repairId)
-    if (response.reply === 'done' && response.data && repairRecord.value?.id === repairId) {
-      vdeTests.value = response.data
-    }
-  } catch (err) {
-    console.error('Error loading VDE tests:', err)
-  }
-}
-
-async function loadPruefgeraete() {
-  try {
-    const devices = await ConfigService.getPruefgeraete()
-    pruefgeraete.value = devices
-  } catch (err) {
-    console.error('Error loading testing devices:', err)
-    pruefgeraete.value = []
-  }
-}
-
-async function printLabel() {
-  if (!repairRecord.value?.id) return
-  printingLabel.value = true
-  try {
-    const result = await RepairsService.printLabel(repairRecord.value.id)
-    toast.success(result.message || 'Label gedruckt')
-  } catch (err: unknown) {
-    toast.error(getErrorMessage(err, 'Fehler beim Drucken'))
-  } finally {
-    printingLabel.value = false
-  }
-}
-
-async function assignUser(userId: number | null) {
-  if (!repairRecord.value?.id) return
-  assigneeLoading.value = true
-  try {
-    await RepairsService.updateRepair(repairRecord.value.id, { user_id: userId })
-    repairRecord.value.user_id = userId ?? undefined
-    repairRecord.value.user = userId ? userStore.users.find((u) => u.id === userId) : undefined
-
-    const assignee = userId ? userStore.users.find((u) => u.id === userId) : null
-    const description = assignee
-      ? `Zugewiesen an: ${assignee.vorname} ${assignee.nachname}`
-      : 'Zuweisung entfernt'
-    await RepairLogsService.createRepairLog(repairRecord.value.id, {
-      log_type: 'assignee_change',
-      reparatur_besch: description,
-      reparatur_dauer: 0,
-      user_id: authStore.currentUser?.id ?? undefined,
-    })
-    await loadRepairLogs()
-
-    toast.success(userId ? 'Zuständigkeit aktualisiert' : 'Zuweisung entfernt')
-  } catch (err) {
-    toast.error('Fehler beim Zuweisen: ' + (err as Error).message)
-    selectedAssigneeId.value = repairRecord.value.user_id ?? null
-  } finally {
-    assigneeLoading.value = false
-  }
-}
-
-function assignToMe() {
-  const me = authStore.currentUser
-  if (!me) return
-  selectedAssigneeId.value = me.id
-  assignUser(me.id)
-}
-
-// ── Status-transition composable ──────────────────────────────────────────────
+// ── Status transitions ────────────────────────────────────────────────────────
 const {
   savingStatus,
   transitionDialog,
@@ -1033,368 +151,73 @@ const {
   confirmNotRepairable,
   confirmAbbruchSignature,
 } = useRepairStatusTransition({
-  repairRecord,
+  repairRecord: repair,
   selectedRepairStatus,
   selectedStatusDetail,
   currentRepairStatus,
   hasVdeTest,
   lastVdeTestPassed,
-  suggestedRepairDuration,
-  selectedAssigneeId,
-  loadRepairLogs,
-  onNeedsVdeTest: (preFilledUserId) => openVdeDialogForCloseFlow(preFilledUserId),
+  suggestedRepairDuration: loggedDuration,
+  loadRepairLogs: reloadLogs,
+  onNeedsVdeTest: openVdeDialogForCloseFlow,
   onCancellationSigned: () => {
     cancellationExists.value = true
   },
 })
 
-// Data that does not depend on the opened repair
-onMounted(() => {
-  void Promise.all([
-    loadPruefgeraete(),
-    userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
-    ConfigService.getFeatures()
-      .then((f) => {
-        labelPrinterEnabled.value = f.label_printer ?? false
-      })
-      .catch(() => {}),
-  ])
-})
-
-function resetRepairState() {
-  logDialog.value = false
-  editLogDialog.value = false
-  deleteLogDialog.value = false
-  vdeDialog.value = false
-  repairRecord.value = null
-  repairLogs.value = []
-  vdeTests.value = []
-  repairAttachments.value = []
-  pendingAttachmentFiles.value = []
-  disclaimerExists.value = false
-  cancellationExists.value = false
-  error.value = ''
+// ── Child component events ────────────────────────────────────────────────────
+function onRepairFieldsUpdated(fields: Partial<Repair>) {
+  if (repair.value) repair.value = { ...repair.value, ...fields }
 }
 
-let repairLoadToken = 0
+function onAssigned(userId: number | null) {
+  if (!repair.value) return
+  repair.value.user_id = userId ?? undefined
+  repair.value.user = userId ? userStore.getUserById(userId) : undefined
+  void reloadLogs()
+}
 
-async function loadRepairPage(qrToken: string | undefined) {
-  const token = ++repairLoadToken
-  const isCurrent = () => token === repairLoadToken
-  resetRepairState()
-  loading.value = true
+function onLogsChanged() {
+  void Promise.all([reloadRepair(), reloadLogs(), reloadAttachments()])
+}
 
-  if (!qrToken) {
-    error.value = 'Kein QR-Token angegeben'
-    loading.value = false
-    return
-  }
+// ── Actions ───────────────────────────────────────────────────────────────────
+const printingLabel = shallowRef(false)
+const savingVde = shallowRef(false)
 
+async function printLabel() {
+  if (!repair.value) return
+  printingLabel.value = true
   try {
-    const response = await RepairsService.getRepairByQrToken(qrToken)
-    if (!isCurrent()) return
-
-    if (!response || !response.data) {
-      error.value = 'Reparatur nicht gefunden'
-      loading.value = false
-      return
-    }
-
-    const repair = response.data as Repair
-    repairRecord.value = repair
-
-    selectedRepairStatus.value = repair.status || 'Offen'
-    selectedStatusDetail.value = repair.status_detail || ''
-    selectedAssigneeId.value = repair.user_id ?? null
-
-    vdeInitialPruferUserId.value = repair.user_id ?? null
-
-    const repairId = repair.id
-    await Promise.all([
-      loadRepairLogs(),
-      loadVdeTests(),
-      loadRepairAttachments(),
-      // Check if disclaimer & cancellation PDFs exist
-      sessionFetch(`/api/repairs/${repairId}/disclaimer`, { method: 'HEAD' })
-        .then((res) => res.ok)
-        .catch(() => false)
-        .then((exists) => {
-          if (isCurrent()) disclaimerExists.value = exists
-        }),
-      sessionFetch(`/api/repairs/${repairId}/cancellation`, { method: 'HEAD' })
-        .then((res) => res.ok)
-        .catch(() => false)
-        .then((exists) => {
-          if (isCurrent()) cancellationExists.value = exists
-        }),
-    ])
-    if (isCurrent()) loading.value = false
+    const result = await RepairsService.printLabel(repair.value.id)
+    toast.success(result.message || 'Label gedruckt')
   } catch (err) {
-    if (!isCurrent()) return
-    console.error('Error loading repair:', err)
-    error.value = 'Fehler beim Laden der Reparaturdaten: ' + (err as Error).message
-    loading.value = false
-  }
-}
-
-// Navigating /edit/a -> /edit/b (e.g. QR scan) reuses this component instance
-watch(
-  () => route.params.qrToken as string | undefined,
-  (qrToken) => void loadRepairPage(qrToken),
-  { immediate: true }
-)
-
-function captureLogPhoto() {
-  if (!logVideoElement.value || !logPhotoCanvas.value) return
-  const video = logVideoElement.value
-  const canvas = logPhotoCanvas.value
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
-  const ctx = canvas.getContext('2d')
-  if (ctx) {
-    ctx.drawImage(video, 0, 0)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-    pendingLogFiles.value = [
-      ...pendingLogFiles.value,
-      dataUrlToFile(dataUrl, `foto_${Date.now()}.jpg`),
-    ]
-  }
-}
-
-function dataUrlToFile(dataUrl: string, filename: string): File {
-  const [header, data] = dataUrl.split(',')
-  const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg'
-  const bytes = atob(data)
-  const arr = new Uint8Array(bytes.length)
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
-  return new File([arr], filename, { type: mime })
-}
-
-async function uploadPendingAttachments(logId: number): Promise<void> {
-  if (!repairRecord.value?.id || pendingLogFiles.value.length === 0) return
-  const fd = new FormData()
-  pendingLogFiles.value.forEach((f) => fd.append('files', f))
-  fd.append('attachment_type', 'log_entry')
-  fd.append('log_id', String(logId))
-  await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
-    method: 'POST',
-    body: fd,
-  })
-}
-
-async function loadRepairAttachments() {
-  if (!repairRecord.value?.id) return
-  try {
-    const repairId = repairRecord.value.id
-    const res = await sessionFetch(`/api/repairs/${repairId}/attachments`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.reply === 'done' && repairRecord.value?.id === repairId) {
-        repairAttachments.value = data.data
-      }
-    }
-  } catch {
-    // silently ignore
-  }
-}
-
-async function uploadRepairAttachments() {
-  if (!repairRecord.value?.id || pendingAttachmentFiles.value.length === 0) return
-  attachmentsUploading.value = true
-  try {
-    const fd = new FormData()
-    pendingAttachmentFiles.value.forEach((f) => fd.append('files', f))
-    fd.append('attachment_type', 'misc')
-    if (authStore.currentUser?.id) {
-      fd.append('uploaded_by_id', String(authStore.currentUser.id))
-    }
-    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments`, {
-      method: 'POST',
-      body: fd,
-    })
-    if (res.ok) {
-      pendingAttachmentFiles.value = []
-      await loadRepairAttachments()
-      toast.success('Dateien hochgeladen')
-    } else {
-      toast.error('Fehler beim Hochladen')
-    }
-  } catch (err) {
-    toast.error('Fehler beim Hochladen: ' + (err as Error).message)
+    toast.error(errorMessage(err, 'Fehler beim Drucken'))
   } finally {
-    attachmentsUploading.value = false
+    printingLabel.value = false
   }
-}
-
-async function deleteRepairAttachment(attachmentId: number) {
-  if (!repairRecord.value?.id) return
-  try {
-    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/attachments/${attachmentId}`, {
-      method: 'DELETE',
-    })
-    if (res.ok) {
-      await loadRepairAttachments()
-      toast.success('Anhang gelöscht')
-    } else {
-      toast.error('Fehler beim Löschen')
-    }
-  } catch (err) {
-    toast.error('Fehler beim Löschen: ' + (err as Error).message)
-  }
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-async function addLogEntry() {
-  if (!repairRecord.value || !logForm.value) return
-
-  const { valid } = await logForm.value.validate()
-
-  if (!valid) return
-
-  saving.value = true
-
-  try {
-    const response = await RepairLogsService.createRepairLog(repairRecord.value.id, {
-      user_id: newLog.value.user_id ?? undefined,
-      reparatur_dauer: newLog.value.reparatur_dauer ?? 0,
-      reparatur_besch: newLog.value.reparatur_besch,
-    })
-
-    if (response.reply === 'done') {
-      // Upload any pending attachments
-      if (response.id) {
-        await uploadPendingAttachments(response.id)
-        await loadRepairAttachments()
-      }
-
-      toast.success('Logeintrag erfolgreich hinzugefügt')
-
-      // Close dialog
-      closeLogDialog()
-
-      // Reload logs
-      await Promise.all([loadRepairRecord(), loadRepairLogs()])
-    } else {
-      toast.error('Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler'))
-    }
-  } catch (err) {
-    console.error('Error adding log entry:', err)
-    toast.error('Fehler beim Speichern: ' + (err as Error).message)
-  } finally {
-    saving.value = false
-  }
-}
-
-function openLogDialog() {
-  newLog.value.user_id = authStore.currentUser?.id ?? null
-  logDialog.value = true
-}
-
-function openEditLogDialog(logId: number) {
-  const log = repairLogs.value.find((l) => l.id === logId)
-  if (!log) return
-  editingLogId.value = logId
-  editLog.value = {
-    user_id: log.user_id ?? null,
-    reparatur_besch: log.reparatur_besch ?? '',
-    reparatur_dauer: log.reparatur_dauer ?? null,
-  }
-  editLogDialog.value = true
 }
 
 async function downloadVdePdf(testId: number) {
-  if (!repairRecord.value?.id) return
+  if (!repair.value) return
+  const repairId = repair.value.id
   try {
-    const res = await sessionFetch(`/api/repairs/${repairRecord.value.id}/vde-tests/${testId}/pdf`, {
-      credentials: 'include',
-    })
+    const res = await sessionFetch(`/api/repairs/${repairId}/vde-tests/${testId}/pdf`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `vde_pruefprotokoll_${repairRecord.value.id}_${testId}.pdf`
-    a.click()
+    const url = URL.createObjectURL(await res.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `vde_pruefprotokoll_${repairId}_${testId}.pdf`
+    link.click()
     URL.revokeObjectURL(url)
   } catch {
     toast.error('Fehler beim Erzeugen des PDF')
   }
 }
 
-async function confirmDeleteFromEditDialog() {
-  if (!editingLogId.value) return
-  editLogDialog.value = false
-  deletingLogId.value = editingLogId.value
-  await confirmDeleteLog()
-}
-
-async function saveEditLog() {
-  if (!repairRecord.value || !editingLogId.value || !editLogForm.value) return
-  const { valid } = await editLogForm.value.validate()
-  if (!valid) return
-
-  editLogSaving.value = true
-  try {
-    const response = await RepairLogsService.updateRepairLog(
-      repairRecord.value.id,
-      editingLogId.value,
-      {
-        user_id: editLog.value.user_id ?? undefined,
-        reparatur_besch: editLog.value.reparatur_besch,
-        reparatur_dauer: editLog.value.reparatur_dauer ?? 0,
-      }
-    )
-    if (response.reply === 'done') {
-      toast.success('Logeintrag aktualisiert')
-      editLogDialog.value = false
-      await Promise.all([loadRepairRecord(), loadRepairLogs()])
-    } else {
-      toast.error(response.error || 'Fehler beim Speichern')
-    }
-  } catch (err) {
-    toast.error('Fehler beim Speichern: ' + (err as Error).message)
-  } finally {
-    editLogSaving.value = false
-  }
-}
-
-function openVdeDialog() {
-  vdeDialogMode.value = 'manual'
-  vdeInitialPruferUserId.value = repairRecord.value?.user_id ?? null
-  vdeDialog.value = true
-}
-
-function openVdeDialogForCloseFlow(preFilledPruferUserId?: number | null) {
-  vdeDialogMode.value = 'close'
-  vdeInitialPruferUserId.value = preFilledPruferUserId ?? repairRecord.value?.user_id ?? null
-  vdeDialog.value = true
-}
-
-function closeLogDialog() {
-  logDialog.value = false
-  stopLogCamera()
-  pendingLogFiles.value = []
-  // Reset form after closing
-  setTimeout(() => {
-    newLog.value = {
-      user_id: null,
-      reparatur_dauer: null,
-      reparatur_besch: '',
-    }
-    logForm.value?.resetValidation?.()
-  }, 300)
-}
-
 async function handleVdeSubmit(payload: VdeFormData) {
-  if (!repairRecord.value?.id) return
-
-  saving.value = true
-
+  if (!repair.value) return
+  savingVde.value = true
   try {
     const vdePayload: Omit<VdeTestCreate, 'repair_id'> = {
       // The datetime-local input gives a local-time string; convert to UTC ISO so
@@ -1417,14 +240,13 @@ async function handleVdeSubmit(payload: VdeFormData) {
       bemerkungen: payload.bemerkungen || undefined,
     }
 
-    const vdeResponse = await VdeTestsService.createVdeTest(repairRecord.value.id, vdePayload)
-
+    const vdeResponse = await VdeTestsService.createVdeTest(repair.value.id, vdePayload)
     if (vdeResponse.reply !== 'done') {
       toast.error('Fehler beim Speichern des VDE Tests')
       return
     }
 
-    await loadVdeTests()
+    await reloadVdeTests()
     vdeDialog.value = false
 
     if (vdeDialogMode.value === 'manual') {
@@ -1433,35 +255,210 @@ async function handleVdeSubmit(payload: VdeFormData) {
     }
 
     if (!payload.gesamtergebnis) {
-      selectedRepairStatus.value = repairRecord.value.status || 'In Bearbeitung'
-      toast.warning('VDE-Test nicht bestanden. Die Reparatur kann nicht als repariert abgeschlossen werden. ' +
-          'Bitte weiterarbeiten oder den Status auf "Nicht Repariert" setzen.')
+      selectedRepairStatus.value = repair.value.status || 'In Bearbeitung'
+      toast.warning(
+        'VDE-Test nicht bestanden. Die Reparatur kann nicht als repariert abgeschlossen werden. ' +
+          'Bitte weiterarbeiten oder den Status auf "Nicht Repariert" setzen.'
+      )
       return
     }
 
     await closeRepair('Repariert')
   } catch (err) {
     console.error('Error saving VDE test:', err)
-    toast.error('Fehler beim Speichern: ' + (err as Error).message)
+    toast.error('Fehler beim Speichern: ' + errorMessage(err, 'Unbekannter Fehler'))
   } finally {
-    saving.value = false
+    savingVde.value = false
   }
-}
-
-function goBack() {
-  router.back()
 }
 </script>
 
-<style scoped>
-.repair-entry {
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 6px;
-  transition: background-color 0.15s ease;
-}
+<template>
+  <v-container class="d-flex justify-center align-center page">
+    <v-card max-width="1200px" width="100%">
+      <v-card-text v-if="loading">
+        <v-progress-circular indeterminate color="primary"></v-progress-circular>
+        <span class="ml-3">Lade Reparaturdaten...</span>
+      </v-card-text>
 
-.repair-entry:hover {
-  background-color: rgba(var(--v-theme-primary), 0.12);
+      <v-card-text v-else-if="error">
+        <v-alert type="error">{{ error }}</v-alert>
+      </v-card-text>
+
+      <v-card-text v-else-if="repair">
+        <v-row class="align-start">
+          <!-- Left column: summary, activity, attachments -->
+          <v-col cols="12" md="8">
+            <RepairSummaryCard
+              :repair-data="repair"
+              :vde-tests="latestVdeTests"
+              :logged-duration="loggedDuration"
+              @updated="onRepairFieldsUpdated"
+            />
+
+            <RepairActivityTimeline
+              :entries="threadEntries"
+              :attachment-counts="attachmentCounts"
+              @edit-log="openEditLogDialog"
+              @download-vde="downloadVdePdf"
+            />
+
+            <RepairAttachmentsPanel
+              class="mt-6"
+              :repair-id="repair.id"
+              :attachments="attachments"
+              :disclaimer-exists="disclaimerExists"
+              :cancellation-exists="cancellationExists"
+              :show-cancellation="repair.status_detail === 'Abbruch'"
+              @changed="reloadAttachments"
+            />
+          </v-col>
+
+          <!-- Right column: status, assignee, quick actions -->
+          <v-col cols="12" md="4">
+            <div class="d-flex align-center ga-3 flex-wrap mb-6">
+              <v-btn-group v-if="availableNextStatuses.length > 0" divided>
+                <v-btn
+                  :color="getRepairStatusColor(bestNextStatus ?? '')"
+                  :prepend-icon="getRepairStatusIcon(bestNextStatus ?? '')"
+                  :loading="savingStatus"
+                  @click="bestNextStatus && handleCloseRepair(bestNextStatus)"
+                >
+                  {{ bestNextStatus }}
+                </v-btn>
+                <v-menu v-if="otherNextStatuses.length > 0">
+                  <template #activator="{ props: menuProps }">
+                    <v-btn
+                      v-bind="menuProps"
+                      :color="getRepairStatusColor(bestNextStatus ?? '')"
+                      icon="mdi-chevron-down"
+                    ></v-btn>
+                  </template>
+                  <v-list density="compact">
+                    <v-list-item
+                      v-for="status in otherNextStatuses"
+                      :key="status"
+                      :prepend-icon="getRepairStatusIcon(status)"
+                      :title="status"
+                      @click="handleCloseRepair(status)"
+                    ></v-list-item>
+                  </v-list>
+                </v-menu>
+              </v-btn-group>
+            </div>
+
+            <RepairAssigneeSelect
+              :repair-id="repair.id"
+              :assignee-id="repair.user_id ?? null"
+              @assigned="onAssigned"
+            />
+
+            <div class="d-flex flex-column ga-2 mt-6">
+              <span class="text-body-large text-grey-darken-1">Quick Actions</span>
+              <v-btn
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-plus"
+                block
+                @click="logDialog = true"
+              >
+                Neuer Logeintrag
+              </v-btn>
+              <v-btn
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-flash"
+                block
+                @click="openVdeDialog"
+              >
+                VDE Test protokollieren
+              </v-btn>
+              <v-btn
+                v-if="labelPrinterEnabled"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-printer"
+                :loading="printingLabel"
+                block
+                @click="printLabel"
+              >
+                Label drucken
+              </v-btn>
+            </div>
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <v-card-actions v-if="!loading && !error" class="flex-wrap ga-2">
+        <v-btn prepend-icon="mdi-arrow-left" @click="router.back()">Zurück</v-btn>
+      </v-card-actions>
+    </v-card>
+
+    <template v-if="repair">
+      <LogEntryDialog v-model="logDialog" :repair-id="repair.id" @saved="onLogsChanged" />
+
+      <EditLogDialog
+        v-model="editLogDialog"
+        :repair-id="repair.id"
+        :log="editingLog"
+        :attachments="editingLogId ? (logAttachments[editingLogId] ?? []) : []"
+        @changed="onLogsChanged"
+      />
+    </template>
+
+    <ReparateurRequiredDialog
+      v-model="transitionDialog"
+      v-model:user-id="transitionUserId"
+      title="Reparatur starten"
+      message="Für den Wechsel von 'Offen' zu 'In Bearbeitung' muss ein Reparateur angegeben werden."
+      confirm-text="Weiter"
+      @confirm="confirmTransitionWithReparateur"
+    />
+
+    <RepairCompletionDialog
+      v-model="completionDialog"
+      v-model:description="completionData.description"
+      v-model:duration="completionData.duration"
+      v-model:needs-vde-test="completionData.needsVdeTest"
+      :suggested-duration="loggedDuration"
+      :has-any-vde-test="hasVdeTest"
+      :last-vde-test-passed="lastVdeTestPassed"
+      :loading="savingStatus"
+      @confirm="confirmRepairCompletion"
+    />
+
+    <RepairNotRepairableDialog
+      v-model="notRepairableDialog"
+      :suggested-duration="loggedDuration"
+      :loading="savingStatus"
+      @confirm="confirmNotRepairable"
+    />
+
+    <AbbruchSignatureDialog
+      v-model="abbruchSignatureDialog"
+      :loading="savingStatus"
+      @confirm="confirmAbbruchSignature"
+    />
+
+    <VdeTestDialog
+      v-model="vdeDialog"
+      :saving="savingVde"
+      :repair-id="repair?.id"
+      :selected-repair-status="selectedRepairStatus"
+      :required-for-status="vdeDialogMode === 'close'"
+      :confirm-text="
+        vdeDialogMode === 'close' ? 'VDE speichern & Reparatur abschliessen' : 'VDE speichern'
+      "
+      :initial-prufer-user-id="vdeInitialPruferUserId"
+      :users="userStore.users"
+      :pruefgeraete="pruefgeraete"
+      @submit="handleVdeSubmit"
+    />
+  </v-container>
+</template>
+
+<style scoped>
+.page {
+  min-height: 80vh;
 }
 </style>

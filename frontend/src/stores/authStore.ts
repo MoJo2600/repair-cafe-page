@@ -23,6 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => currentUser.value !== null)
   const isAdmin = computed(() => currentUser.value?.is_admin ?? false)
 
+  /** Same rule as the API: admins delete everything, others only their own entries. */
+  function canDeleteOwnedBy(ownerId: number | null | undefined): boolean {
+    return isAdmin.value || (ownerId != null && ownerId === currentUser.value?.id)
+  }
+
   /** Called on app startup to restore session from cookie. */
   async function fetchMe(): Promise<boolean> {
     try {
@@ -128,6 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     isAuthenticated,
     isAdmin,
+    canDeleteOwnedBy,
     pinSessionEligible,
     isLocked,
     pinUnlockAvailable,

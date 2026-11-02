@@ -22,7 +22,6 @@ export interface UseRepairStatusTransitionOptions {
   hasVdeTest: ComputedRef<boolean>
   lastVdeTestPassed: ComputedRef<boolean>
   suggestedRepairDuration: ComputedRef<number>
-  selectedAssigneeId: Ref<number | null>
   loadRepairLogs: () => Promise<void>
   /** Called when a status transition requires a VDE test first. */
   onNeedsVdeTest: (preFilledUserId?: number | null) => void

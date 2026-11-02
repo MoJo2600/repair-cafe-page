@@ -75,7 +75,7 @@ stale fetches with a revision counter.
 | **P0 – bugs** | Items 1–5 | done – needs manual browser check (camera, QR, PIN lock) |
 | **Build fixes** | Lockfile + Docker after Dependabot bumps (see below) | done |
 | **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
-| **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | in progress: 8, 7, 9, 13 done (+ VForm refs from 12) |
+| **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | done (+ VForm refs and `markLocked` from 12) – needs browser check of the repair page |
 | **UI rework** | Redesign on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | open |
 | **P2 – API layer** | Item 6, item 11 (backend writes the status log) | open |
 | **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |
@@ -124,3 +124,25 @@ Goal: working app on Vuetify 4 defaults; the look changes and is reworked afterw
 - Accepted defaults: no uppercase buttons, gap-based grid, smaller breakpoints, no global
   CSS reset (no raw `<button>`/`<input>` or Sass overrides affected), theme stays `light`.
 - Form slot values are unwrapped in v4 (`isValid.value` → `isValid`); not used in our templates.
+
+## P1 changes
+
+- **8** `useToast()` + one `VSnackbarQueue` in `App.vue`; page-local snackbars and
+  `provide('showToast')` removed; toasts cleared and hidden while locked.
+- **7** `defineModel` in all dialogs; drafts stay local and are sent on confirm. All
+  `v-form` refs typed as `VForm`.
+- **9** `usePinSession()` (idle lock, heartbeats, cross-tab sync, clearing on lock/user
+  change) and `QrScannerDialog`; `App.vue` ~480 → 191 lines.
+- **13** `SignaturePad` (pointer events, `v-model` = data URL or null) replaces the
+  duplicated canvas code in `CreateRepairPage` and `AbbruchSignatureDialog`.
+- **10** `LogRepairWorkPage` ~1470 → 464 lines, now coordinating status transitions, the
+  VDE flow and label printing:
+  - `useRepairDetail(qrToken)` loads and owns repair, logs, VDE tests, attachments and
+    documents (reload on token change, stale responses ignored)
+  - `AttachmentsService` (list/upload/delete, document existence) replaces raw `fetch()`
+  - `RepairActivityTimeline`, `RepairAttachmentsPanel`, `RepairAssigneeSelect`,
+    `LogEntryDialog`, `EditLogDialog`
+  - `authStore.canDeleteOwnedBy()` is the single ownership rule
+  - deleting a log entry now asks for confirmation (the old confirmation dialog was
+    never opened); a failed photo upload after a saved entry is reported as a warning
+    instead of "save failed"
