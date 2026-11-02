@@ -1,8 +1,7 @@
 <script setup lang="ts">
+import { api, asFormData } from '@/api/client'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
-import { AttachmentsService } from '@/api/services/AttachmentsService'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserStore } from '@/stores/userStore'
 import { useCameraStream } from '@/composables/useCameraStream'
@@ -72,11 +71,9 @@ async function save() {
 
   saving.value = true
   try {
-    const response = await RepairLogsService.createRepairLog(repairId, {
-      user_id: userId.value ?? undefined,
+    const response = await api.createRepairLog({ repairId: repairId }, { repair_id: repairId, user_id: userId.value ?? undefined,
       reparatur_dauer: duration.value ?? 0,
-      reparatur_besch: description.value,
-    })
+      reparatur_besch: description.value })
     if (response.reply !== 'done') {
       toast.error(
         'Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler')
@@ -86,10 +83,10 @@ async function save() {
 
     if (response.id && files.value.length > 0) {
       try {
-        await AttachmentsService.upload(repairId, files.value, {
-          attachment_type: 'log_entry',
-          log_id: response.id,
-        })
+        await api.uploadRepairAttachments(
+          { repairId },
+          asFormData({ files: files.value, attachment_type: 'log_entry', log_id: response.id })
+        )
       } catch (err) {
         // The entry itself is saved; don't report the whole save as failed
         toast.warning(

@@ -385,14 +385,12 @@
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
+import type { CustomerResponse } from '@/api/types'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { sessionFetch } from '@/api/session'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
-import { ConfigService } from '@/api/services/ConfigService'
-import { RepairsService } from '@/api/services/RepairsService'
-import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
 import { useCameraStream } from '@/composables/useCameraStream'
 import SignaturePad from '@/components/SignaturePad.vue'
@@ -406,7 +404,7 @@ const step2Form = ref<InstanceType<typeof VForm> | null>(null)
 const step3Form = ref<InstanceType<typeof VForm> | null>(null)
 const submitting = ref(false)
 const createdRepairId = ref<number | null>(null)
-const createdRepairQrToken = ref<number | null>(null)
+const createdRepairQrToken = ref<string | null>(null)
 const printingLabel = ref(false)
 const printLabelError = ref('')
 const labelPrinterEnabled = ref(false)
@@ -422,13 +420,13 @@ const repairTypes = ref<Array<{ id: number; name: string }>>([])
 
 onMounted(async () => {
   try {
-    const features = await ConfigService.getFeatures()
+    const features = await api.getFeatures()
     labelPrinterEnabled.value = features.label_printer ?? false
   } catch {
     labelPrinterEnabled.value = false
   }
   try {
-    const cfg = await ConfigService.getDropdownConfig()
+    const cfg = await api.getDropdownConfig()
     repairTypes.value = cfg.repair_type ?? []
   } catch {
     repairTypes.value = []
@@ -511,7 +509,7 @@ async function onCustomerSearchInput(query: string) {
   customerSearchTimer = setTimeout(async () => {
     customerSearchLoading.value = true
     try {
-      const res = await CustomersService.searchCustomers(query)
+      const res = await api.searchCustomers({ q: query })
       customerSearchResults.value = res.data ?? []
     } catch {
       customerSearchResults.value = []
@@ -609,11 +607,11 @@ async function submitForm() {
       }
 
       // Call API to create repair
-      const response = await RepairsService.createRepair(repairData as any)
+      const response = await api.createRepair(repairData as any)
 
       if (response.reply === 'done') {
         createdRepairId.value = response.id || null
-        createdRepairQrToken.value = response.data.qr_token || null
+        createdRepairQrToken.value = response.data?.qr_token || null
 
         // Upload pre-signed PDF if applicable
         if (
@@ -621,12 +619,20 @@ async function submitForm() {
           uploadedPdfFile.value &&
           createdRepairId.value !== null
         ) {
-          const fd = new FormData()
-          fd.append('file', uploadedPdfFile.value)
-          await sessionFetch(`/api/repairs/${createdRepairId.value}/disclaimer`, {
-            method: 'POST',
-            body: fd,
-          })
+          try {
+            await api.uploadRepairDisclaimer(
+              { id: createdRepairId.value },
+              { file: uploadedPdfFile.value }
+            )
+          } catch (err) {
+            // The repair exists; don't report the whole save as failed (risk of duplicates)
+            console.error('Error uploading disclaimer PDF:', err)
+            toast.show(
+              'Reparatur erstellt, aber der Haftungsausschluss konnte nicht hochgeladen werden. ' +
+                'Bitte in der Reparatur erneut hochladen.',
+              { color: 'warning', timeout: 8000 }
+            )
+          }
         }
 
         toast.show('Reparatur erfolgreich erstellt', { color: 'success' })
@@ -685,7 +691,7 @@ async function printLabel() {
   printingLabel.value = true
   printLabelError.value = ''
   try {
-    const result = await RepairsService.printLabel(createdRepairId.value)
+    const result = await api.printRepairLabel({ id: createdRepairId.value }, {})
     if (result.reply === 'done') {
       toast.show('Etikett erfolgreich gedruckt', { color: 'success' })
     } else {

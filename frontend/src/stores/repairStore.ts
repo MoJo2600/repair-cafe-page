@@ -1,7 +1,7 @@
+import { api } from "@/api/client";
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { RepairsService } from "@/api/services/RepairsService";
-import type { Repair, RepairLog, RepairUpdate } from "@/api/types";
+import type { RepairListItem, RepairLog, RepairUpdate } from "@/api/types";
 
 export const REPAIR_STATUSES = [
   "Offen",
@@ -127,7 +127,8 @@ type CompleteFailedRepairInput = {
 
 export const useRepairStore = defineStore("repair", () => {
   // State
-  const repairs = ref<Repair[]>([]);
+  // List items carry each repair's latest log (GET /api/list)
+  const repairs = ref<RepairListItem[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const autoRefreshInterval = ref<number | null>(null);
@@ -184,7 +185,7 @@ export const useRepairStore = defineStore("repair", () => {
     error.value = null;
 
     try {
-      const response = await RepairsService.listRepairs();
+      const response = await api.listRepairs();
       if (response.data && revision === fetchRevision) {
         repairs.value = response.data;
       }
@@ -250,7 +251,7 @@ export const useRepairStore = defineStore("repair", () => {
 
   async function updateRepair(id: number, updates: RepairUpdate) {
     try {
-      await RepairsService.updateRepair(id, updates);
+      await api.updateRepair({ id: id }, updates);
       // Refresh the list after update
       await fetchRepairs(false);
     } catch (err) {
@@ -301,7 +302,7 @@ export const useRepairStore = defineStore("repair", () => {
       updates.user_id = user_id;
     }
 
-    await RepairsService.updateRepair(repairId, updates);
+    await api.updateRepair({ id: repairId }, updates);
     await fetchRepairs(false);
   }
 
@@ -333,7 +334,7 @@ export const useRepairStore = defineStore("repair", () => {
       throw new Error("Reparaturdauer muss 0 oder groesser sein");
     }
 
-    await RepairsService.updateRepair(repairId, {
+    await api.updateRepair({ id: repairId }, {
       status: toStatus,
       status_detail: statusDetail || undefined,
       user_id: user_id || undefined,
@@ -359,7 +360,7 @@ export const useRepairStore = defineStore("repair", () => {
       throw new Error("Begründung ist erforderlich");
     }
 
-    await RepairsService.updateRepair(repairId, {
+    await api.updateRepair({ id: repairId }, {
       status: toStatus,
       status_detail: statusDetail || undefined,
       user_id: user_id || undefined,
@@ -369,11 +370,11 @@ export const useRepairStore = defineStore("repair", () => {
     await fetchRepairs(false);
   }
 
-  function getRepairById(id: number): Repair | undefined {
+  function getRepairById(id: number): RepairListItem | undefined {
     return repairs.value.find((repair) => repair.id === id);
   }
 
-  function getRepairByQrToken(qrToken: string): Repair | undefined {
+  function getRepairByQrToken(qrToken: string): RepairListItem | undefined {
     return repairs.value.find((repair) => repair.qr_token === qrToken);
   }
 

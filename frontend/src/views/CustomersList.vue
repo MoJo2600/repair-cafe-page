@@ -132,11 +132,12 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
+import type { CustomerWithRepairCountResponse as CustomerResponse } from '@/api/types'
 import { ref, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
-import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
 
@@ -179,7 +180,7 @@ const deleting = ref(false)
 async function loadCustomers() {
     loading.value = true
     try {
-        const res = await CustomersService.listCustomers()
+        const res = await api.listCustomers()
         customers.value = res.data ?? []
     } catch (err: any) {
         toast.error(err.message || 'Fehler beim Laden der Kunden')
@@ -227,10 +228,10 @@ async function saveCustomer() {
             email: editedCustomer.value.email || null,
         }
         if (editedCustomer.value.id) {
-            await CustomersService.updateCustomer(editedCustomer.value.id, payload)
+            await api.updateCustomer({ customerId: editedCustomer.value.id }, payload)
             toast.success('Kunde aktualisiert')
         } else {
-            await CustomersService.createCustomer(payload)
+            await api.createCustomer(payload)
             toast.success('Kunde erstellt')
         }
         closeEditDialog()
@@ -252,7 +253,7 @@ async function confirmDelete() {
     if (!deleteTargetId.value) return
     deleting.value = true
     try {
-        await CustomersService.deleteCustomer(deleteTargetId.value)
+        await api.deleteCustomer({ customerId: deleteTargetId.value })
         deleteDialog.value = false
         toast.success('Kunde gelöscht')
         await loadCustomers()

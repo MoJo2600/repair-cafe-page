@@ -1,6 +1,6 @@
+import { api } from '@/api/client'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { AuthService } from '@/api/services/AuthService'
 import type { UserResponse } from '@/api/types'
 
 function messageFromError(error: unknown, fallback: string): string {
@@ -31,7 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
   /** Called on app startup to restore session from cookie. */
   async function fetchMe(): Promise<boolean> {
     try {
-      const data = await AuthService.pinSessionStatus()
+      const data = await api.pinSessionStatus()
       pinSessionEligible.value = data.eligible
       isLocked.value = data.locked
       pinUnlockAvailable.value = data.pin_unlock_available ?? true
@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<{ success: boolean; error?: string }> {
     loading.value = true
     try {
-      const data = await AuthService.login({ username, password })
+      const data = await api.login({ username, password })
       currentUser.value = data.data ?? null
       pinSessionEligible.value = currentUser.value !== null
       isLocked.value = false
@@ -68,7 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    await AuthService.logout()
+    await api.logout()
     currentUser.value = null
     pinSessionEligible.value = false
     isLocked.value = false
@@ -77,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function lockSession(): Promise<boolean> {
     try {
-      await AuthService.lockPinSession()
+      await api.lockPinSession()
       currentUser.value = null
       isLocked.value = true
       return true
@@ -89,7 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function recordActivity(): Promise<boolean> {
     try {
-      await AuthService.recordPinActivity()
+      await api.recordPinSessionActivity()
       return true
     } catch {
       await fetchMe()
@@ -101,7 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     pin_code: string
   ): Promise<{ success: boolean; error?: string; sessionEnded?: boolean }> {
     try {
-      const data = await AuthService.unlockPinSession({ pin_code })
+      const data = await api.unlockPinSession({ pin_code })
       currentUser.value = data.data ?? null
       pinSessionEligible.value = currentUser.value !== null
       isLocked.value = false

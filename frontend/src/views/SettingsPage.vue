@@ -251,12 +251,11 @@ v-model="form.name" label="Name *"
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
+import { errorMessage } from '@/utils/errors'
 import { onMounted, ref } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { sessionFetch } from '@/api/session'
 import type { SettingResponse } from '../api/generated/data-contracts'
-import { ConfigService } from '../api/services/ConfigService'
-import { SettingsService } from '../api/services/SettingsService'
 import { useToast } from '@/composables/useToast'
 
 const toast = useToast()
@@ -314,7 +313,7 @@ const orgSuccess = ref(false)
 
 async function loadOrgConfig() {
   try {
-    const cfg = await ConfigService.getAppConfig()
+    const cfg = await api.getAppConfig()
     orgForm.value = {
       org_name: cfg.org_name ?? '',
       org_website: cfg.org_website ?? '',
@@ -330,7 +329,7 @@ async function saveOrg() {
   orgError.value = ''
   orgSuccess.value = false
   try {
-    const cfg = await ConfigService.updateAppConfig({
+    const cfg = await api.updateAppConfig({
       org_name: orgForm.value.org_name,
       org_website: orgForm.value.org_website,
       app_url: orgForm.value.app_url,
@@ -353,8 +352,8 @@ async function saveOrg() {
 async function loadSettings() {
   loading.value = true
   try {
-    const res = await SettingsService.getAll()
-    settings.value = res.data
+    const res = await api.listAllSettings()
+    settings.value = res.data ?? []
   } catch {
     toast.error('Fehler beim Laden der Einstellungen')
   } finally {
@@ -398,7 +397,7 @@ async function saveItem() {
 
   try {
     if (editingItem.value) {
-      const res = await SettingsService.update(editingItem.value.id, {
+      const res = await api.updateSetting({ settingId: editingItem.value.id }, {
         name: form.value.name,
         serial_number: form.value.serial_number || null,
         is_active: form.value.is_active,
@@ -407,7 +406,7 @@ async function saveItem() {
       if (idx !== -1) settings.value[idx] = res.data
       toast.success('Eintrag gespeichert')
     } else {
-      const res = await SettingsService.create({
+      const res = await api.createSetting({
         category: formCategory.value,
         name: form.value.name,
         serial_number: form.value.serial_number || null,
@@ -435,7 +434,7 @@ async function doDelete() {
   if (!deletingItem.value) return
   saving.value = true
   try {
-    await SettingsService.delete(deletingItem.value.id)
+    await api.deleteSetting({ settingId: deletingItem.value.id })
     settings.value = settings.value.filter((s) => s.id !== deletingItem.value!.id)
     toast.success('Eintrag gelöscht')
     deleteDialog.value = false
@@ -479,25 +478,18 @@ async function uploadLogo() {
   logoError.value = ''
   logoSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', logoFile.value)
-    const res = await sessionFetch('/api/config/logo', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      logoError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      logoSuccess.value = true
-      logoFile.value = null
-      // Update all favicon links in the document head
-      const bust = `?t=${Date.now()}`
-      document
-        .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
-        .forEach((el) => {
-          el.href = `/api/config/logo${bust}`
-        })
-    }
-  } catch {
-    logoError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadLogo({ file: logoFile.value })
+    logoSuccess.value = true
+    logoFile.value = null
+    // Update all favicon links in the document head
+    const bust = `?t=${Date.now()}`
+    document
+      .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
+      .forEach((el) => {
+        el.href = `/api/config/logo${bust}`
+      })
+  } catch (err) {
+    logoError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     logoUploading.value = false
   }
@@ -516,18 +508,11 @@ async function uploadDisclaimer() {
   disclaimerError.value = ''
   disclaimerSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', disclaimerFile.value)
-    const res = await sessionFetch('/api/config/disclaimer', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      disclaimerError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      disclaimerSuccess.value = true
-      disclaimerFile.value = null
-    }
-  } catch {
-    disclaimerError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadDisclaimerTemplate({ file: disclaimerFile.value })
+    disclaimerSuccess.value = true
+    disclaimerFile.value = null
+  } catch (err) {
+    disclaimerError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     disclaimerUploading.value = false
   }
@@ -546,18 +531,11 @@ async function uploadCancellation() {
   cancellationError.value = ''
   cancellationSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', cancellationFile.value)
-    const res = await sessionFetch('/api/config/cancellation', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      cancellationError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      cancellationSuccess.value = true
-      cancellationFile.value = null
-    }
-  } catch {
-    cancellationError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadCancellationTemplate({ file: cancellationFile.value })
+    cancellationSuccess.value = true
+    cancellationFile.value = null
+  } catch (err) {
+    cancellationError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     cancellationUploading.value = false
   }

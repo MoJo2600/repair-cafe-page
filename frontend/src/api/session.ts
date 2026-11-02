@@ -1,6 +1,6 @@
 /**
- * Central reaction to session-level HTTP errors, shared by the axios client
- * (core/request.ts) and every direct fetch() call via `sessionFetch`.
+ * Central reaction to session-level HTTP errors, shared by the generated API client
+ * (client.ts) and the few direct requests via `sessionFetch` (HEAD checks).
  *
  * 401 → session ended, go to login; 423 → PIN session locked, go to lock screen.
  */

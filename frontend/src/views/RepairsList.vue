@@ -253,10 +253,9 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { RepairsService } from '@/api/services/RepairsService'
-import { ConfigService } from '@/api/services/ConfigService'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { Repair } from '@/api/types'
@@ -345,7 +344,7 @@ const repairTypes = ref<Array<{ id: number; name: string }>>([])
 // Load dropdown options from backend
 async function loadDropdownOptions() {
   try {
-    const config = await ConfigService.getDropdownConfig()
+    const config = await api.getDropdownConfig()
     if (config.repair_type) {
       repairTypes.value = config.repair_type
     }
@@ -384,7 +383,7 @@ const loadRepairs = async (customerId?: number) => {
   loading.value = true
 
   try {
-    const response = await RepairsService.listRepairs(customerId)
+    const response = await api.listRepairs({ customer_id: customerId })
     repairs.value = response.data || []
     totalCount.value = response.count || 0
   } catch (err: any) {
@@ -413,7 +412,7 @@ const saveRepair = async () => {
 
   saving.value = true
   try {
-    const data = await RepairsService.updateRepair(editedItem.value.id, editedItem.value)
+    const data = await api.updateRepair({ id: editedItem.value.id }, editedItem.value)
 
     if (data.reply === 'done') {
       toast.success('Reparatur gespeichert')
@@ -448,7 +447,7 @@ const confirmDelete = async () => {
   if (!deleteTargetId.value) return
   deleting.value = true
   try {
-    await RepairsService.deleteRepair(deleteTargetId.value)
+    await api.deleteRepair({ id: deleteTargetId.value })
     deleteDialog.value = false
     toast.success('Reparatur gelöscht')
     await loadRepairs(customerFilter.value?.id)
@@ -486,7 +485,7 @@ watch(
 const printLabel = async (id: number) => {
   printingLabelId.value = id
   try {
-    const result = await RepairsService.printLabel(id)
+    const result = await api.printRepairLabel({ id: id }, {})
     toast.success(result.message || 'Label gedruckt')
   } catch (err: any) {
     const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
@@ -520,7 +519,7 @@ onMounted(() => {
   loadDropdownOptions()
   userStore.fetchUsers()
   loadRepairs(customerId)
-  ConfigService.getFeatures()
+  api.getFeatures()
     .then((f) => {
       labelPrinterEnabled.value = f.label_printer ?? false
     })

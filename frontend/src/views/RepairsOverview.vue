@@ -99,7 +99,7 @@
                       <strong>Reparateur:</strong> {{ repair.user.vorname }}
                       {{ repair.user.nachname }}
                     </div>
-                    <div v-if="repairLogsMap[repair.id]?.length > 0" class="mt-2">
+                    <div v-if="repair.latest_log" class="mt-2">
                       <v-divider class="mb-2"></v-divider>
                       <div class="text-body-small font-weight-bold mb-1">
                         <v-icon size="small" class="mr-1">mdi-history</v-icon>
@@ -108,22 +108,14 @@
                       <div class="ml-6">
                         <div>
                           <strong>Von:</strong>
-                          {{
-                            repairLogsMap[repair.id][0].user
-                              ? `${repairLogsMap[repair.id][0].user!.vorname} ${repairLogsMap[repair.id][0].user!.nachname}`
-                              : ''
-                          }}
+                          {{ logAuthor(repair.latest_log) }}
                         </div>
                         <div>
                           <strong>Datum:</strong>
-                          {{ formatDateTime(repairLogsMap[repair.id][0].created_at) }}
+                          {{ formatDateTime(repair.latest_log.created_at) }}
                         </div>
-                        <div v-if="repairLogsMap[repair.id][0].reparatur_besch">
-                          {{ repairLogsMap[repair.id]?.[0]?.reparatur_besch?.substring(0, 100)
-                          }}
-                          {{
-                            (repairLogsMap[repair.id]?.[0]?.reparatur_besch?.length ?? 0) > 100 ? '...' : ''
-                          }}
+                        <div v-if="repair.latest_log.reparatur_besch">
+                          {{ truncate(repair.latest_log.reparatur_besch, 100) }}
                         </div>
                       </div>
                     </div>
@@ -242,12 +234,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { formatDateTime } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useRepairStore, normalizeRepairStatus } from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
 import type { Repair, RepairLog } from '@/api/types'
 import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 
@@ -262,41 +253,13 @@ const selectedRepair = ref<Repair | null>(null)
 const startingRepair = ref(false)
 const startRepairUserId = ref<number | null>(null)
 
-// Repair logs for in-progress repairs
-const repairLogsMap = ref<Record<number, RepairLog[]>>({})
-
-
-// Fetch repair logs for in-progress repairs (latest first)
-// TODO(P2): have the list endpoint return the latest log per repair instead
-let logsFetchToken = 0
-
-async function fetchRepairLogs() {
-  const token = ++logsFetchToken
-  const results = await Promise.all(
-    repairStore.inProgressRepairs.map(async (repair) => {
-      try {
-        const response = await RepairLogsService.listRepairLogs(repair.id)
-        const logs = (response.data ?? []) as RepairLog[]
-        logs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        return [repair.id, logs] as const
-      } catch (error) {
-        console.error(`Error fetching logs for repair ${repair.id}:`, error)
-        return null
-      }
-    })
-  )
-  // A newer refresh started meanwhile; its result wins
-  if (token !== logsFetchToken) return
-
-  const logsMap: Record<number, RepairLog[]> = {}
-  for (const entry of results) {
-    if (entry && entry[1].length > 0) logsMap[entry[0]] = entry[1]
-  }
-  repairLogsMap.value = logsMap
+function logAuthor(log: RepairLog): string {
+  return log.user ? `${log.user.vorname} ${log.user.nachname}` : ''
 }
 
-// Every store refresh replaces the list, so this runs once per refresh
-watch(() => repairStore.inProgressRepairs, fetchRepairLogs)
+function truncate(text: string, length: number): string {
+  return text.length > length ? `${text.substring(0, length)}...` : text
+}
 
 onMounted(async () => {
   await repairStore.fetchRepairs()
@@ -344,14 +307,6 @@ async function confirmStartRepair(userId: number) {
       user_id: userId,
     })
 
-    await RepairLogsService.createRepairLog(repairId, {
-      user_id: userId,
-      reparatur_dauer: 0,
-      reparatur_besch: '',
-      log_type: 'status_change',
-      status_from: fromStatus,
-      status_to: 'In Bearbeitung',
-    })
 
     toast.show('Reparatur wurde gestartet', { color: 'success' })
 

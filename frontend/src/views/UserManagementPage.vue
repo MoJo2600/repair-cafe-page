@@ -146,7 +146,8 @@ v-model="form.is_admin" label="Administrator" hide-details
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import type { VForm } from "vuetify/components";
-import { sessionFetch } from "@/api/session";
+import { api } from "@/api/client";
+import { errorMessage } from "@/utils/errors";
 import type { UserResponse } from "@/api/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/composables/useToast";
@@ -227,9 +228,10 @@ const minLen8IfSet = (v: string) => !v || v.length >= 8 || "Mindestens 8 Zeichen
 async function fetchUsers() {
     loading.value = true;
     try {
-        const res = await sessionFetch("/api/users", { credentials: "include" });
-        const data = await res.json();
-        users.value = data.data ?? [];
+        const res = await api.listUsers();
+        users.value = res.data;
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler beim Laden der Benutzer"));
     } finally {
         loading.value = false;
     }
@@ -269,7 +271,7 @@ async function saveUser() {
     formError.value = "";
 
     try {
-        const payload: Record<string, unknown> = {
+        const fields = {
             username: form.value.username,
             vorname: form.value.vorname,
             nachname: form.value.nachname,
@@ -277,33 +279,23 @@ async function saveUser() {
             is_admin: form.value.is_admin,
         };
         if (editingUser.value) {
-            payload.is_active = form.value.is_active;
-            if (form.value.password) payload.password = form.value.password;
+            await api.updateUser(
+                { userId: editingUser.value.id },
+                {
+                    ...fields,
+                    is_active: form.value.is_active,
+                    ...(form.value.password ? { password: form.value.password } : {}),
+                },
+            );
         } else {
-            payload.password = form.value.password;
-        }
-
-        const url = editingUser.value
-            ? `/api/users/${editingUser.value.id}`
-            : "/api/users";
-        const method = editingUser.value ? "PUT" : "POST";
-
-        const res = await sessionFetch(url, {
-            method,
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            formError.value = data.error ?? "Fehler beim Speichern";
-            return;
+            await api.createUser({ ...fields, password: form.value.password });
         }
 
         formDialog.value = false;
         await fetchUsers();
         toast.success(editingUser.value ? "Benutzer aktualisiert" : "Benutzer erstellt");
+    } catch (err) {
+        formError.value = errorMessage(err, "Fehler beim Speichern");
     } finally {
         saving.value = false;
     }
@@ -318,18 +310,12 @@ async function doDeactivate() {
     if (!deactivateTarget.value) return;
     saving.value = true;
     try {
-        const res = await sessionFetch(`/api/users/${deactivateTarget.value.id}`, {
-            method: "DELETE",
-            credentials: "include",
-        });
-        if (res.ok) {
-            deactivateDialog.value = false;
-            await fetchUsers();
-            toast.warning("Benutzer deaktiviert");
-        } else {
-            const d = await res.json();
-            toast.error(d.error ?? "Fehler");
-        }
+        await api.deactivateUser({ userId: deactivateTarget.value.id });
+        deactivateDialog.value = false;
+        await fetchUsers();
+        toast.warning("Benutzer deaktiviert");
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler"));
     } finally {
         saving.value = false;
     }
@@ -338,19 +324,11 @@ async function doDeactivate() {
 async function reactivate(user: UserResponse) {
     saving.value = true;
     try {
-        const res = await sessionFetch(`/api/users/${user.id}`, {
-            method: "PUT",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ is_active: true }),
-        });
-        if (res.ok) {
-            await fetchUsers();
-            toast.success("Benutzer reaktiviert");
-        } else {
-            const d = await res.json();
-            toast.error(d.error ?? "Fehler");
-        }
+        await api.updateUser({ userId: user.id }, { is_active: true });
+        await fetchUsers();
+        toast.success("Benutzer reaktiviert");
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler"));
     } finally {
         saving.value = false;
     }

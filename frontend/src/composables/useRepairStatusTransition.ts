@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import {
   useRepairStore,
@@ -8,8 +9,6 @@ import {
   requiresFailureDetailsForTransition,
   type RepairStatus,
 } from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
-import { RepairsService } from '@/api/services/RepairsService'
 import confetti from 'canvas-confetti'
 import { useToast } from '@/composables/useToast'
 import type { Repair } from '@/api/types'
@@ -201,14 +200,6 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
           repairDescription: completionData.value.description,
           repairDuration: Number(completionData.value.duration ?? 0),
         })
-        await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-          user_id: userId || options.repairRecord.value.user_id || undefined,
-          reparatur_dauer: 0,
-          reparatur_besch: completionData.value.description,
-          log_type: 'status_change',
-          status_from: fromStatus,
-          status_to: 'Repariert',
-        })
       } else {
         await repairStore.transitionRepairStatus({
           repairId: options.repairRecord.value.id,
@@ -216,14 +207,6 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
           toStatus,
           statusDetail: validStatusDetail,
           user_id: userId || options.repairRecord.value.user_id || undefined,
-        })
-        await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-          user_id: userId || options.repairRecord.value.user_id || undefined,
-          reparatur_dauer: 0,
-          reparatur_besch: '',
-          log_type: 'status_change',
-          status_from: fromStatus,
-          status_to: toStatus,
         })
       }
 
@@ -270,7 +253,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     pendingAbbruchPayload.value = null
 
     try {
-      await RepairsService.createRepairCancellation(options.repairRecord.value.id, {
+      await api.createOrUploadRepairCancellation({ id: options.repairRecord.value.id }, {
         signature: signaturePayload.signature,
       })
       await options.onCancellationSigned?.()
@@ -295,14 +278,6 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         user_id: options.repairRecord.value.user_id || undefined,
         repairDescription: payload.description,
         repairDuration: payload.duration,
-      })
-      await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-        user_id: options.repairRecord.value.user_id || undefined,
-        reparatur_dauer: 0,
-        reparatur_besch: payload.description,
-        log_type: 'status_change',
-        status_from: fromStatus,
-        status_to: 'Nicht Repariert',
       })
       toast.success('Reparatur als nicht reparierbar abgeschlossen')
       options.repairRecord.value.status = 'Nicht Repariert'

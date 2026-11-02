@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
 import type { RepairLog } from '@/api/types'
 import type { LogAttachment } from '@/composables/useRepairDetail'
 import { useAuthStore } from '@/stores/authStore'
@@ -70,7 +70,7 @@ async function save() {
 
   saving.value = true
   try {
-    const response = await RepairLogsService.updateRepairLog(repairId, log.id, {
+    const response = await api.updateRepairLog({ repairId: repairId, logId: log.id }, {
       user_id: userId.value ?? undefined,
       reparatur_besch: description.value,
       reparatur_dauer: duration.value ?? 0,
@@ -93,7 +93,7 @@ async function remove() {
   if (!log) return
   deleting.value = true
   try {
-    const response = await RepairLogsService.deleteRepairLog(repairId, log.id)
+    const response = await api.deleteRepairLog({ repairId: repairId, logId: log.id })
     if (response.reply === 'done') {
       toast.success('Logeintrag gelöscht')
       confirmDelete.value = false

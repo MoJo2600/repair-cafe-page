@@ -124,11 +124,10 @@ v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { ref, computed } from 'vue'
 import type { Repair, VdeTestResponse } from '@/api/types'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/stores/repairStore'
-import { RepairsService } from '@/api/services/RepairsService'
-import { ConfigService } from '@/api/services/ConfigService'
 import { formatDate, formatDateTime } from '@/utils/date'
 
 // A repair being created: no ids yet, and unselected fields are null.
@@ -170,7 +169,7 @@ function openEditDialog() {
     defekt_besch: props.repairData.defekt_besch ?? '',
   }
   if (repairTypes.value.length === 0) {
-    ConfigService.getDropdownConfig()
+    api.getDropdownConfig()
       .then((c) => {
         if (c.repair_type) repairTypes.value = c.repair_type
       })
@@ -183,7 +182,7 @@ async function saveEdit() {
   if (!props.repairData.id) return
   saving.value = true
   try {
-    await RepairsService.updateRepair(props.repairData.id, {
+    await api.updateRepair({ id: props.repairData.id }, {
       datum: editForm.value.datum,
       repair_type_id: editForm.value.repair_type_id ?? undefined,
       geraet_art: editForm.value.geraet_art,

@@ -46,6 +46,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Generated API client is up to date
+        run: |
+          pnpm generate-api
+          git diff --exit-code src/api/generated || {
+            echo "::error::src/api/generated is outdated. Run: pnpm generate-api"
+            exit 1
+          }
       - run: pnpm type-check
       - run: pnpm exec eslint src --quiet
       - run: pnpm build

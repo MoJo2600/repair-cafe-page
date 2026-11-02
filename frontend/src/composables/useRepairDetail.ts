@@ -1,13 +1,12 @@
+import { api } from '@/api/client'
 import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
-import { RepairsService } from '@/api/services/RepairsService'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
-import { VdeTestsService } from '@/api/services/VdeTestsService'
-import {
-  AttachmentsService,
-  attachmentUrl,
-  type RepairAttachment,
-} from '@/api/services/AttachmentsService'
-import type { Repair, RepairLog, VdeTestResponse } from '@/api/types'
+import { attachmentUrl, documentExists } from '@/api/documents'
+import type {
+  Repair,
+  RepairAttachmentResponse as RepairAttachment,
+  RepairLog,
+  VdeTestResponse,
+} from '@/api/types'
 import { calculateRepairDurationFromLogs } from '@/stores/repairStore'
 import { useRepairThread } from '@/composables/useRepairThread'
 
@@ -43,7 +42,7 @@ export function useRepairDetail(
     const token = toValue(qrToken)
     if (!token) return
     try {
-      const response = await RepairsService.getRepairByQrToken(token)
+      const response = await api.getRepairByQrToken({ token: token })
       if (response?.data && toValue(qrToken) === token) {
         repair.value = response.data as Repair
       }
@@ -56,7 +55,7 @@ export function useRepairDetail(
     const repairId = repair.value?.id
     if (!repairId) return
     try {
-      const response = await RepairLogsService.listRepairLogs(repairId)
+      const response = await api.listRepairLogs({ repairId: repairId })
       if (response.data && isCurrent(repairId)) logs.value = response.data
     } catch (err) {
       console.error('Error loading repair logs:', err)
@@ -67,7 +66,7 @@ export function useRepairDetail(
     const repairId = repair.value?.id
     if (!repairId) return
     try {
-      const response = await VdeTestsService.listVdeTests(repairId)
+      const response = await api.listVdeTests({ repairId: repairId })
       if (response.reply === 'done' && response.data && isCurrent(repairId)) {
         vdeTests.value = response.data
       }
@@ -80,8 +79,8 @@ export function useRepairDetail(
     const repairId = repair.value?.id
     if (!repairId) return
     try {
-      const list = await AttachmentsService.list(repairId)
-      if (isCurrent(repairId)) attachments.value = list
+      const response = await api.listRepairAttachments({ repairId })
+      if (isCurrent(repairId)) attachments.value = response.data ?? []
     } catch (err) {
       console.error('Error loading attachments:', err)
     }
@@ -91,8 +90,8 @@ export function useRepairDetail(
     const repairId = repair.value?.id
     if (!repairId) return
     const [disclaimer, cancellation] = await Promise.all([
-      AttachmentsService.documentExists(repairId, 'disclaimer'),
-      AttachmentsService.documentExists(repairId, 'cancellation'),
+      documentExists(repairId, 'disclaimer'),
+      documentExists(repairId, 'cancellation'),
     ])
     if (!isCurrent(repairId)) return
     disclaimerExists.value = disclaimer
@@ -120,7 +119,7 @@ export function useRepairDetail(
     }
 
     try {
-      const response = await RepairsService.getRepairByQrToken(token)
+      const response = await api.getRepairByQrToken({ token: token })
       if (!stillLoading()) return
       if (!response?.data) {
         error.value = 'Reparatur nicht gefunden'
@@ -157,7 +156,7 @@ export function useRepairDetail(
     const repairId = repair.value?.id
     if (!repairId) return grouped
     for (const att of attachments.value) {
-      if (att.log_id === null) continue
+      if (att.log_id == null) continue
       ;(grouped[att.log_id] ??= []).push({
         name: att.original_filename,
         url: attachmentUrl(repairId, att.id),

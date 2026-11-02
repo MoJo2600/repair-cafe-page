@@ -124,8 +124,8 @@
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { AuthService } from '@/api/services/AuthService'
 import type { PinStatusResponse } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -152,7 +152,7 @@ async function loadStatus() {
   loading.value = true
   error.value = ''
   try {
-    const result = await AuthService.pinStatus()
+    const result = await api.pinStatus()
     if (active) status.value = result
   } catch {
     if (active) {
@@ -175,7 +175,7 @@ async function generate(replace: boolean) {
   error.value = ''
   clearPin()
   try {
-    const result = await AuthService.generatePin({ replace })
+    const result = await api.generatePin({ replace })
     if (!active || !authStore.isAuthenticated) return
     newPin.value = result.pin_code
     status.value = { mode: 'local', has_pin: true, can_generate: true }

@@ -396,9 +396,9 @@
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { AuthService } from '@/api/services/AuthService'
 import type { PinDashboardSummaryResponse, RepairsTimelinePoint } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import confetti from 'canvas-confetti'
@@ -578,7 +578,7 @@ async function loadSummary() {
   summaryLoading.value = true
   summaryError.value = false
   try {
-    summary.value = await AuthService.pinDashboardSummary()
+    summary.value = await api.pinDashboardSummary()
   } catch {
     summaryError.value = true
   } finally {

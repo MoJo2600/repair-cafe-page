@@ -1,10 +1,8 @@
 <script setup lang="ts">
+import { api } from '@/api/client'
+import type { VdeTestCreate } from '@/api/types'
 import { onMounted, ref, shallowRef, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { RepairsService } from '@/api/services/RepairsService'
-import { VdeTestsService, type VdeTestCreate } from '@/api/services/VdeTestsService'
-import { ConfigService } from '@/api/services/ConfigService'
-import { sessionFetch } from '@/api/session'
 import type { PruefgeraetResponse, Repair } from '@/api/types'
 import {
   getRepairStatusColor,
@@ -83,13 +81,13 @@ const labelPrinterEnabled = shallowRef(false)
 
 onMounted(() => {
   void Promise.all([
-    ConfigService.getPruefgeraete()
+    api.getPruefgeraete()
       .then((devices) => {
         pruefgeraete.value = devices
       })
       .catch((err) => console.error('Error loading testing devices:', err)),
     userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
-    ConfigService.getFeatures()
+    api.getFeatures()
       .then((f) => {
         labelPrinterEnabled.value = f.label_printer ?? false
       })
@@ -189,7 +187,7 @@ async function printLabel() {
   if (!repair.value) return
   printingLabel.value = true
   try {
-    const result = await RepairsService.printLabel(repair.value.id)
+    const result = await api.printRepairLabel({ id: repair.value.id }, {})
     toast.success(result.message || 'Label gedruckt')
   } catch (err) {
     toast.error(errorMessage(err, 'Fehler beim Drucken'))
@@ -202,9 +200,8 @@ async function downloadVdePdf(testId: number) {
   if (!repair.value) return
   const repairId = repair.value.id
   try {
-    const res = await sessionFetch(`/api/repairs/${repairId}/vde-tests/${testId}/pdf`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const url = URL.createObjectURL(await res.blob())
+    const pdf = await api.getVdeTestPdf({ repairId, testId }, { format: 'blob' })
+    const url = URL.createObjectURL(pdf)
     const link = document.createElement('a')
     link.href = url
     link.download = `vde_pruefprotokoll_${repairId}_${testId}.pdf`
@@ -240,7 +237,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
       bemerkungen: payload.bemerkungen || undefined,
     }
 
-    const vdeResponse = await VdeTestsService.createVdeTest(repair.value.id, vdePayload)
+    const vdeResponse = await api.createVdeTest({ repairId: repair.value.id }, { repair_id: repair.value.id, ...vdePayload })
     if (vdeResponse.reply !== 'done') {
       toast.error('Fehler beim Speichern des VDE Tests')
       return

@@ -109,11 +109,11 @@
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { AuthService } from '@/api/services/AuthService'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -139,13 +139,13 @@ const errorCode = route.query.error as string | undefined
 const errorMessage = ref(errorCode ? (SSO_ERRORS[errorCode] ?? SSO_ERRORS.sso_failed) : '')
 
 const redirectTarget = computed(() => (route.query.redirect as string) || '/')
-const ssoUrl = computed(() => AuthService.oidcLoginUrl(redirectTarget.value))
+const ssoUrl = computed(() => `/api/auth/oidc/login?next=${encodeURIComponent(redirectTarget.value)}`)
 
 const required = (v: string) => !!v || 'Pflichtfeld'
 
 onMounted(async () => {
   try {
-    oidcEnabled.value = (await AuthService.config()).oidc_enabled
+    oidcEnabled.value = (await api.authConfig()).oidc_enabled
   } catch {
     oidcEnabled.value = false
   }

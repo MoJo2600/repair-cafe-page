@@ -1,13 +1,12 @@
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, ref, shallowRef, watch } from 'vue'
-import { RepairsService } from '@/api/services/RepairsService'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/composables/useToast'
 import { errorMessage } from '@/utils/errors'
 
-/** Who is responsible for a repair; saves changes and logs them as assignee changes. */
+/** Who is responsible for a repair; the backend logs each change as an assignee change. */
 const { repairId, assigneeId } = defineProps<{
   repairId: number
   assigneeId: number | null
@@ -43,16 +42,7 @@ async function assign(userId: number | null) {
   selected.value = userId
   saving.value = true
   try {
-    await RepairsService.updateRepair(repairId, { user_id: userId })
-    const assignee = userId ? userStore.getUserById(userId) : undefined
-    await RepairLogsService.createRepairLog(repairId, {
-      log_type: 'assignee_change',
-      reparatur_besch: assignee
-        ? `Zugewiesen an: ${assignee.vorname} ${assignee.nachname}`
-        : 'Zuweisung entfernt',
-      reparatur_dauer: 0,
-      user_id: authStore.currentUser?.id ?? undefined,
-    })
+    await api.updateRepair({ id: repairId }, { user_id: userId })
     toast.success(userId ? 'Zuständigkeit aktualisiert' : 'Zuweisung entfernt')
     emit('assigned', userId)
   } catch (err) {

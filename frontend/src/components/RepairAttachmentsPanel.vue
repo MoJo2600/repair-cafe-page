@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue'
-import {
-  AttachmentsService,
-  attachmentUrl,
-  documentUrl,
-  type RepairAttachment,
-} from '@/api/services/AttachmentsService'
+import { api, asFormData } from '@/api/client'
+import { attachmentUrl, documentUrl } from '@/api/documents'
+import type { RepairAttachmentResponse as RepairAttachment } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
 import { fileIcon, formatFileSize, isImage } from '@/utils/files'
@@ -74,10 +71,14 @@ async function upload() {
   if (pendingFiles.value.length === 0) return
   uploading.value = true
   try {
-    await AttachmentsService.upload(repairId, pendingFiles.value, {
-      attachment_type: 'misc',
-      uploaded_by_id: authStore.currentUser?.id,
-    })
+    await api.uploadRepairAttachments(
+      { repairId },
+      asFormData({
+        files: pendingFiles.value,
+        attachment_type: 'misc',
+        uploaded_by_id: authStore.currentUser?.id,
+      })
+    )
     pendingFiles.value = []
     toast.success('Dateien hochgeladen')
     emit('changed')
@@ -90,7 +91,7 @@ async function upload() {
 
 async function remove(attachmentId: number) {
   try {
-    await AttachmentsService.remove(repairId, attachmentId)
+    await api.deleteRepairAttachment({ repairId, attachmentId })
     toast.success('Anhang gelöscht')
     emit('changed')
   } catch (err) {
