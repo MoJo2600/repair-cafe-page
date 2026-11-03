@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.5.0...v1.6.0) (2026-11-03)
+
+
+### Features
+
+* hardening app for production ([a252321](https://github.com/MoJo2600/repair-cafe-page/commit/a2523216f0e3cc37dfb0ee45546bf9dc8daaf449))
+* vuetify 4 upgrade and UI overhaul ([#31](https://github.com/MoJo2600/repair-cafe-page/issues/31)) ([10617e6](https://github.com/MoJo2600/repair-cafe-page/commit/10617e6a60e2758fbee9a193760e23a0f5f8d9d6))
+
 ## [1.5.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.4.1...v1.5.0) (2026-11-02)
 
 
