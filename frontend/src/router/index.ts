@@ -11,7 +11,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/lock',
     name: 'PinLock',
-    component: () => import('../components/PinLockScreen.vue'),
+    component: () => import('../views/LockPage.vue'),
   },
   {
     path: '/',
@@ -21,7 +21,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('../components/PinLockScreen.vue'),
+    component: () => import('../views/DashboardPage.vue'),
   },
   {
     path: '/repairs',
