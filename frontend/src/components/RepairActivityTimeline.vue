@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import type { RepairThreadEntry } from '@/composables/useRepairThread'
 import { getRepairStatusColor } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
+import SectionTitle from '@/components/ui/SectionTitle.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
 
 /** Chronological activity of a repair: work logs, status/assignee changes, VDE tests. */
 const {
@@ -22,20 +24,28 @@ const emit = defineEmits<{
   downloadVde: [testId: number]
 }>()
 
-const ENTRY_STYLE: Record<RepairThreadEntry['type'], { color: string; icon: string }> = {
-  repair: { color: 'primary', icon: 'mdi-wrench' },
-  status_change: { color: 'warning', icon: 'mdi-swap-horizontal' },
-  created: { color: 'grey', icon: 'mdi-clipboard-plus-outline' },
-  assignee_change: { color: 'blue-lighten-1', icon: 'mdi-account-arrow-right' },
-  vde: { color: 'success', icon: 'mdi-flash' },
+/** Dot per entry type (docs/STYLEGUIDE.md: status colors only for statuses). */
+function entryStyle(entry: RepairThreadEntry): { color: string; icon: string } {
+  switch (entry.type) {
+    case 'repair':
+      return { color: 'primary', icon: 'mdi-wrench' }
+    case 'status_change':
+      return { color: getRepairStatusColor(entry.status_to), icon: 'mdi-swap-horizontal' }
+    case 'created':
+      return { color: getRepairStatusColor('Offen'), icon: 'mdi-clipboard-plus-outline' }
+    case 'assignee_change':
+      return { color: 'surface-variant', icon: 'mdi-account-arrow-right' }
+    case 'vde':
+      // The test result is feedback, so it uses the feedback colors
+      return entry.vdePassed
+        ? { color: 'success', icon: 'mdi-flash' }
+        : { color: 'error', icon: 'mdi-flash-off' }
+  }
 }
 
 const items = computed(() =>
   entries.map((entry) => {
-    const style =
-      entry.type === 'vde' && !entry.vdePassed
-        ? { color: 'error', icon: 'mdi-flash-off' }
-        : ENTRY_STYLE[entry.type]
+    const style = entryStyle(entry)
     return {
       entry,
       ...style,
@@ -52,7 +62,7 @@ function onEntryClick(entry: RepairThreadEntry) {
 
 <template>
   <div>
-    <h3 v-if="showTitle" class="text-title-large mb-4">Reparatur Logeinträge</h3>
+    <SectionTitle v-if="showTitle" title="Verlauf" icon="mdi-history" />
 
     <v-timeline v-if="items.length > 0" density="compact" side="end" class="mb-4">
       <v-timeline-item
@@ -63,16 +73,6 @@ function onEntryClick(entry: RepairThreadEntry) {
         @click="onEntryClick(item.entry)"
       >
         <div :class="{ 'repair-entry': item.entry.type === 'repair' }">
-          <v-chip
-            v-if="item.attachments > 0"
-            size="x-small"
-            color="grey-darken-1"
-            variant="tonal"
-            class="mb-1"
-          >
-            <v-icon size="12" start>mdi-paperclip</v-icon>
-            {{ item.attachments }}
-          </v-chip>
 
           <!-- Status change, or a work log that also changed the status -->
           <div
@@ -88,13 +88,9 @@ function onEntryClick(entry: RepairThreadEntry) {
             "
             class="d-flex align-center ga-1 flex-wrap"
           >
-            <v-chip size="x-small" variant="tonal" :color="getRepairStatusColor(item.entry.status_from)">
-              {{ item.entry.status_from || '?' }}
-            </v-chip>
-            <v-icon size="14" color="grey">mdi-arrow-right</v-icon>
-            <v-chip size="x-small" variant="tonal" :color="getRepairStatusColor(item.entry.status_to)">
-              {{ item.entry.status_to || '?' }}
-            </v-chip>
+            <StatusChip :status="item.entry.status_from" size="x-small" />
+            <v-icon size="14" class="text-medium-emphasis">mdi-arrow-right</v-icon>
+            <StatusChip :status="item.entry.status_to" size="x-small" />
           </div>
 
           <div v-else-if="item.entry.type === 'vde'" class="d-flex align-center ga-2 flex-wrap">
@@ -105,43 +101,41 @@ function onEntryClick(entry: RepairThreadEntry) {
               size="small"
               variant="text"
               prepend-icon="mdi-file-pdf-box"
-              color="error"
+              color="primary"
               @click.stop="emit('downloadVde', item.entry.id)"
             >
               PDF herunterladen
             </v-btn>
           </div>
 
-          <v-chip
-            v-else-if="item.entry.type === 'created'"
-            size="x-small"
-            variant="tonal"
-            :color="getRepairStatusColor('Offen')"
-          >
-            Offen
-          </v-chip>
+          <div v-else-if="item.entry.type === 'created'" class="text-body-medium">
+            Reparatur angenommen
+          </div>
 
           <div
             v-else-if="item.entry.type === 'assignee_change'"
             class="d-flex align-center ga-1 flex-wrap"
           >
-            <v-icon size="14" color="blue-lighten-1">mdi-account-arrow-right</v-icon>
             <span class="text-body-medium">{{ item.entry.description }}</span>
           </div>
 
           <div class="text-body-small text-medium-emphasis">
-            {{ item.timestamp }}
-            <template v-if="item.entry.person">
-              - <strong>{{ item.entry.person }}</strong>
-            </template>
+            {{ item.timestamp }}<template v-if="item.entry.person"> · {{ item.entry.person }}</template>
+            <span v-if="item.attachments > 0" class="ml-2">
+              <v-icon icon="mdi-paperclip" size="x-small" />{{ item.attachments }}
+            </span>
           </div>
         </div>
       </v-timeline-item>
     </v-timeline>
 
-    <v-alert v-else type="info" variant="tonal" class="mb-4">
-      Noch keine Logeinträge vorhanden.
-    </v-alert>
+    <v-empty-state
+      v-else
+      icon="mdi-history"
+      title="Noch keine Einträge"
+      text="Arbeitsschritte, Statuswechsel und VDE-Tests erscheinen hier."
+      size="64"
+    />
   </div>
 </template>
 

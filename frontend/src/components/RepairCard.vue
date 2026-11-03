@@ -2,8 +2,11 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { RepairListItem } from '@/api/types'
-import { getRepairStatusColor } from '@/domain/repairStatus'
 import { formatDateTime } from '@/utils/date'
+import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import TagChip from '@/components/ui/TagChip.vue'
 
 /** A repair in the overview: tap the card to open it; the button runs its next step. */
 const { repair } = defineProps<{ repair: RepairListItem }>()
@@ -20,67 +23,50 @@ function openRepair() {
 }
 
 const isOpen = computed(() => repair.status === 'Offen')
-const color = computed(() => getRepairStatusColor(repair.status))
-const customerName = computed(() =>
-  [repair.customer?.vorname, repair.customer?.nachname].filter(Boolean).join(' ')
-)
-const repairerName = computed(() =>
-  repair.user ? `${repair.user.vorname} ${repair.user.nachname}` : ''
-)
-const latestLog = computed(() => {
-  const log = repair.latest_log
-  if (!log) return null
-  const author = log.user ? `${log.user.vorname} ${log.user.nachname}` : ''
-  return {
-    meta: [formatDateTime(log.created_at), author].filter(Boolean).join(' · '),
-    text: log.reparatur_besch,
-  }
-})
 </script>
 
 <template>
   <v-card class="d-flex flex-column h-100" border @click="openRepair">
     <v-card-item>
       <template #prepend>
-        <v-avatar :color="color" size="48">
-          <span class="text-title-medium font-weight-bold">{{ repair.id }}</span>
-        </v-avatar>
+        <RepairNumber :id="repair.id" :status="repair.status" />
       </template>
       <v-card-title class="text-title-large">{{ repair.geraet_art }}</v-card-title>
-      <v-card-subtitle v-if="customerName">
-        <v-icon icon="mdi-account" size="small" start />{{ customerName }}
+      <v-card-subtitle>
+        <PersonLabel :person="repair.customer" role="customer" />
       </v-card-subtitle>
     </v-card-item>
 
-    <v-card-text class="flex-grow-1 pt-0">
-      <div class="d-flex flex-wrap ga-2 mb-2">
-        <v-chip v-if="repair.repair_type" size="small" prepend-icon="mdi-tools">
-          {{ repair.repair_type.name }}
-        </v-chip>
-        <v-chip v-if="repairerName" size="small" prepend-icon="mdi-account-wrench" :color="color">
-          {{ repairerName }}
-        </v-chip>
+    <v-card-text class="flex-grow-1 pt-0 d-flex flex-column ga-2">
+      <div v-if="repair.repair_type || repair.user" class="d-flex flex-wrap align-center ga-3">
+        <TagChip v-if="repair.repair_type" :label="repair.repair_type.name" />
+        <PersonLabel v-if="repair.user" :person="repair.user" role="repairer" />
       </div>
 
       <p v-if="isOpen && repair.defekt_besch" class="line-clamp-2 text-body-medium">
         {{ repair.defekt_besch }}
       </p>
 
-      <div v-if="!isOpen && latestLog" class="text-body-small">
-        <div class="text-medium-emphasis">
-          <v-icon icon="mdi-history" size="small" start />{{ latestLog.meta }}
+      <div v-if="!isOpen && repair.latest_log" class="text-body-medium">
+        <p v-if="repair.latest_log.reparatur_besch" class="line-clamp-2">
+          {{ repair.latest_log.reparatur_besch }}
+        </p>
+        <div class="text-body-small text-medium-emphasis">
+          {{ formatDateTime(repair.latest_log.created_at) }}
+          <template v-if="repair.latest_log.user">
+            · <PersonLabel :person="repair.latest_log.user" role="author" />
+          </template>
         </div>
-        <p v-if="latestLog.text" class="line-clamp-2 mt-1">{{ latestLog.text }}</p>
       </div>
     </v-card-text>
 
     <v-card-actions class="pa-4 pt-0">
       <v-btn
         v-if="isOpen"
-        color="success"
+        :color="getRepairStatusColor('In Bearbeitung')"
         variant="flat"
         size="large"
-        prepend-icon="mdi-play-circle"
+        :prepend-icon="getRepairStatusIcon('In Bearbeitung')"
         block
         @click.stop="emit('start', repair)"
       >

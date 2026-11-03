@@ -4,6 +4,7 @@ import { api, asFormData } from '@/api/client'
 import { attachmentUrl, documentUrl } from '@/api/documents'
 import type { RepairAttachmentResponse as RepairAttachment } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
+import SectionTitle from '@/components/ui/SectionTitle.vue'
 import { useToast } from '@/composables/useToast'
 import { fileIcon, formatFileSize, isImage } from '@/utils/files'
 import { errorMessage } from '@/utils/errors'
@@ -110,7 +111,7 @@ async function remove(attachmentId: number) {
 
 <template>
   <div>
-    <h3 v-if="showTitle" class="text-title-large mb-3">Anhänge</h3>
+    <SectionTitle v-if="showTitle" title="Anhänge" icon="mdi-paperclip" />
 
     <!-- Generated PDFs (read-only) -->
     <v-card class="mb-3">
@@ -135,7 +136,7 @@ async function remove(attachmentId: number) {
                 :download="doc.filename"
                 @click.stop
               ></v-btn>
-              <v-icon v-else color="grey" size="small">mdi-minus</v-icon>
+              <v-icon v-else size="small" class="text-medium-emphasis">mdi-minus</v-icon>
             </template>
           </v-list-item>
         </template>

@@ -17,6 +17,7 @@ import { useRepairStatusTransition } from '@/composables/useRepairStatusTransiti
 import { useToast } from '@/composables/useToast'
 import { errorMessage } from '@/utils/errors'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
+import CountBadge from '@/components/ui/CountBadge.vue'
 import RepairActivityTimeline from '@/components/RepairActivityTimeline.vue'
 import RepairAttachmentsPanel from '@/components/RepairAttachmentsPanel.vue'
 import RepairAssigneeSelect from '@/components/RepairAssigneeSelect.vue'
@@ -358,9 +359,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
               <v-tab value="activity" prepend-icon="mdi-history">Verlauf</v-tab>
               <v-tab value="attachments" prepend-icon="mdi-paperclip">
                 Anhänge
-                <v-chip v-if="attachments.length" size="x-small" class="ml-2">
-                  {{ attachments.length }}
-                </v-chip>
+                <CountBadge v-if="attachments.length" :count="attachments.length" />
               </v-tab>
             </v-tabs>
             <RepairActivityTimeline

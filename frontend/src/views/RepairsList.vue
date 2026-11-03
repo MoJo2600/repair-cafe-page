@@ -1,19 +1,15 @@
 <template>
   <v-container fluid class="pa-4">
-    <!-- Header -->
-    <v-row class="mb-4 align-center">
-      <v-col>
-        <h1 class="text-headline-small font-weight-bold">Reparaturliste</h1>
-      </v-col>
-      <v-col cols="auto">
-        <v-btn color="success" prepend-icon="mdi-plus" class="mr-2" @click="createNewRepair">
-          Neue Reparatur
-        </v-btn>
-        <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="loadRepairs">
+    <PageHeader title="Reparaturliste">
+      <template #actions>
+        <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="loadRepairs()">
           Aktualisieren
         </v-btn>
-      </v-col>
-    </v-row>
+        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="createNewRepair">
+          Neue Reparatur
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <!-- Filter row -->
     <v-row class="mb-2">
@@ -64,13 +60,19 @@
         @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
       >
         <template #item.status="{ item }">
-          <v-chip :color="getRepairStatusColor(item.status)" size="small">
-            {{ item.status }}
-          </v-chip>
+          <StatusChip :status="item.status" />
+        </template>
+
+        <template #item.customer="{ item }">
+          <PersonLabel :person="item.customer" role="customer" />
+        </template>
+
+        <template #item.user="{ item }">
+          <PersonLabel v-if="item.user" :person="item.user" role="repairer" />
         </template>
 
         <template #item.repair_type="{ item }">
-          {{ item.repair_type?.name || '-' }}
+          <TagChip v-if="item.repair_type" :label="item.repair_type.name" />
         </template>
 
         <template #item.geraet_art="{ item }">
@@ -78,17 +80,19 @@
         </template>
 
         <template #item.status_detail="{ item }">
-          {{ item.status_detail || '-' }}
+          {{ item.status_detail || '–' }}
         </template>
 
-        <template #item.reparatur_dauer="{ item }"> {{ item.reparatur_dauer }} min </template>
+        <template #item.reparatur_dauer="{ item }">
+          {{ item.reparatur_dauer ? `${item.reparatur_dauer} Min.` : '–' }}
+        </template>
 
         <template #item.datum="{ item }">
           {{ formatDate(item.datum) }}
         </template>
 
         <template #item.closed_at="{ item }">
-          {{ item.closed_at ? formatDateTime(item.closed_at) : '-' }}
+          {{ item.closed_at ? formatDateTime(item.closed_at) : '–' }}
         </template>
 
         <template #item.din_pruef="{ item }">
@@ -252,6 +256,10 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
 
 <script setup lang="ts">
 import { personName } from '@/utils/person'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
+import TagChip from '@/components/ui/TagChip.vue'
 import { api } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -262,7 +270,6 @@ import { formatDate, formatDateTime } from '@/utils/date'
 import {
   REPAIR_STATUSES,
   REPAIR_STATUS_DETAIL_OPTIONS,
-  getRepairStatusColor,
   isOpenRepairStatus,
   isClosedRepairStatus,
   type RepairStatus,
@@ -364,18 +371,18 @@ function customerNameFilter(value: unknown, query: string, item?: { raw: Repair 
 }
 
 const headers = [
-  { title: 'ID', key: 'id', sortable: true },
+  { title: 'Nr.', key: 'id', sortable: true },
   { title: 'Status', key: 'status', sortable: true },
-  { title: 'Device Type', key: 'geraet_art', sortable: true },
-  { title: 'First Name', key: 'customer.vorname', sortable: false },
-  { title: 'Last Name', key: 'customer.nachname', sortable: false },
-  { title: 'Repair Type', key: 'repair_type', sortable: false },
-  { title: 'Status Detail', key: 'status_detail', sortable: true },
-  { title: 'Duration', key: 'reparatur_dauer', sortable: true },
-  { title: 'Date', key: 'datum', sortable: true },
-  { title: 'Closed', key: 'closed_at', sortable: true },
+  { title: 'Gerät', key: 'geraet_art', sortable: true },
+  { title: 'Kunde', key: 'customer', sortable: false },
+  { title: 'Reparateur', key: 'user', sortable: false },
+  { title: 'Kategorie', key: 'repair_type', sortable: false },
+  { title: 'Abschlussgrund', key: 'status_detail', sortable: true },
+  { title: 'Dauer', key: 'reparatur_dauer', sortable: true },
+  { title: 'Angenommen', key: 'datum', sortable: true },
+  { title: 'Abgeschlossen', key: 'closed_at', sortable: true },
   { title: 'DIN', key: 'din_pruef', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: '', key: 'actions', sortable: false },
 ]
 
 const loadRepairs = async (customerId?: number) => {

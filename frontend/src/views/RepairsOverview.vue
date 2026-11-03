@@ -7,6 +7,11 @@ import { useRepairStore } from '@/stores/repairStore'
 import { normalizeRepairStatus } from '@/domain/repairStatus'
 import type { RepairListItem } from '@/api/types'
 import RepairCard from '@/components/RepairCard.vue'
+import CountBadge from '@/components/ui/CountBadge.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import SectionTitle from '@/components/ui/SectionTitle.vue'
+import TagChip from '@/components/ui/TagChip.vue'
 import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 
 const router = useRouter()
@@ -41,12 +46,6 @@ const visibleSections = computed(() =>
 const initialLoading = computed(() => repairStore.loading && repairStore.repairs.length === 0)
 
 const nextRepair = computed(() => repairStore.nextRepair)
-const nextCustomer = computed(() =>
-  [nextRepair.value?.customer?.vorname, nextRepair.value?.customer?.nachname]
-    .filter(Boolean)
-    .join(' ')
-)
-
 onMounted(async () => {
   await repairStore.fetchRepairs()
   repairStore.startAutoRefresh()
@@ -103,19 +102,14 @@ async function confirmStartRepair(userId: number) {
           type="list-item-avatar-two-line"
           color="transparent"
         />
-        <v-list-item
-          v-else-if="nextRepair"
-          class="px-0"
-          :title="nextRepair.geraet_art"
-          :subtitle="[nextCustomer, nextRepair.repair_type?.name].filter(Boolean).join(' · ')"
-        >
+        <v-list-item v-else-if="nextRepair" class="px-0" :title="nextRepair.geraet_art">
           <template #prepend>
-            <v-avatar color="surface" size="56">
-              <span class="text-title-large font-weight-bold text-primary">
-                {{ nextRepair.id }}
-              </span>
-            </v-avatar>
+            <RepairNumber :id="nextRepair.id" :status="nextRepair.status" class="mr-4" />
           </template>
+          <v-list-item-subtitle class="d-flex flex-wrap align-center ga-3 mt-1">
+            <PersonLabel :person="nextRepair.customer" role="customer" />
+            <TagChip v-if="nextRepair.repair_type" :label="nextRepair.repair_type.name" />
+          </v-list-item-subtitle>
         </v-list-item>
         <div v-else class="text-title-medium">Keine offenen Reparaturen vorhanden</div>
       </v-card-text>
@@ -137,17 +131,18 @@ async function confirmStartRepair(userId: number) {
     <v-tabs v-if="!mdAndUp" v-model="activeTab" grow class="mb-4">
       <v-tab v-for="section in sections" :key="section.key" :value="section.key">
         {{ section.title }}
-        <v-chip size="x-small" class="ml-2">{{ section.repairs.length }}</v-chip>
+        <CountBadge :count="section.repairs.length" />
       </v-tab>
     </v-tabs>
 
     <v-row>
       <v-col v-for="section in visibleSections" :key="section.key" cols="12" md="6">
-        <h2 v-if="mdAndUp" class="text-title-large d-flex align-center ga-2 mb-3">
-          <v-icon :icon="section.icon" />
-          {{ section.title }}
-          <v-chip size="small">{{ section.repairs.length }}</v-chip>
-        </h2>
+        <SectionTitle
+          v-if="mdAndUp"
+          :title="section.title"
+          :icon="section.icon"
+          :count="section.repairs.length"
+        />
 
         <v-row v-if="initialLoading" density="compact">
           <v-col v-for="n in 2" :key="n" cols="12">

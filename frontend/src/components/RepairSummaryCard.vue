@@ -2,34 +2,19 @@
   <v-card class="mb-4">
     <v-card-item>
       <template #prepend>
-        <v-avatar :color="statusColor" size="48">
-          <span class="text-title-medium font-weight-bold">{{ repairData.id }}</span>
-        </v-avatar>
+        <RepairNumber :id="repairData.id" :status="repairData.status" />
       </template>
       <v-card-title class="text-headline-small text-wrap">{{ repairData.geraet_art }}</v-card-title>
-      <v-card-subtitle>{{ subtitle }}</v-card-subtitle>
-      <template v-if="mdAndUp" #append>
-        <div class="d-flex align-center ga-1">
-          <v-chip :color="statusColor" variant="tonal" :prepend-icon="statusIcon">
-            {{ repairData.status }}
-          </v-chip>
-          <v-btn
-            v-if="repairData.id"
-            icon="mdi-pencil"
-            variant="text"
-            aria-label="Reparatur bearbeiten"
-            @click="openEditDialog"
-          ></v-btn>
-        </div>
-      </template>
+      <v-card-subtitle v-if="repairData.datum">
+        Angenommen am {{ formatDate(repairData.datum) }}
+      </v-card-subtitle>
     </v-card-item>
 
     <v-card-text>
-      <!-- Small screens: status and edit get their own row, the title keeps the full width -->
-      <div v-if="!mdAndUp" class="d-flex align-center justify-space-between mb-4">
-        <v-chip :color="statusColor" variant="tonal" :prepend-icon="statusIcon">
-          {{ repairData.status }}
-        </v-chip>
+      <div class="d-flex flex-wrap align-center ga-2 mb-4">
+        <StatusChip :status="repairData.status" size="default" />
+        <TagChip v-if="repairData.repair_type?.name" :label="repairData.repair_type.name" />
+        <v-spacer />
         <v-btn
           v-if="repairData.id"
           variant="text"
@@ -46,7 +31,7 @@
       <v-row density="compact">
         <v-col cols="12" sm="6">
           <v-list density="compact" class="py-0" bg-color="transparent">
-            <v-list-item prepend-icon="mdi-account" :title="customerName || '–'" subtitle="Kunde" />
+            <v-list-item prepend-icon="mdi-account" :title="personName(repairData.customer)" subtitle="Kunde" />
             <v-list-item
               v-if="repairData.customer?.telefon"
               prepend-icon="mdi-phone"
@@ -145,9 +130,11 @@ v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api } from '@/api/client'
 import { ref, computed } from 'vue'
-import { useDisplay } from 'vuetify'
 import type { Repair, VdeTestResponse } from '@/api/types'
-import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
+import { personName } from '@/utils/person'
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
+import TagChip from '@/components/ui/TagChip.vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { useToast } from '@/composables/useToast'
 import { errorMessage } from '@/utils/errors'
@@ -178,25 +165,9 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const { mdAndUp } = useDisplay()
 
-const statusColor = computed(() => getRepairStatusColor(props.repairData.status ?? ''))
-const statusIcon = computed(() => getRepairStatusIcon(props.repairData.status ?? ''))
 const isClosed = computed(
   () => props.repairData.status === 'Repariert' || props.repairData.status === 'Nicht Repariert'
-)
-const customerName = computed(() =>
-  [props.repairData.customer?.vorname, props.repairData.customer?.nachname]
-    .filter(Boolean)
-    .join(' ')
-)
-const subtitle = computed(() =>
-  [
-    props.repairData.repair_type?.name,
-    props.repairData.datum ? formatDate(props.repairData.datum) : '',
-  ]
-    .filter(Boolean)
-    .join(' · ')
 )
 const durationLabel = computed(() => {
   if (props.repairData.reparatur_dauer) {
