@@ -1,10 +1,10 @@
 <template>
   <section class="login-page bg-surface-variant d-flex align-center">
     <v-container fluid>
-      <v-row align="center" justify="center">
+      <v-row class="align-center justify-center">
         <v-col cols="12" sm="8" md="5" lg="4">
           <v-card elevation="4" rounded="lg">
-            <v-card-title class="text-h5 pa-6 pb-2">
+            <v-card-title class="text-headline-small pa-6 pb-2">
               <v-icon class="mr-2" color="primary">mdi-wrench</v-icon>
               RepairCafe
             </v-card-title>
@@ -109,16 +109,17 @@
 </template>
 
 <script setup lang="ts">
+import { api } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { AuthService } from '@/api/services/AuthService'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -138,13 +139,13 @@ const errorCode = route.query.error as string | undefined
 const errorMessage = ref(errorCode ? (SSO_ERRORS[errorCode] ?? SSO_ERRORS.sso_failed) : '')
 
 const redirectTarget = computed(() => (route.query.redirect as string) || '/')
-const ssoUrl = computed(() => AuthService.oidcLoginUrl(redirectTarget.value))
+const ssoUrl = computed(() => `/api/auth/oidc/login?next=${encodeURIComponent(redirectTarget.value)}`)
 
 const required = (v: string) => !!v || 'Pflichtfeld'
 
 onMounted(async () => {
   try {
-    oidcEnabled.value = (await AuthService.config()).oidc_enabled
+    oidcEnabled.value = (await api.authConfig()).oidc_enabled
   } catch {
     oidcEnabled.value = false
   }

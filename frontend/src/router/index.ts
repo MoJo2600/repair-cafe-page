@@ -11,7 +11,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/lock',
     name: 'PinLock',
-    component: () => import('../components/PinLockScreen.vue'),
+    component: () => import('../views/LockPage.vue'),
   },
   {
     path: '/',
@@ -21,7 +21,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('../components/PinLockScreen.vue'),
+    component: () => import('../views/DashboardPage.vue'),
   },
   {
     path: '/repairs',
@@ -52,6 +52,12 @@ const routes: RouteRecordRaw[] = [
     path: '/users',
     name: 'UserManagement',
     component: () => import('../views/UserManagementPage.vue'),
+    meta: { adminOnly: true },
+  },
+  {
+    path: '/styleguide',
+    name: 'Styleguide',
+    component: () => import('../views/StyleguidePage.vue'),
     meta: { adminOnly: true },
   },
   {

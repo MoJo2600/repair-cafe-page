@@ -1,25 +1,25 @@
 <template>
-  <div class="profile-page pa-4">
-    <h1 class="text-h5 font-weight-bold mb-6">Mein Profil</h1>
+  <v-container fluid class="page-container">
+    <PageHeader title="Mein Profil" />
 
     <dl class="profile-details mb-8">
       <div>
-        <dt class="text-caption text-medium-emphasis">Name</dt>
+        <dt class="text-body-small text-medium-emphasis">Name</dt>
         <dd>{{ fullName }}</dd>
       </div>
       <div>
-        <dt class="text-caption text-medium-emphasis">Benutzername</dt>
+        <dt class="text-body-small text-medium-emphasis">Benutzername</dt>
         <dd>{{ authStore.currentUser?.username }}</dd>
       </div>
       <div>
-        <dt class="text-caption text-medium-emphasis">E-Mail</dt>
+        <dt class="text-body-small text-medium-emphasis">E-Mail</dt>
         <dd>{{ authStore.currentUser?.email }}</dd>
       </div>
     </dl>
 
     <v-divider class="mb-6" />
     <section aria-labelledby="pin-heading" :aria-busy="loading || generating">
-      <h2 id="pin-heading" class="text-h6 mb-4">PIN</h2>
+      <h2 id="pin-heading" class="text-title-large mb-4">PIN</h2>
       <v-progress-linear
         v-if="loading"
         indeterminate
@@ -35,7 +35,7 @@
           <v-icon :icon="status.has_pin ? 'mdi-shield-check-outline' : 'mdi-shield-off-outline'" />
           <span>{{ status.has_pin ? 'PIN eingerichtet' : 'Keine PIN eingerichtet' }}</span>
         </div>
-        <p v-if="status.mode === 'oidc'" class="text-body-2 text-medium-emphasis">
+        <p v-if="status.mode === 'oidc'" class="text-body-medium text-medium-emphasis">
           PIN-Verwaltung: Identitaetsanbieter. Die PIN ist nur im dortigen Profil abrufbar.
         </p>
         <v-btn
@@ -112,7 +112,7 @@
               </v-tooltip>
             </template>
           </v-text-field>
-          <p class="text-body-2">Nach dem Schliessen ist diese PIN nicht erneut abrufbar.</p>
+          <p class="text-body-medium">Nach dem Schliessen ist diese PIN nicht erneut abrufbar.</p>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -120,20 +120,19 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import { personName } from '@/utils/person'
+import { api } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { AuthService } from '@/api/services/AuthService'
 import type { PinStatusResponse } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 
 const authStore = useAuthStore()
-const fullName = computed(() => {
-  const user = authStore.currentUser
-  return [user?.vorname, user?.nachname].filter(Boolean).join(' ') || user?.username
-})
+const fullName = computed(() => personName(authStore.currentUser))
 const status = ref<PinStatusResponse | null>(null)
 const loading = ref(true)
 const generating = ref(false)
@@ -152,7 +151,7 @@ async function loadStatus() {
   loading.value = true
   error.value = ''
   try {
-    const result = await AuthService.pinStatus()
+    const result = await api.pinStatus()
     if (active) status.value = result
   } catch {
     if (active) {
@@ -175,7 +174,7 @@ async function generate(replace: boolean) {
   error.value = ''
   clearPin()
   try {
-    const result = await AuthService.generatePin({ replace })
+    const result = await api.generatePin({ replace })
     if (!active || !authStore.isAuthenticated) return
     newPin.value = result.pin_code
     status.value = { mode: 'local', has_pin: true, can_generate: true }
@@ -206,10 +205,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.profile-page {
-  max-width: 720px;
-  margin-inline: auto;
-}
 .profile-details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

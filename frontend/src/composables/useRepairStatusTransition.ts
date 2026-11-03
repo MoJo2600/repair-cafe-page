@@ -1,16 +1,18 @@
+import { api } from '@/api/client'
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { useRepairStore } from '@/stores/repairStore'
 import {
-  useRepairStore,
   normalizeRepairStatus,
   REPAIR_STATUSES,
   getRepairStatusDetailOptions,
   requiresCompletionDetailsForTransition,
   requiresFailureDetailsForTransition,
   type RepairStatus,
-} from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
-import { RepairsService } from '@/api/services/RepairsService'
+  canTransitionStatus,
+  requiresReparateurForTransition,
+} from '@/domain/repairStatus'
 import confetti from 'canvas-confetti'
+import { useToast } from '@/composables/useToast'
 import type { Repair } from '@/api/types'
 
 export interface UseRepairStatusTransitionOptions {
@@ -21,8 +23,6 @@ export interface UseRepairStatusTransitionOptions {
   hasVdeTest: ComputedRef<boolean>
   lastVdeTestPassed: ComputedRef<boolean>
   suggestedRepairDuration: ComputedRef<number>
-  selectedAssigneeId: Ref<number | null>
-  showSnackbar: (msg: string, color?: string) => void
   loadRepairLogs: () => Promise<void>
   /** Called when a status transition requires a VDE test first. */
   onNeedsVdeTest: (preFilledUserId?: number | null) => void
@@ -32,6 +32,7 @@ export interface UseRepairStatusTransitionOptions {
 
 export function useRepairStatusTransition(options: UseRepairStatusTransitionOptions) {
   const repairStore = useRepairStore()
+  const toast = useToast()
 
   const savingStatus = ref(false)
   const transitionDialog = ref(false)
@@ -53,7 +54,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
   function isStatusChangeDisabled(status: string): boolean {
     const target = normalizeRepairStatus(status) as RepairStatus
     const from = options.currentRepairStatus.value as RepairStatus
-    return from === target || !repairStore.canTransitionStatus(from, target)
+    return from === target || !canTransitionStatus(from, target)
   }
 
   const availableNextStatuses = computed<RepairStatus[]>(() =>
@@ -129,7 +130,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     }
 
     if (
-      repairStore.requiresReparateurForTransition(fromStatus, toStatus) &&
+      requiresReparateurForTransition(fromStatus, toStatus) &&
       !options.repairRecord.value?.user_id
     ) {
       transitionUserId.value = null
@@ -201,14 +202,6 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
           repairDescription: completionData.value.description,
           repairDuration: Number(completionData.value.duration ?? 0),
         })
-        await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-          user_id: userId || options.repairRecord.value.user_id || undefined,
-          reparatur_dauer: 0,
-          reparatur_besch: completionData.value.description,
-          log_type: 'status_change',
-          status_from: fromStatus,
-          status_to: 'Repariert',
-        })
       } else {
         await repairStore.transitionRepairStatus({
           repairId: options.repairRecord.value.id,
@@ -217,17 +210,9 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
           statusDetail: validStatusDetail,
           user_id: userId || options.repairRecord.value.user_id || undefined,
         })
-        await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-          user_id: userId || options.repairRecord.value.user_id || undefined,
-          reparatur_dauer: 0,
-          reparatur_besch: '',
-          log_type: 'status_change',
-          status_from: fromStatus,
-          status_to: toStatus,
-        })
       }
 
-      options.showSnackbar(`Status update erfolgreich: ${toStatus}`)
+      toast.success(`Status update erfolgreich: ${toStatus}`)
       if (toStatus === 'Repariert') {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
       }
@@ -242,7 +227,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       await options.loadRepairLogs()
     } catch (err) {
       console.error('Error closing repair:', err)
-      options.showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+      toast.error('Fehler beim Speichern: ' + (err as Error).message)
     } finally {
       savingStatus.value = false
     }
@@ -270,16 +255,13 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     pendingAbbruchPayload.value = null
 
     try {
-      await RepairsService.createRepairCancellation(options.repairRecord.value.id, {
+      await api.createOrUploadRepairCancellation({ id: options.repairRecord.value.id }, {
         signature: signaturePayload.signature,
       })
       await options.onCancellationSigned?.()
     } catch (err) {
       console.error('Error saving cancellation PDF:', err)
-      options.showSnackbar(
-        'Fehler beim Erstellen der Abbruchbestätigung: ' + (err as Error).message,
-        'error'
-      )
+      toast.error('Fehler beim Erstellen der Abbruchbestätigung: ' + (err as Error).message)
       return
     }
 
@@ -299,15 +281,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
         repairDescription: payload.description,
         repairDuration: payload.duration,
       })
-      await RepairLogsService.createRepairLog(options.repairRecord.value.id, {
-        user_id: options.repairRecord.value.user_id || undefined,
-        reparatur_dauer: 0,
-        reparatur_besch: payload.description,
-        log_type: 'status_change',
-        status_from: fromStatus,
-        status_to: 'Nicht Repariert',
-      })
-      options.showSnackbar('Reparatur als nicht reparierbar abgeschlossen')
+      toast.success('Reparatur als nicht reparierbar abgeschlossen')
       options.repairRecord.value.status = 'Nicht Repariert'
       options.repairRecord.value.status_detail = payload.statusDetail
       options.repairRecord.value.reparatur_besch = payload.description
@@ -316,7 +290,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
       await options.loadRepairLogs()
     } catch (err) {
       console.error('Error closing repair as not repairable:', err)
-      options.showSnackbar('Fehler beim Speichern: ' + (err as Error).message, 'error')
+      toast.error('Fehler beim Speichern: ' + (err as Error).message)
     } finally {
       savingStatus.value = false
     }

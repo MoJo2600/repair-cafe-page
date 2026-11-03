@@ -1,5 +1,5 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="600px" @update:model-value="onDialogToggle">
+    <ResponsiveDialog v-model="open" max-width="600px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-account</v-icon>
@@ -15,26 +15,14 @@
 
                 <v-form ref="formRef" v-model="formValid">
                     <v-autocomplete
-                        v-model="localUserId"
-                        :items="userStore.users"
-                        :item-title="getUserTitle"
-                        item-value="id"
+                        v-model="userId"
+                        :items="userStore.userOptions"
                         label="Reparateur"
-                        prepend-icon="mdi-account"
+                        prepend-inner-icon="mdi-account-wrench"
                         required
                         :loading="userStore.loading"
                         :rules="[v => !!v || 'Name des Reparateurs ist erforderlich']"
-                    >
-                        <template #item="{ props: itemProps, item }">
-                            <v-list-item
-                                v-bind="itemProps"
-                                :title="`${item.raw.vorname} ${item.raw.nachname}`"
-                                :subtitle="item.raw.email"></v-list-item>
-                        </template>
-                        <template #selection="{ item }">
-                            {{ item.raw.vorname }} {{ item.raw.nachname }}
-                        </template>
-                    </v-autocomplete>
+                    />
                 </v-form>
             </v-card-text>
 
@@ -44,19 +32,21 @@
                 <v-btn color="primary" :loading="loading" @click="confirmDialog">{{ confirmText }}</v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch, onMounted } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { useUserStore } from '@/stores/userStore'
-import type { UserResponse } from '@/api/types'
 
 const userStore = useUserStore()
 
-const props = withDefaults(defineProps<{
-    modelValue: boolean
-    userId: number | null
+const open = defineModel<boolean>({ required: true })
+const userId = defineModel<number | null>('userId', { required: true })
+
+withDefaults(defineProps<{
     title?: string
     message?: string
     confirmText?: string
@@ -71,54 +61,31 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'update:userId', value: number | null): void
     (e: 'confirm', value: number): void
 }>()
 
-const formRef = ref<{
-    validate: () => Promise<{ valid: boolean }>
-    resetValidation?: () => void
-} | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = ref(false)
-const localUserId = ref<number | null>(props.userId)
 
-function getUserTitle(user: UserResponse): string {
-    return [user.vorname, user.nachname].filter(Boolean).join(' ') || `User #${user.id}`
-}
 
 onMounted(() => {
     if (!userStore.loaded) userStore.fetchUsers()
 })
 
-watch(() => props.userId, (value) => {
-    localUserId.value = value
+watch(open, (isOpen) => {
+    if (isOpen) formRef.value?.resetValidation()
 })
-
-watch(localUserId, (value) => {
-    emit('update:userId', value)
-})
-
-watch(() => props.modelValue, (isOpen) => {
-    if (isOpen) {
-        formRef.value?.resetValidation?.()
-    }
-})
-
-function onDialogToggle(value: boolean) {
-    emit('update:modelValue', value)
-}
 
 function closeDialog() {
-    emit('update:modelValue', false)
+    open.value = false
 }
 
 async function confirmDialog() {
     if (!formRef.value) return
 
     const { valid } = await formRef.value.validate()
-    if (!valid || !localUserId.value) return
+    if (!valid || !userId.value) return
 
-    emit('confirm', localUserId.value)
+    emit('confirm', userId.value)
 }
 </script>

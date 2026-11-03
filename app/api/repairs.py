@@ -8,17 +8,96 @@ from datetime import datetime, timezone
 
 import flask_login
 from flask import Blueprint, Response, current_app, request, send_file
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.api.attachments import cleanup_repair_attachments
 from app.auth.decorators import admin_required
 from app.extensions import db
-from app.models import Customer, Repair, Setting
-from app.schemas import RepairCreate, RepairCreateResponse, RepairResponse, RepairUpdate, RepairsTimelinePoint, RepairsTimelineResponse
+from app.models import Customer, Repair, RepairAttachment, RepairLog, Setting, User
+from app.schemas import (
+    RepairCreate,
+    RepairCreateResponse,
+    RepairListItem,
+    RepairLogResponse,
+    RepairResponse,
+    RepairUpdate,
+    RepairsTimelinePoint,
+    RepairsTimelineResponse,
+)
 from app.utils import pydantic_to_swagger
 from app.validation import validate_request
 
 repairs_bp = Blueprint("repairs", __name__)
+
+
+def _latest_logs_by_repair(repair_ids: list[int]) -> dict[int, RepairLogResponse]:
+    """Most recent log entry per repair, in one query (used by list polling)."""
+    if not repair_ids:
+        return {}
+    latest_ids = (
+        db.session.query(func.max(RepairLog.id))
+        .filter(RepairLog.repair_id.in_(repair_ids))
+        .group_by(RepairLog.repair_id)
+    )
+    logs = (
+        RepairLog.query.options(joinedload(RepairLog.user))
+        .filter(RepairLog.id.in_(latest_ids))
+        .all()
+    )
+    return {log.repair_id: RepairLogResponse.model_validate(log) for log in logs}
+
+
+def _device_photo_ids_by_repair(repair_ids: list[int]) -> dict[int, int]:
+    """Newest device photo (attachment ID) per repair, in one query."""
+    if not repair_ids:
+        return {}
+    rows = (
+        db.session.query(RepairAttachment.repair_id, func.max(RepairAttachment.id))
+        .filter(
+            RepairAttachment.repair_id.in_(repair_ids),
+            RepairAttachment.attachment_type == "device_photo",
+            RepairAttachment.content_type.like("image/%"),
+        )
+        .group_by(RepairAttachment.repair_id)
+        .all()
+    )
+    return {repair_id: attachment_id for repair_id, attachment_id in rows}
+
+
+def _log_repair_change(repair: Repair, old_status: str, old_user_id: int | None) -> None:
+    """Record status / assignee changes as log entries, in the caller's transaction."""
+    actor_id = flask_login.current_user.id if flask_login.current_user.is_authenticated else None
+
+    if repair.status != old_status:
+        closed = repair.status in {"Repariert", "Nicht Repariert"}
+        db.session.add(
+            RepairLog(
+                repair_id=repair.id,
+                # Attributed to the repairer, as before when the client wrote this entry
+                user_id=repair.user_id or old_user_id or actor_id,
+                reparatur_dauer=0,
+                reparatur_besch=(repair.reparatur_besch or "") if closed else "",
+                log_type="status_change",
+                status_from=old_status,
+                status_to=repair.status,
+            )
+        )
+    elif repair.user_id != old_user_id:
+        assignee = db.session.get(User, repair.user_id) if repair.user_id else None
+        db.session.add(
+            RepairLog(
+                repair_id=repair.id,
+                user_id=actor_id,
+                reparatur_dauer=0,
+                reparatur_besch=(
+                    f"Zugewiesen an: {assignee.vorname} {assignee.nachname}"
+                    if assignee
+                    else "Zuweisung entfernt"
+                ),
+                log_type="assignee_change",
+            )
+        )
 
 
 @repairs_bp.route("/list", methods=["GET"])
@@ -38,6 +117,8 @@ def api_list_repairs():
     responses:
       200:
         description: List of all repairs
+        schema:
+          $ref: '#/definitions/RepairListResponse'
       500:
         description: Internal Server Error - database query failed
     """
@@ -52,14 +133,18 @@ def api_list_repairs():
         if customer_id is not None:
             query = query.filter(Repair.customer_id == customer_id)
         repairs = query.all()
+        repair_ids = [repair.id for repair in repairs]
+        latest_logs = _latest_logs_by_repair(repair_ids)
+        device_photos = _device_photo_ids_by_repair(repair_ids)
         # Serialize using Pydantic (omit raw base64 signature payload from list polling)
         repairs_list = [
-            {
-                **RepairResponse.model_validate(repair).model_dump(
-                    mode="json", exclude={"unterschrift"}
-                ),
-                "unterschrift": None,
-            }
+            RepairListItem.model_validate(
+                {
+                    **RepairResponse.model_validate(repair).model_dump(exclude={"unterschrift"}),
+                    "latest_log": latest_logs.get(repair.id),
+                    "device_photo_id": device_photos.get(repair.id),
+                }
+            ).model_dump(mode="json")
             for repair in repairs
         ]
         return Response(
@@ -96,6 +181,8 @@ def api_get_repair_by_token(token):
     responses:
       200:
         description: Repair record found
+        schema:
+          $ref: '#/definitions/RepairSingleResponse'
       404:
         description: Repair not found
       500:
@@ -151,7 +238,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
         in: body
         required: true
         schema:
-          $ref: '#/components/schemas/RepairUpdate'
+          $ref: '#/definitions/RepairUpdate'
     responses:
       200:
         description: Repair record updated successfully
@@ -162,7 +249,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
               type: string
               example: "done"
             data:
-              $ref: '#/components/schemas/RepairResponse'
+              $ref: '#/definitions/RepairResponse'
       404:
         description: Repair not found
       500:
@@ -180,6 +267,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
 
         update_data = validated_data.model_dump(exclude_unset=True)
         old_status = repair.status
+        old_user_id = repair.user_id
         new_status = update_data.get("status")
 
         # 1. Validate that the status transition is allowed
@@ -230,6 +318,7 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
                 if new_status == "Offen":
                     repair.user_id = None
 
+        _log_repair_change(repair, old_status, old_user_id)
         db.session.commit()
 
         # Serialize response using Pydantic
@@ -254,7 +343,27 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
 @repairs_bp.route("/repairs/<int:id>", methods=["DELETE"])
 @admin_required
 def api_delete_repair(id: int):
-    """Delete a repair record and its associated files on disk."""
+    """Delete a repair record and its associated files on disk.
+    ---
+    operationId: deleteRepair
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/IdResponse'
+      403:
+        description: Admin only
+      404:
+        description: Repair not found
+    """
     try:
         repair = Repair.query.get_or_404(id)
         db.session.delete(repair)
@@ -296,12 +405,12 @@ def api_create_repair(validated_data: RepairCreate):
         in: body
         required: true
         schema:
-          $ref: '#/components/schemas/RepairCreate'
+          $ref: '#/definitions/RepairCreate'
     responses:
       201:
         description: Repair record created successfully
         schema:
-          $ref: '#/components/schemas/RepairCreateResponse'
+          $ref: '#/definitions/RepairCreateResponse'
       400:
         description: Bad request - missing required fields
       500:
@@ -422,7 +531,32 @@ def api_create_repair(validated_data: RepairCreate):
 
 @repairs_bp.route("/repairs/<int:id>/disclaimer", methods=["POST"])
 def api_upload_disclaimer(id: int):
-    """Upload a pre-signed disclaimer PDF for a repair."""
+    """Upload a pre-signed disclaimer PDF for a repair.
+    ---
+    operationId: uploadRepairDisclaimer
+    tags:
+      - Repairs
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Signed disclaimer PDF
+    responses:
+      200:
+        description: Disclaimer stored
+        schema:
+          $ref: '#/definitions/APIResponse'
+      400:
+        description: Missing or invalid PDF
+    """
     try:
         Repair.query.get_or_404(id)
 
@@ -556,9 +690,21 @@ def api_create_or_upload_cancellation(id: int):
         required: true
         type: integer
         description: Repair ID
+      - name: body
+        in: body
+        required: false
+        description: Signature as PNG data URL (alternatively a multipart "file" with a signed PDF)
+        schema:
+          type: object
+          required: [signature]
+          properties:
+            signature:
+              type: string
     responses:
       201:
         description: Signed cancellation PDF stored
+        schema:
+          $ref: '#/definitions/APIResponse'
       400:
         description: Missing or invalid signature / file
       404:
@@ -734,6 +880,8 @@ def api_print_label(id: int):
     responses:
       200:
         description: Label printed successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       404:
         description: Repair not found
       503:

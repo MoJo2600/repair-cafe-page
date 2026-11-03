@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { UserResponse } from "@/api/types";
+import { api } from "@/api/client";
+import { personName } from "@/utils/person";
 
 export const useUserStore = defineStore("users", () => {
   const users = ref<UserResponse[]>([]);
@@ -13,12 +15,14 @@ export const useUserStore = defineStore("users", () => {
     const revision = fetchRevision;
     loading.value = true;
     try {
-      const res = await fetch("/api/users");
-      const data = await res.json();
+      const res = await api.listUsers();
       if (revision === fetchRevision) {
-        users.value = data.data ?? [];
+        users.value = res.data;
         loaded.value = true;
       }
+    } catch (err) {
+      // Keep `loaded` false (e.g. locked session) so a later call retries
+      console.error("Error loading users:", err);
     } finally {
       if (revision === fetchRevision) {
         loading.value = false;
@@ -37,11 +41,12 @@ export const useUserStore = defineStore("users", () => {
     return users.value.find((u) => u.id === id);
   }
 
-  function getUserDisplayName(id: number | undefined | null): string {
-    if (!id) return "";
-    const u = getUserById(id);
-    return u ? `${u.vorname} ${u.nachname}` : String(id);
-  }
+  /** Items for user dropdowns (repairer, tester), sorted by name. */
+  const userOptions = computed(() =>
+    users.value
+      .map((u) => ({ value: u.id, title: personName(u) }))
+      .sort((a, b) => a.title.localeCompare(b.title, "de")),
+  );
 
   return {
     users,
@@ -50,6 +55,6 @@ export const useUserStore = defineStore("users", () => {
     fetchUsers,
     clear,
     getUserById,
-    getUserDisplayName,
+    userOptions,
   };
 });

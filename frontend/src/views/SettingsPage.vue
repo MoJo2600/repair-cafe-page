@@ -1,16 +1,12 @@
 <template>
-  <v-container fluid class="pa-4">
-    <v-row align="center" class="mb-4">
-      <v-col>
-        <h1 class="text-h5 font-weight-bold">Einstellungen</h1>
-      </v-col>
-    </v-row>
+  <v-container fluid class="page-container">
+    <PageHeader title="Einstellungen" />
 
     <!-- Organisation -->
     <v-card class="mb-6">
       <v-card-title>Organisation</v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Name und Website der Organisation werden auf gedruckten Etiketten angezeigt.
         </p>
         <v-row class="ga-4">
@@ -39,7 +35,7 @@ v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
       </v-card-text>
       <v-card-actions class="px-4 pb-4">
         <v-spacer />
-        <v-btn color="primary" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
+        <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
       </v-card-actions>
     </v-card>
 
@@ -49,16 +45,16 @@ v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
         <span>Haftungserklärung (Vorlage)</span>
       </v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie eine eigene PDF-Vorlage hoch. Die Datei muss die AcroForm-Felder
           <strong>date</strong> und <strong>signature</strong> enthalten. Feld
           <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
-color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
+color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
@@ -70,7 +66,7 @@ v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,applica
               @update:model-value="disclaimerError = ''" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
+            <v-btn color="primary" variant="flat" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
               Hochladen
             </v-btn>
           </v-col>
@@ -87,16 +83,16 @@ v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,applica
         <span>Abbruchbestätigung (Vorlage)</span>
       </v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie eine eigene PDF-Vorlage für den Reparaturabbruch hoch. Die Datei muss die
           AcroForm-Felder <strong>date</strong> und <strong>signature</strong> enthalten. Feld
           <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
-color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
+color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
@@ -108,7 +104,7 @@ v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,appli
               @update:model-value="cancellationError = ''" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
+            <v-btn color="primary" variant="flat" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
               Hochladen
             </v-btn>
           </v-col>
@@ -123,11 +119,11 @@ v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,appli
     <v-card class="mb-6">
       <v-card-title>Logo / Icon</v-card-title>
       <v-card-text>
-        <p class="text-body-2 text-medium-emphasis mb-4">
+        <p class="text-body-medium text-medium-emphasis mb-4">
           Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon
           aktiv.
         </p>
-        <v-row align="center" class="ga-4">
+        <v-row class="ga-4 align-center">
           <v-col cols="auto">
             <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg" class="border" />
           </v-col>
@@ -138,7 +134,7 @@ v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.pn
               @update:model-value="onLogoFileChange" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
+            <v-btn color="primary" variant="flat" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
               Hochladen
             </v-btn>
           </v-col>
@@ -161,9 +157,8 @@ size="small" color="primary" prepend-icon="mdi-plus"
 :headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
-          <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-            {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
-          </v-chip>
+          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
@@ -186,9 +181,8 @@ size="small" color="primary" prepend-icon="mdi-plus"
 :headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
-          <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-            {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
-          </v-chip>
+          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
@@ -218,7 +212,7 @@ v-model="form.name" label="Name *"
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="closeDialog">Abbrechen</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveItem">Speichern</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveItem">Speichern</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -230,7 +224,7 @@ v-model="form.name" label="Name *"
         <v-card-text>
           <span v-if="deletingItem?.category === 'repair_type'">
             Soll <strong>{{ deletingItem?.name }}</strong> wirklich gelöscht werden?<br />
-            <span class="text-caption text-medium-emphasis">
+            <span class="text-body-small text-medium-emphasis">
               Reparaturarten die bereits Reparaturen zugewiesen sind, können nicht gelöscht werden.
               Deaktivieren Sie diese stattdessen.
             </span>
@@ -247,18 +241,20 @@ v-model="form.name" label="Name *"
       </v-card>
     </v-dialog>
 
-    <!-- Snackbar -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="bottom right">
-      {{ snackbar.text }}
-    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
+import { api } from '@/api/client'
+import { errorMessage } from '@/utils/errors'
 import { onMounted, ref } from 'vue'
+import type { VForm } from 'vuetify/components'
 import type { SettingResponse } from '../api/generated/data-contracts'
-import { ConfigService } from '../api/services/ConfigService'
-import { SettingsService } from '../api/services/SettingsService'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 // ── Table column definitions ─────────────────────────────────────────────────
 
@@ -287,23 +283,17 @@ const formDialog = ref(false)
 const formCategory = ref<string>('repair_type')
 const editingItem = ref<SettingResponse | null>(null)
 const formError = ref<string | null>(null)
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
 
 const form = ref({ name: '', serial_number: '', is_active: true })
 
 const deleteDialog = ref(false)
 const deletingItem = ref<SettingResponse | null>(null)
 
-const snackbar = ref({ show: false, text: '', color: 'success' })
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function required(v: string) {
   return (v && v.trim().length > 0) || 'Pflichtfeld'
-}
-
-function showMsg(text: string, color: 'success' | 'error' = 'success') {
-  snackbar.value = { show: true, text, color }
 }
 
 function byCategory(category: string): SettingResponse[] {
@@ -319,7 +309,7 @@ const orgSuccess = ref(false)
 
 async function loadOrgConfig() {
   try {
-    const cfg = await ConfigService.getAppConfig()
+    const cfg = await api.getAppConfig()
     orgForm.value = {
       org_name: cfg.org_name ?? '',
       org_website: cfg.org_website ?? '',
@@ -335,7 +325,7 @@ async function saveOrg() {
   orgError.value = ''
   orgSuccess.value = false
   try {
-    const cfg = await ConfigService.updateAppConfig({
+    const cfg = await api.updateAppConfig({
       org_name: orgForm.value.org_name,
       org_website: orgForm.value.org_website,
       app_url: orgForm.value.app_url,
@@ -358,10 +348,10 @@ async function saveOrg() {
 async function loadSettings() {
   loading.value = true
   try {
-    const res = await SettingsService.getAll()
-    settings.value = res.data
+    const res = await api.listAllSettings()
+    settings.value = res.data ?? []
   } catch {
-    showMsg('Fehler beim Laden der Einstellungen', 'error')
+    toast.error('Fehler beim Laden der Einstellungen')
   } finally {
     loading.value = false
   }
@@ -403,22 +393,22 @@ async function saveItem() {
 
   try {
     if (editingItem.value) {
-      const res = await SettingsService.update(editingItem.value.id, {
+      const res = await api.updateSetting({ settingId: editingItem.value.id }, {
         name: form.value.name,
         serial_number: form.value.serial_number || null,
         is_active: form.value.is_active,
       })
       const idx = settings.value.findIndex((s) => s.id === editingItem.value!.id)
       if (idx !== -1) settings.value[idx] = res.data
-      showMsg('Eintrag gespeichert')
+      toast.success('Eintrag gespeichert')
     } else {
-      const res = await SettingsService.create({
+      const res = await api.createSetting({
         category: formCategory.value,
         name: form.value.name,
         serial_number: form.value.serial_number || null,
       })
       settings.value.push(res.data)
-      showMsg('Eintrag hinzugefügt')
+      toast.success('Eintrag hinzugefügt')
     }
     closeDialog()
   } catch (err: unknown) {
@@ -440,15 +430,15 @@ async function doDelete() {
   if (!deletingItem.value) return
   saving.value = true
   try {
-    await SettingsService.delete(deletingItem.value.id)
+    await api.deleteSetting({ settingId: deletingItem.value.id })
     settings.value = settings.value.filter((s) => s.id !== deletingItem.value!.id)
-    showMsg('Eintrag gelöscht')
+    toast.success('Eintrag gelöscht')
     deleteDialog.value = false
   } catch (err: unknown) {
     const msg =
       (err as { body?: { error?: string } })?.body?.error ??
       'Fehler beim Löschen'
-    showMsg(msg, 'error')
+    toast.error(msg)
   } finally {
     saving.value = false
   }
@@ -484,25 +474,18 @@ async function uploadLogo() {
   logoError.value = ''
   logoSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', logoFile.value)
-    const res = await fetch('/api/config/logo', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      logoError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      logoSuccess.value = true
-      logoFile.value = null
-      // Update all favicon links in the document head
-      const bust = `?t=${Date.now()}`
-      document
-        .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
-        .forEach((el) => {
-          el.href = `/api/config/logo${bust}`
-        })
-    }
-  } catch {
-    logoError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadLogo({ file: logoFile.value })
+    logoSuccess.value = true
+    logoFile.value = null
+    // Update all favicon links in the document head
+    const bust = `?t=${Date.now()}`
+    document
+      .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
+      .forEach((el) => {
+        el.href = `/api/config/logo${bust}`
+      })
+  } catch (err) {
+    logoError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     logoUploading.value = false
   }
@@ -521,18 +504,11 @@ async function uploadDisclaimer() {
   disclaimerError.value = ''
   disclaimerSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', disclaimerFile.value)
-    const res = await fetch('/api/config/disclaimer', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      disclaimerError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      disclaimerSuccess.value = true
-      disclaimerFile.value = null
-    }
-  } catch {
-    disclaimerError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadDisclaimerTemplate({ file: disclaimerFile.value })
+    disclaimerSuccess.value = true
+    disclaimerFile.value = null
+  } catch (err) {
+    disclaimerError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     disclaimerUploading.value = false
   }
@@ -551,18 +527,11 @@ async function uploadCancellation() {
   cancellationError.value = ''
   cancellationSuccess.value = false
   try {
-    const fd = new FormData()
-    fd.append('file', cancellationFile.value)
-    const res = await fetch('/api/config/cancellation', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok || json.reply !== 'done') {
-      cancellationError.value = json.error ?? 'Fehler beim Hochladen'
-    } else {
-      cancellationSuccess.value = true
-      cancellationFile.value = null
-    }
-  } catch {
-    cancellationError.value = 'Netzwerkfehler beim Hochladen'
+    await api.uploadCancellationTemplate({ file: cancellationFile.value })
+    cancellationSuccess.value = true
+    cancellationFile.value = null
+  } catch (err) {
+    cancellationError.value = errorMessage(err, 'Fehler beim Hochladen')
   } finally {
     cancellationUploading.value = false
   }

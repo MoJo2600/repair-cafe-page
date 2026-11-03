@@ -1,221 +1,188 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
+import { useToast } from '@/composables/useToast'
+import { useRepairStore } from '@/stores/repairStore'
+import { normalizeRepairStatus } from '@/domain/repairStatus'
+import type { RepairListItem } from '@/api/types'
+import RepairCard from '@/components/RepairCard.vue'
+import CountBadge from '@/components/ui/CountBadge.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import SectionTitle from '@/components/ui/SectionTitle.vue'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
+import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
+
+const router = useRouter()
+const repairStore = useRepairStore()
+const toast = useToast()
+// Side by side from md up; tabs on phones and tablets in portrait
+const { mdAndUp } = useDisplay()
+
+type SectionKey = 'in_progress' | 'open'
+
+const sections = computed(() => [
+  {
+    key: 'in_progress' as SectionKey,
+    title: 'In Bearbeitung',
+    icon: 'mdi-wrench-clock',
+    emptyText: 'Keine Reparaturen in Bearbeitung',
+    repairs: repairStore.inProgressRepairs,
+  },
+  {
+    key: 'open' as SectionKey,
+    title: 'Offen',
+    icon: 'mdi-clipboard-text-clock',
+    emptyText: 'Keine offenen Reparaturen',
+    repairs: repairStore.openRepairs,
+  },
+])
+const activeTab = shallowRef<SectionKey>('in_progress')
+const visibleSections = computed(() =>
+  mdAndUp.value ? sections.value : sections.value.filter((s) => s.key === activeTab.value)
+)
+// Skeletons only on the first load; background refreshes keep the cards
+const initialLoading = computed(() => repairStore.loading && repairStore.repairs.length === 0)
+
+const nextRepair = computed(() => repairStore.nextRepair)
+onMounted(async () => {
+  await repairStore.fetchRepairs()
+  repairStore.startAutoRefresh()
+})
+
+onUnmounted(() => {
+  repairStore.stopAutoRefresh()
+})
+
+// ── Start repair (assign repairer, Offen -> In Bearbeitung) ──────────────────
+const startRepairDialog = shallowRef(false)
+const selectedRepair = ref<RepairListItem | null>(null)
+const startingRepair = shallowRef(false)
+const startRepairUserId = ref<number | null>(null)
+
+function openStartRepairDialog(repair: RepairListItem) {
+  selectedRepair.value = repair
+  startRepairUserId.value = null
+  startRepairDialog.value = true
+}
+
+async function confirmStartRepair(userId: number) {
+  const repair = selectedRepair.value
+  if (!repair) return
+
+  startingRepair.value = true
+  try {
+    await repairStore.transitionRepairStatus({
+      repairId: repair.id,
+      fromStatus: normalizeRepairStatus(repair.status),
+      toStatus: 'In Bearbeitung',
+      user_id: userId,
+    })
+    toast.success('Reparatur wurde gestartet')
+    startRepairDialog.value = false
+    void router.push(`/edit/${repair.qr_token}`)
+  } catch (error) {
+    console.error('Error starting repair:', error)
+    toast.error('Fehler beim Starten der Reparatur')
+  } finally {
+    startingRepair.value = false
+  }
+}
+</script>
+
 <template>
-  <v-container>
-    <!-- <CreateRepairDialog v-model="createDialog" @submit="handleSubmit" /> -->
-
-    <!-- Next Repair Card -->
-    <v-row>
-      <v-col cols="12">
-        <v-card color="primary" variant="elevated" class="pa-2">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon size="40" class="mr-3">mdi-tools</v-icon>
-              <div>
-                <div class="text-h5">Nächste Reparatur</div>
-              </div>
-            </div>
-            <v-btn
-              v-if="repairStore.nextRepair"
-              color="white"
-              prepend-icon="mdi-account-plus"
-              @click="openStartRepairDialog(repairStore.nextRepair)"
-            >
-              Zuweisen
-            </v-btn>
-          </v-card-title>
-          <v-card-text>
-            <div v-if="repairStore.loading" class="text-center">
-              <v-progress-circular indeterminate color="white"></v-progress-circular>
-            </div>
-            <div v-else-if="repairStore.nextRepair">
-              <div class="text-h3 font-weight-bold mb-2">ID: {{ repairStore.nextRepair.id }}</div>
-              <v-divider class="my-3 opacity-50"></v-divider>
-              <div class="text-body-1">
-                <div><strong>Gerät:</strong> {{ repairStore.nextRepair.geraet_art }}</div>
-                <div>
-                  <strong>Kunde:</strong> {{ repairStore.nextRepair.customer?.vorname }}
-                  {{ repairStore.nextRepair.customer?.nachname }}
-                </div>
-                <div><strong>Kategorie:</strong> {{ repairStore.nextRepair.repair_type?.name }}</div>
-              </div>
-            </div>
-            <div v-else class="text-h6">Keine offenen Reparaturen vorhanden</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <v-row>
-      <v-col cols="12" class="d-flex justify-end">
-        <v-btn color="primary" prepend-icon="mdi-plus" @click="goToCreateRepair">
-          Neue Reparatur
+  <v-container fluid class="page-container pb-16">
+    <!-- Next repair to start -->
+    <v-card color="primary" class="mb-6">
+      <v-card-item prepend-icon="mdi-tools" title="Nächste Reparatur" />
+      <v-card-text>
+        <v-skeleton-loader
+          v-if="initialLoading"
+          type="list-item-avatar-two-line"
+          color="transparent"
+        />
+        <v-list-item v-else-if="nextRepair" class="px-0" :title="nextRepair.geraet_art">
+          <template #prepend>
+            <RepairNumber :id="nextRepair.id" :status="nextRepair.status" class="mr-4" />
+          </template>
+          <div class="d-flex flex-column ga-2 mt-2">
+            <RepairMeta :category="nextRepair.repair_type?.name" />
+            <PersonLabel :person="nextRepair.customer" role="customer" />
+          </div>
+        </v-list-item>
+        <div v-else class="text-title-medium">Keine offenen Reparaturen vorhanden</div>
+      </v-card-text>
+      <v-card-actions v-if="nextRepair" class="pa-4 pt-0">
+        <v-btn
+          color="surface"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-play-circle"
+          :block="!mdAndUp"
+          @click="openStartRepairDialog(nextRepair)"
+        >
+          Zuweisen und starten
         </v-btn>
+      </v-card-actions>
+    </v-card>
+
+    <!-- Small screens: one section at a time -->
+    <v-tabs v-if="!mdAndUp" v-model="activeTab" grow class="mb-4">
+      <v-tab v-for="section in sections" :key="section.key" :value="section.key">
+        {{ section.title }}
+        <CountBadge :count="section.repairs.length" />
+      </v-tab>
+    </v-tabs>
+
+    <v-row>
+      <v-col v-for="section in visibleSections" :key="section.key" cols="12" md="6">
+        <SectionTitle
+          v-if="mdAndUp"
+          :title="section.title"
+          :icon="section.icon"
+          :count="section.repairs.length"
+        />
+
+        <v-row v-if="initialLoading" density="compact">
+          <v-col v-for="n in 2" :key="n" cols="12">
+            <v-skeleton-loader type="list-item-avatar-two-line, actions" />
+          </v-col>
+        </v-row>
+
+        <v-empty-state
+          v-else-if="section.repairs.length === 0"
+          :icon="section.icon"
+          :title="section.emptyText"
+          size="64"
+        />
+
+        <v-row v-else>
+          <v-col
+            v-for="repair in section.repairs"
+            :key="repair.id"
+            cols="12"
+            :sm="mdAndUp ? 12 : 6"
+            xl="6"
+          >
+            <RepairCard :repair="repair" @start="openStartRepairDialog" />
+          </v-col>
+        </v-row>
       </v-col>
     </v-row>
 
-    <!-- In Progress Repairs List -->
-    <v-row class="mt-4">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-wrench-clock</v-icon>
-            Reparaturen in Bearbeitung
-          </v-card-title>
-          <v-card-text>
-            <div v-if="repairStore.loading" class="text-center py-8">
-              <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            </div>
-            <div v-else-if="repairStore.inProgressRepairs.length === 0" class="text-center py-8">
-              <v-icon size="64" color="grey">mdi-wrench-clock-outline</v-icon>
-              <p class="text-h6 mt-4">Keine Reparaturen in Bearbeitung</p>
-            </div>
-            <v-list v-else>
-              <v-list-item
-                v-for="repair in repairStore.inProgressRepairs"
-                :key="repair.id"
-                class="mb-2"
-                border
-              >
-                <template #prepend>
-                  <v-avatar color="warning" class="mr-3">
-                    <span class="text-h6">{{ repair.id }}</span>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="text-h6 mb-2">
-                  {{ repair.geraet_art }}
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  <div class="d-flex flex-column gap-1">
-                    <div>
-                      <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Name:</strong> {{ repair.customer?.vorname }}
-                      {{ repair.customer?.nachname }}
-                    </div>
-                    <div>
-                      <v-icon size="small" class="mr-1">mdi-tools</v-icon>
-                      <strong>Kategorie:</strong> {{ repair.repair_type?.name }}
-                    </div>
-                    <div v-if="repair.user">
-                      <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Reparateur:</strong> {{ repair.user.vorname }}
-                      {{ repair.user.nachname }}
-                    </div>
-                    <div v-if="repairLogsMap[repair.id]?.length > 0" class="mt-2">
-                      <v-divider class="mb-2"></v-divider>
-                      <div class="text-caption font-weight-bold mb-1">
-                        <v-icon size="small" class="mr-1">mdi-history</v-icon>
-                        Letzter Eintrag:
-                      </div>
-                      <div class="ml-6">
-                        <div>
-                          <strong>Von:</strong>
-                          {{
-                            repairLogsMap[repair.id][0].user
-                              ? `${repairLogsMap[repair.id][0].user!.vorname} ${repairLogsMap[repair.id][0].user!.nachname}`
-                              : ''
-                          }}
-                        </div>
-                        <div>
-                          <strong>Datum:</strong>
-                          {{ formatDateTime(repairLogsMap[repair.id][0].created_at) }}
-                        </div>
-                        <div v-if="repairLogsMap[repair.id][0].reparatur_besch">
-                          {{ repairLogsMap[repair.id]?.[0]?.reparatur_besch?.substring(0, 100)
-                          }}
-                          {{
-                            (repairLogsMap[repair.id]?.[0]?.reparatur_besch?.length ?? 0) > 100 ? '...' : ''
-                          }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </v-list-item-subtitle>
-                <template #append>
-                  <v-btn
-                    color="primary"
-                    prepend-icon="mdi-clipboard-edit"
-                    @click="goToRepairWork(repair.qr_token)"
-                  >
-                    Weiter bearbeiten
-                  </v-btn>
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- On large screens the app bar's "+" is enough -->
+    <v-fab
+      v-if="!mdAndUp"
+      icon="mdi-plus"
+      color="success"
+      size="large"
+      location="bottom end"
+      app
+      aria-label="Neue Reparatur"
+      @click="router.push('/create-repair')"
+    />
 
-    <!-- Open Repairs List -->
-    <v-row class="mt-4">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div>
-              <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-              Offene Reparaturen
-            </div>
-            <v-btn color="primary" prepend-icon="mdi-plus" @click="goToCreateRepair">
-              Neue Reparatur
-            </v-btn>
-          </v-card-title>
-          <v-card-text>
-            <div v-if="repairStore.loading" class="text-center py-8">
-              <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            </div>
-            <div v-else-if="repairStore.openRepairs.length === 0" class="text-center py-8">
-              <v-icon size="64" color="grey">mdi-clipboard-text-off</v-icon>
-              <p class="text-h6 mt-4">Keine offenen Reparaturen</p>
-            </div>
-            <v-list v-else>
-              <v-list-item
-                v-for="repair in repairStore.openRepairs"
-                :key="repair.id"
-                class="mb-2"
-                border
-              >
-                <template #prepend>
-                  <v-avatar color="primary" class="mr-3">
-                    <span class="text-h6">{{ repair.id }}</span>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="text-h6 mb-2">
-                  {{ repair.geraet_art }}
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  <div class="d-flex flex-column gap-1">
-                    <div>
-                      <v-icon size="small" class="mr-1">mdi-account</v-icon>
-                      <strong>Name:</strong> {{ repair.customer?.vorname }}
-                      {{ repair.customer?.nachname }}
-                    </div>
-                    <div>
-                      <v-icon size="small" class="mr-1">mdi-tools</v-icon>
-                      <strong>Kategorie:</strong> {{ repair.repair_type?.name }}
-                    </div>
-                    <div v-if="repair.defekt_besch">
-                      <v-icon size="small" class="mr-1">mdi-text</v-icon>
-                      <strong>Defekt:</strong> {{ repair.defekt_besch.substring(0, 100)
-                      }}{{ repair.defekt_besch.length > 100 ? '...' : '' }}
-                    </div>
-                  </div>
-                </v-list-item-subtitle>
-                <template #append>
-                  <v-btn
-                    color="success"
-                    prepend-icon="mdi-play-circle"
-                    @click="openStartRepairDialog(repair)"
-                  >
-                    Reparatur starten
-                  </v-btn>
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Start Repair Dialog -->
     <ReparateurRequiredDialog
       v-model="startRepairDialog"
       v-model:user-id="startRepairUserId"
@@ -226,147 +193,16 @@
       @confirm="confirmStartRepair"
     >
       <template #context>
-        <div v-if="selectedRepair" class="mb-4">
-          <v-alert type="info" variant="tonal" class="mb-4">
-            <div><strong>Reparatur ID:</strong> {{ selectedRepair.id }}</div>
-            <div><strong>Gerät:</strong> {{ selectedRepair.geraet_art }}</div>
-            <div>
-              <strong>Kunde:</strong> {{ selectedRepair.customer?.vorname }}
-              {{ selectedRepair.customer?.nachname }}
-            </div>
-          </v-alert>
-        </div>
+        <v-alert v-if="selectedRepair" type="info" variant="tonal" class="mb-4">
+          <div><strong>Reparatur ID:</strong> {{ selectedRepair.id }}</div>
+          <div><strong>Gerät:</strong> {{ selectedRepair.geraet_art }}</div>
+          <div>
+            <strong>Kunde:</strong> {{ selectedRepair.customer?.vorname }}
+            {{ selectedRepair.customer?.nachname }}
+          </div>
+        </v-alert>
       </template>
     </ReparateurRequiredDialog>
   </v-container>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted, inject, watch } from 'vue'
-import { formatDateTime } from '@/utils/date'
-import { useRouter } from 'vue-router'
-import { useRepairStore, normalizeRepairStatus } from '@/stores/repairStore'
-import { RepairLogsService } from '@/api/services/RepairLogsService'
-import type { Repair, RepairLog } from '@/api/types'
-import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
-
-const router = useRouter()
-const repairStore = useRepairStore()
-
-const showToast = inject('showToast') as
-  | undefined
-  | ((message: string, options?: { color?: string; timeout?: number }) => void)
-
-// Start repair dialog state
-const startRepairDialog = ref(false)
-const selectedRepair = ref<Repair | null>(null)
-const startingRepair = ref(false)
-const startRepairUserId = ref<number | null>(null)
-
-// Repair logs for in-progress repairs
-const repairLogsMap = ref<Record<number, RepairLog[]>>({})
-
-
-// Fetch repair logs for in-progress repairs
-async function fetchRepairLogs() {
-  const inProgress = repairStore.inProgressRepairs
-  const logsMap: Record<number, RepairLog[]> = {}
-
-  for (const repair of inProgress) {
-    try {
-      const response = await RepairLogsService.listRepairLogs(repair.id)
-      if (response.data && response.data.length > 0) {
-        // Sort by created_at descending to get latest first
-        logsMap[repair.id] = response.data.sort((a, b) => {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        })
-      }
-    } catch (error) {
-      console.error(`Error fetching logs for repair ${repair.id}:`, error)
-    }
-  }
-
-  repairLogsMap.value = logsMap
-}
-
-// Watch for changes in inProgressRepairs and fetch logs
-watch(
-  () => repairStore.inProgressRepairs,
-  async () => {
-    await fetchRepairLogs()
-  },
-  { immediate: false }
-)
-
-// Initialize and start auto-refresh on mount
-onMounted(async () => {
-  await repairStore.fetchRepairs()
-  await fetchRepairLogs()
-  repairStore.startAutoRefresh()
-})
-
-// Clean up auto-refresh on unmount
-onUnmounted(() => {
-  repairStore.stopAutoRefresh()
-})
-
-function goToCreateRepair() {
-  router.push('/create-repair')
-}
-
-function goToRepairWork(qrToken: string) {
-  router.push(`/edit/${qrToken}`)
-}
-
-function openStartRepairDialog(repair: Repair) {
-  selectedRepair.value = repair
-  startRepairUserId.value = null
-  startRepairDialog.value = true
-}
-
-function closeStartRepairDialog() {
-  startRepairDialog.value = false
-  selectedRepair.value = null
-  startRepairUserId.value = null
-}
-
-async function confirmStartRepair(userId: number) {
-  if (!selectedRepair.value) return
-
-  const qrToken = selectedRepair.value.qr_token
-  const repairId = selectedRepair.value.id
-  const fromStatus = normalizeRepairStatus(selectedRepair.value.status)
-
-  startingRepair.value = true
-  try {
-    await repairStore.transitionRepairStatus({
-      repairId,
-      fromStatus,
-      toStatus: 'In Bearbeitung',
-      user_id: userId,
-    })
-
-    await RepairLogsService.createRepairLog(repairId, {
-      user_id: userId,
-      reparatur_dauer: 0,
-      reparatur_besch: '',
-      log_type: 'status_change',
-      status_from: fromStatus,
-      status_to: 'In Bearbeitung',
-    })
-
-    showToast?.('Reparatur wurde gestartet', { color: 'success' })
-
-    // Close dialog
-    closeStartRepairDialog()
-
-    // Redirect to LogRepairWorkPage using the stored token
-    router.push(`/edit/${qrToken}`)
-  } catch (error) {
-    console.error('Error starting repair:', error)
-    showToast?.('Fehler beim Starten der Reparatur', { color: 'error' })
-  } finally {
-    startingRepair.value = false
-  }
-}
-</script>

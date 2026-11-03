@@ -15,25 +15,40 @@ import {
   AppConfigResponse,
   AuthConfigResponse,
   AuthResponse,
+  CreateOrUploadRepairCancellationParams,
+  CreateOrUploadRepairCancellationPayload,
   CreateRepairLogParams,
   CreateVdeTestParams,
+  CustomerCreate,
+  CustomerSearchResponse,
+  CustomerSingleResponse,
   CustomerWithRepairCountResponse,
+  DeactivateUserParams,
+  DeleteCustomerParams,
   DeleteRepairAttachmentParams,
   DeleteRepairLogParams,
+  DeleteRepairParams,
   DeleteSettingParams,
+  DropdownConfigResponse,
   FeaturesResponse,
+  GetCustomerParams,
   GetRepairAttachmentParams,
   GetRepairByQrTokenParams,
+  GetRepairCancellationParams,
   GetRepairDisclaimerParams,
   GetRepairLogParams,
   GetStatDataParams,
+  GetUserParams,
   GetVdeTestParams,
+  GetVdeTestPdfParams,
+  IdResponse,
   ListRepairAttachmentsParams,
   ListRepairLogsParams,
   ListRepairsParams,
   ListVdeTestsParams,
   LoginRequest,
   OidcLoginParams,
+  PinAutoLockRequest,
   PinDashboardSummaryResponse,
   PinGenerateRequest,
   PinGeneratedResponse,
@@ -47,22 +62,43 @@ import {
   RepairAttachmentListResponse,
   RepairCreate,
   RepairCreateResponse,
+  RepairListResponse,
   RepairLogCreate,
+  RepairLogCreateResponse,
   RepairLogListResponse,
+  RepairLogSingleResponse,
+  RepairLogUpdate,
   RepairResponse,
+  RepairSingleResponse,
   RepairUpdate,
   RepairsTimelineResponse,
+  SearchCustomersParams,
+  SettingCreate,
   SettingResponse,
+  SettingSingleResponse,
+  SettingUpdate,
+  SettingsGroupedResponse,
   UpdateAppConfigPayload,
+  UpdateCustomerParams,
+  UpdateRepairLogParams,
   UpdateRepairParams,
   UpdateSettingParams,
+  UpdateUserParams,
+  UploadCancellationTemplatePayload,
   UploadDisclaimerTemplatePayload,
   UploadLogoPayload,
   UploadRepairAttachmentsParams,
   UploadRepairAttachmentsPayload,
+  UploadRepairDisclaimerParams,
+  UploadRepairDisclaimerPayload,
+  UserCreate,
+  UserListResponse,
+  UserSingleResponse,
+  UserUpdate,
   VdeTestCreate,
   VdeTestCreateResponse,
   VdeTestListResponse,
+  VdeTestSingleResponse,
 } from "./data-contracts";
 import { ContentType, HttpClient, RequestParams } from "./http-client";
 
@@ -81,6 +117,7 @@ export class Api<
     this.request<AuthConfigResponse, any>({
       path: `/api/auth/config`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -97,6 +134,7 @@ export class Api<
       method: "POST",
       body: body,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -111,6 +149,7 @@ export class Api<
     this.request<APIResponse, void>({
       path: `/api/auth/logout`,
       method: "POST",
+      format: "json",
       ...params,
     });
   /**
@@ -125,6 +164,7 @@ export class Api<
     this.request<AuthResponse, void>({
       path: `/api/auth/me`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -139,6 +179,7 @@ export class Api<
     this.request<PinStatusResponse, void>({
       path: `/api/auth/me/pin`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -155,6 +196,7 @@ export class Api<
       method: "POST",
       body: body,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -179,7 +221,7 @@ export class Api<
    * @summary Start the SSO login (redirects to the identity provider).
    * @request GET:/api/auth/oidc/login
    */
-  oidcLogin = (query: OidcLoginParams, params: RequestParams = {}) =>
+  oidcLogin = (query: OidcLoginParams = {}, params: RequestParams = {}) =>
     this.request<any, void>({
       path: `/api/auth/oidc/login`,
       method: "GET",
@@ -198,6 +240,7 @@ export class Api<
     this.request<PinSessionStatusResponse, void>({
       path: `/api/auth/pin-session`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -212,6 +255,24 @@ export class Api<
     this.request<PinSessionActionResponse, void>({
       path: `/api/auth/pin-session/activity`,
       method: "POST",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name SetPinAutoLock
+   * @summary Switch the idle auto-lock for this browser session (e.g. off on a personal device).
+   * @request PUT:/api/auth/pin-session/auto-lock
+   */
+  setPinAutoLock = (body: PinAutoLockRequest, params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/auto-lock`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -219,13 +280,14 @@ export class Api<
    *
    * @tags Auth
    * @name PinDashboardSummary
-   * @summary Return aggregate dashboard metrics allowed on the PIN lock screen.
+   * @summary Return aggregate dashboard metrics allowed on the PIN lock screen and unified dashboard.
    * @request GET:/api/auth/pin-session/dashboard
    */
   pinDashboardSummary = (params: RequestParams = {}) =>
     this.request<PinDashboardSummaryResponse, void>({
       path: `/api/auth/pin-session/dashboard`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -240,6 +302,7 @@ export class Api<
     this.request<PinSessionActionResponse, void>({
       path: `/api/auth/pin-session/lock`,
       method: "POST",
+      format: "json",
       ...params,
     });
   /**
@@ -256,6 +319,7 @@ export class Api<
       method: "POST",
       body: body,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -270,6 +334,7 @@ export class Api<
     this.request<AppConfigResponse, any>({
       path: `/api/config/app-config`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -289,6 +354,41 @@ export class Api<
       method: "PUT",
       body: body,
       type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
+   * @name GetCancellationTemplate
+   * @summary Serve the active cancellation PDF template for inline display.
+   * @request GET:/api/config/cancellation
+   */
+  getCancellationTemplate = (params: RequestParams = {}) =>
+    this.request<void, void>({
+      path: `/api/config/cancellation`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * @description The PDF must contain AcroForm fields named 'date' and 'signature'.<br/>Takes effect immediately without a server restart.<br/>
+   *
+   * @tags Configuration
+   * @name UploadCancellationTemplate
+   * @summary Upload and activate a new cancellation PDF template (admin only).
+   * @request POST:/api/config/cancellation
+   */
+  uploadCancellationTemplate = (
+    data: UploadCancellationTemplatePayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<APIResponse, void>({
+      path: `/api/config/cancellation`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      format: "json",
       ...params,
     });
   /**
@@ -317,11 +417,12 @@ export class Api<
     data: UploadDisclaimerTemplatePayload,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/config/disclaimer`,
       method: "POST",
       body: data,
       type: ContentType.FormData,
+      format: "json",
       ...params,
     });
   /**
@@ -333,9 +434,10 @@ export class Api<
    * @request GET:/api/config/dropdowns
    */
   getDropdownConfig = (params: RequestParams = {}) =>
-    this.request<void, any>({
+    this.request<DropdownConfigResponse, any>({
       path: `/api/config/dropdowns`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -350,6 +452,7 @@ export class Api<
     this.request<FeaturesResponse, any>({
       path: `/api/config/features`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -375,11 +478,12 @@ export class Api<
    * @request POST:/api/config/logo
    */
   uploadLogo = (data: UploadLogoPayload, params: RequestParams = {}) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/config/logo`,
       method: "POST",
       body: data,
       type: ContentType.FormData,
+      format: "json",
       ...params,
     });
   /**
@@ -394,6 +498,7 @@ export class Api<
     this.request<PruefgeraetResponse[], any>({
       path: `/api/config/pruefgeraete`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -415,6 +520,100 @@ export class Api<
     >({
       path: `/api/customers`,
       method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Customers
+   * @name CreateCustomer
+   * @summary Create a new customer.
+   * @request POST:/api/customers
+   */
+  createCustomer = (body: CustomerCreate, params: RequestParams = {}) =>
+    this.request<CustomerSingleResponse, void>({
+      path: `/api/customers`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Customers
+   * @name SearchCustomers
+   * @summary Search customers by name, phone or email.
+   * @request GET:/api/customers/search
+   */
+  searchCustomers = (
+    query: SearchCustomersParams = {},
+    params: RequestParams = {},
+  ) =>
+    this.request<CustomerSearchResponse, void>({
+      path: `/api/customers/search`,
+      method: "GET",
+      query: query,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Customers
+   * @name DeleteCustomer
+   * @summary Delete a customer (sets customer_id to NULL on linked repairs).
+   * @request DELETE:/api/customers/{customer_id}
+   */
+  deleteCustomer = (
+    { customerId }: DeleteCustomerParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<IdResponse, void>({
+      path: `/api/customers/${customerId}`,
+      method: "DELETE",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Customers
+   * @name GetCustomer
+   * @summary Get a single customer by ID.
+   * @request GET:/api/customers/{customer_id}
+   */
+  getCustomer = (
+    { customerId }: GetCustomerParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<CustomerSingleResponse, void>({
+      path: `/api/customers/${customerId}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Customers
+   * @name UpdateCustomer
+   * @summary Update a customer.
+   * @request PUT:/api/customers/{customer_id}
+   */
+  updateCustomer = (
+    { customerId }: UpdateCustomerParams,
+    body: CustomerCreate,
+    params: RequestParams = {},
+  ) =>
+    this.request<CustomerSingleResponse, void>({
+      path: `/api/customers/${customerId}`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -439,11 +638,12 @@ export class Api<
    * @summary Get all repairs as JSON
    * @request GET:/api/list
    */
-  listRepairs = (query: ListRepairsParams, params: RequestParams = {}) =>
-    this.request<void, void>({
+  listRepairs = (query: ListRepairsParams = {}, params: RequestParams = {}) =>
+    this.request<RepairListResponse, void>({
       path: `/api/list`,
       method: "GET",
       query: query,
+      format: "json",
       ...params,
     });
   /**
@@ -460,6 +660,7 @@ export class Api<
       method: "POST",
       body: body,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -474,9 +675,10 @@ export class Api<
     { token }: GetRepairByQrTokenParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<RepairSingleResponse, void>({
       path: `/api/repairs/by-token/${token}`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -491,6 +693,22 @@ export class Api<
     this.request<RepairsTimelineResponse, any>({
       path: `/api/repairs/stats/timeline`,
       method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name DeleteRepair
+   * @summary Delete a repair record and its associated files on disk.
+   * @request DELETE:/api/repairs/{id}
+   */
+  deleteRepair = ({ id }: DeleteRepairParams, params: RequestParams = {}) =>
+    this.request<IdResponse, void>({
+      path: `/api/repairs/${id}`,
+      method: "DELETE",
+      format: "json",
       ...params,
     });
   /**
@@ -518,6 +736,45 @@ export class Api<
       method: "PUT",
       body: body,
       type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name GetRepairCancellation
+   * @summary Download the signed cancellation PDF for a repair
+   * @request GET:/api/repairs/{id}/cancellation
+   */
+  getRepairCancellation = (
+    { id }: GetRepairCancellationParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/repairs/${id}/cancellation`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name CreateOrUploadRepairCancellation
+   * @summary Generate a signed cancellation PDF from a base64 signature or upload a pre-signed PDF.
+   * @request POST:/api/repairs/{id}/cancellation
+   */
+  createOrUploadRepairCancellation = (
+    { id }: CreateOrUploadRepairCancellationParams,
+    body: CreateOrUploadRepairCancellationPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<APIResponse, void>({
+      path: `/api/repairs/${id}/cancellation`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -541,6 +798,27 @@ export class Api<
    * No description
    *
    * @tags Repairs
+   * @name UploadRepairDisclaimer
+   * @summary Upload a pre-signed disclaimer PDF for a repair.
+   * @request POST:/api/repairs/{id}/disclaimer
+   */
+  uploadRepairDisclaimer = (
+    { id }: UploadRepairDisclaimerParams,
+    data: UploadRepairDisclaimerPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<APIResponse, void>({
+      path: `/api/repairs/${id}/disclaimer`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
    * @name PrintRepairLabel
    * @summary Print a QR code label for a repair on a label printer.
    * @request POST:/api/repairs/{id}/print-label
@@ -550,11 +828,12 @@ export class Api<
     body: PrintRepairLabelPayload,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/repairs/${id}/print-label`,
       method: "POST",
       body: body,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -573,6 +852,7 @@ export class Api<
       path: `/api/repairs/${repairId}/attachments`,
       method: "GET",
       query: query,
+      format: "json",
       ...params,
     });
   /**
@@ -593,6 +873,7 @@ export class Api<
       method: "POST",
       body: data,
       type: ContentType.FormData,
+      format: "json",
       ...params,
     });
   /**
@@ -607,9 +888,10 @@ export class Api<
     { repairId, attachmentId }: DeleteRepairAttachmentParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/repairs/${repairId}/attachments/${attachmentId}`,
       method: "DELETE",
+      format: "json",
       ...params,
     });
   /**
@@ -644,6 +926,7 @@ export class Api<
     this.request<RepairLogListResponse, void>({
       path: `/api/repairs/${repairId}/logs`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -659,11 +942,12 @@ export class Api<
     data: RepairLogCreate,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<RepairLogCreateResponse, void>({
       path: `/api/repairs/${repairId}/logs`,
       method: "POST",
       body: data,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -678,9 +962,10 @@ export class Api<
     { repairId, logId }: DeleteRepairLogParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
       method: "DELETE",
+      format: "json",
       ...params,
     });
   /**
@@ -695,9 +980,31 @@ export class Api<
     { repairId, logId }: GetRepairLogParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<RepairLogSingleResponse, void>({
       path: `/api/repairs/${repairId}/logs/${logId}`,
       method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repair Logs
+   * @name UpdateRepairLog
+   * @summary Update an existing repair log entry.
+   * @request PUT:/api/repairs/{repair_id}/logs/{log_id}
+   */
+  updateRepairLog = (
+    { repairId, logId }: UpdateRepairLogParams,
+    body: RepairLogUpdate,
+    params: RequestParams = {},
+  ) =>
+    this.request<RepairLogSingleResponse, void>({
+      path: `/api/repairs/${repairId}/logs/${logId}`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -715,6 +1022,7 @@ export class Api<
     this.request<VdeTestListResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -735,6 +1043,7 @@ export class Api<
       method: "POST",
       body: data,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -749,8 +1058,26 @@ export class Api<
     { repairId, testId }: GetVdeTestParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<VdeTestSingleResponse, void>({
       path: `/api/repairs/${repairId}/vde-tests/${testId}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags VDE Tests
+   * @name GetVdeTestPdf
+   * @summary Download a VDE Prüfprotokoll as PDF for the given test.
+   * @request GET:/api/repairs/{repair_id}/vde-tests/{test_id}/pdf
+   */
+  getVdeTestPdf = (
+    { repairId, testId }: GetVdeTestPdfParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<Blob, void>({
+      path: `/api/repairs/${repairId}/vde-tests/${testId}/pdf`,
       method: "GET",
       ...params,
     });
@@ -763,9 +1090,10 @@ export class Api<
    * @request GET:/api/settings
    */
   listSettings = (params: RequestParams = {}) =>
-    this.request<void, any>({
+    this.request<SettingsGroupedResponse, any>({
       path: `/api/settings`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -776,10 +1104,13 @@ export class Api<
    * @summary Create a new setting entry.
    * @request POST:/api/settings
    */
-  createSetting = (params: RequestParams = {}) =>
-    this.request<SettingResponse, void>({
+  createSetting = (body: SettingCreate, params: RequestParams = {}) =>
+    this.request<SettingSingleResponse, void>({
       path: `/api/settings`,
       method: "POST",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -800,6 +1131,7 @@ export class Api<
     >({
       path: `/api/settings/all`,
       method: "GET",
+      format: "json",
       ...params,
     });
   /**
@@ -814,9 +1146,10 @@ export class Api<
     { settingId }: DeleteSettingParams,
     params: RequestParams = {},
   ) =>
-    this.request<void, void>({
+    this.request<APIResponse, void>({
       path: `/api/settings/${settingId}`,
       method: "DELETE",
+      format: "json",
       ...params,
     });
   /**
@@ -829,11 +1162,15 @@ export class Api<
    */
   updateSetting = (
     { settingId }: UpdateSettingParams,
+    body: SettingUpdate,
     params: RequestParams = {},
   ) =>
-    this.request<SettingResponse, void>({
+    this.request<SettingSingleResponse, void>({
       path: `/api/settings/${settingId}`,
       method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -848,6 +1185,92 @@ export class Api<
     this.request<void, any>({
       path: `/api/stat-data/${type}`,
       method: "GET",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Users
+   * @name ListUsers
+   * @summary List all users.
+   * @request GET:/api/users
+   */
+  listUsers = (params: RequestParams = {}) =>
+    this.request<UserListResponse, void>({
+      path: `/api/users`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Users
+   * @name CreateUser
+   * @summary Create a new user.
+   * @request POST:/api/users
+   */
+  createUser = (body: UserCreate, params: RequestParams = {}) =>
+    this.request<UserSingleResponse, void>({
+      path: `/api/users`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Users
+   * @name DeactivateUser
+   * @summary Soft-delete a user by setting is_active=False.
+   * @request DELETE:/api/users/{user_id}
+   */
+  deactivateUser = (
+    { userId }: DeactivateUserParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<APIResponse, void>({
+      path: `/api/users/${userId}`,
+      method: "DELETE",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Users
+   * @name GetUser
+   * @summary Get a single user by ID.
+   * @request GET:/api/users/{user_id}
+   */
+  getUser = ({ userId }: GetUserParams, params: RequestParams = {}) =>
+    this.request<UserSingleResponse, void>({
+      path: `/api/users/${userId}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Users
+   * @name UpdateUser
+   * @summary Update an existing user.
+   * @request PUT:/api/users/{user_id}
+   */
+  updateUser = (
+    { userId }: UpdateUserParams,
+    body: UserUpdate,
+    params: RequestParams = {},
+  ) =>
+    this.request<UserSingleResponse, void>({
+      path: `/api/users/${userId}`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
       ...params,
     });
 }

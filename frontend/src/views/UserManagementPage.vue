@@ -1,15 +1,12 @@
 <template>
-    <v-container fluid class="pa-4">
-        <v-row align="center" class="mb-4">
-            <v-col>
-                <h1 class="text-h5 font-weight-bold">Benutzerverwaltung</h1>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn color="primary" prepend-icon="mdi-account-plus" @click="openCreateDialog">
+    <v-container fluid class="page-container">
+        <PageHeader title="Benutzerverwaltung">
+            <template #actions>
+                <v-btn color="primary" variant="flat" prepend-icon="mdi-account-plus" @click="openCreateDialog">
                     Neuer Benutzer
                 </v-btn>
-            </v-col>
-        </v-row>
+            </template>
+        </PageHeader>
 
         <!-- Filter bar -->
         <v-row class="mb-2">
@@ -32,22 +29,19 @@ v-model="filterActive" :items="activeFilterOptions" label="Status" density="comp
                 @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <!-- Active chip -->
                 <template #item.is_active="{ item }">
-                    <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-                        {{ item.is_active ? 'Aktiv' : 'Deaktiviert' }}
-                    </v-chip>
+                    <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+                    <StatusChip v-else label="Deaktiviert" icon="mdi-cancel" />
                 </template>
 
                 <!-- Admin chip -->
                 <template #item.is_admin="{ item }">
-                    <v-chip v-if="item.is_admin" color="primary" size="small" variant="tonal">
-                        Admin
-                    </v-chip>
-                    <span v-else class="text-medium-emphasis">—</span>
+                    <StatusChip v-if="item.is_admin" label="Admin" icon="mdi-shield-account" />
+                    <span v-else class="text-medium-emphasis">–</span>
                 </template>
 
                 <!-- Full name -->
                 <template #item.name="{ item }">
-                    {{ item.vorname }} {{ item.nachname }}
+                    {{ personName(item) }}
                 </template>
 
                 <!-- Actions -->
@@ -57,7 +51,7 @@ icon="mdi-pencil" size="small" variant="text" density="compact"
                         @click.stop="openEditDialog(item)" />
                     <v-btn
 v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
-                        color="warning" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
+                        color="error" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
                         @click.stop="confirmDeactivate(item)" />
                     <v-btn
 v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
@@ -75,7 +69,7 @@ v-else icon="mdi-account-check" size="small" variant="text" density="compact" co
                         {{ formError }}
                     </v-alert>
                     <v-form ref="formRef" @submit.prevent="saveUser">
-                        <v-row dense>
+                        <v-row density="compact">
                             <v-col cols="12">
                                 <v-text-field
 v-model="form.username" label="Benutzername *"
@@ -140,16 +134,22 @@ v-model="form.is_admin" label="Administrator" hide-details
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-            {{ snackbarText }}
-        </v-snackbar>
     </v-container>
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/ui/PageHeader.vue";
+import StatusChip from "@/components/ui/StatusChip.vue";
+import { personName } from "@/utils/person";
 import { computed, onMounted, ref } from "vue";
+import type { VForm } from "vuetify/components";
+import { api } from "@/api/client";
+import { errorMessage } from "@/utils/errors";
 import type { UserResponse } from "@/api/types";
 import { useAuthStore } from "@/stores/authStore";
+import { useToast } from "@/composables/useToast";
+
+const toast = useToast();
 
 const authStore = useAuthStore();
 
@@ -166,11 +166,8 @@ const deactivateTarget = ref<UserResponse | null>(null);
 const editingUser = ref<UserResponse | null>(null);
 const formError = ref("");
 const showPassword = ref(false);
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const formRef = ref<InstanceType<typeof VForm> | null>(null);
 
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("success");
 
 const emptyForm = () => ({
     username: "",
@@ -225,18 +222,13 @@ const minLen8 = (v: string) => v?.length >= 8 || "Mindestens 8 Zeichen";
 const minLen8IfSet = (v: string) => !v || v.length >= 8 || "Mindestens 8 Zeichen";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
-function showMsg(text: string, color = "success") {
-    snackbarText.value = text;
-    snackbarColor.value = color;
-    snackbar.value = true;
-}
-
 async function fetchUsers() {
     loading.value = true;
     try {
-        const res = await fetch("/api/users", { credentials: "include" });
-        const data = await res.json();
-        users.value = data.data ?? [];
+        const res = await api.listUsers();
+        users.value = res.data;
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler beim Laden der Benutzer"));
     } finally {
         loading.value = false;
     }
@@ -276,7 +268,7 @@ async function saveUser() {
     formError.value = "";
 
     try {
-        const payload: Record<string, unknown> = {
+        const fields = {
             username: form.value.username,
             vorname: form.value.vorname,
             nachname: form.value.nachname,
@@ -284,33 +276,23 @@ async function saveUser() {
             is_admin: form.value.is_admin,
         };
         if (editingUser.value) {
-            payload.is_active = form.value.is_active;
-            if (form.value.password) payload.password = form.value.password;
+            await api.updateUser(
+                { userId: editingUser.value.id },
+                {
+                    ...fields,
+                    is_active: form.value.is_active,
+                    ...(form.value.password ? { password: form.value.password } : {}),
+                },
+            );
         } else {
-            payload.password = form.value.password;
-        }
-
-        const url = editingUser.value
-            ? `/api/users/${editingUser.value.id}`
-            : "/api/users";
-        const method = editingUser.value ? "PUT" : "POST";
-
-        const res = await fetch(url, {
-            method,
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            formError.value = data.error ?? "Fehler beim Speichern";
-            return;
+            await api.createUser({ ...fields, password: form.value.password });
         }
 
         formDialog.value = false;
         await fetchUsers();
-        showMsg(editingUser.value ? "Benutzer aktualisiert" : "Benutzer erstellt");
+        toast.success(editingUser.value ? "Benutzer aktualisiert" : "Benutzer erstellt");
+    } catch (err) {
+        formError.value = errorMessage(err, "Fehler beim Speichern");
     } finally {
         saving.value = false;
     }
@@ -325,18 +307,12 @@ async function doDeactivate() {
     if (!deactivateTarget.value) return;
     saving.value = true;
     try {
-        const res = await fetch(`/api/users/${deactivateTarget.value.id}`, {
-            method: "DELETE",
-            credentials: "include",
-        });
-        if (res.ok) {
-            deactivateDialog.value = false;
-            await fetchUsers();
-            showMsg("Benutzer deaktiviert", "warning");
-        } else {
-            const d = await res.json();
-            showMsg(d.error ?? "Fehler", "error");
-        }
+        await api.deactivateUser({ userId: deactivateTarget.value.id });
+        deactivateDialog.value = false;
+        await fetchUsers();
+        toast.warning("Benutzer deaktiviert");
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler"));
     } finally {
         saving.value = false;
     }
@@ -345,19 +321,11 @@ async function doDeactivate() {
 async function reactivate(user: UserResponse) {
     saving.value = true;
     try {
-        const res = await fetch(`/api/users/${user.id}`, {
-            method: "PUT",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ is_active: true }),
-        });
-        if (res.ok) {
-            await fetchUsers();
-            showMsg("Benutzer reaktiviert");
-        } else {
-            const d = await res.json();
-            showMsg(d.error ?? "Fehler", "error");
-        }
+        await api.updateUser({ userId: user.id }, { is_active: true });
+        await fetchUsers();
+        toast.success("Benutzer reaktiviert");
+    } catch (err) {
+        toast.error(errorMessage(err, "Fehler"));
     } finally {
         saving.value = false;
     }

@@ -33,14 +33,13 @@ def api_list_repair_logs(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     responses:
       200:
         description: List of repair log entries
         schema:
-          $ref: '#/components/schemas/RepairLogListResponse'
+          $ref: '#/definitions/RepairLogListResponse'
       404:
         description: Repair not found
       500:
@@ -96,18 +95,19 @@ def api_create_repair_log(validated_data, repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/RepairLogCreate'
+            $ref: '#/definitions/RepairLogCreate'
     responses:
       201:
         description: Repair log created successfully
+        schema:
+          $ref: '#/definitions/RepairLogCreateResponse'
       400:
         description: Invalid input
       404:
@@ -129,7 +129,8 @@ def api_create_repair_log(validated_data, repair_id):
         validated_data.repair_id = repair_id
 
         # Create the repair log
-        log_data = validated_data.model_dump(exclude_unset=True)
+        # Include schema defaults (e.g. reparatur_dauer=0): the columns are NOT NULL
+        log_data = validated_data.model_dump()
         new_log = RepairLog(**log_data)
 
         # increment repair time in parent repair record
@@ -183,18 +184,18 @@ def api_get_repair_log(repair_id, log_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
       - name: log_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair log ID
     responses:
       200:
         description: Repair log details
+        schema:
+          $ref: '#/definitions/RepairLogSingleResponse'
       404:
         description: Repair log not found
       500:
@@ -230,7 +231,35 @@ def api_get_repair_log(repair_id, log_id):
 @repair_logs_bp.route("/repairs/<int:repair_id>/logs/<int:log_id>", methods=["PUT"])
 @validate_request(RepairLogUpdate)
 def api_update_repair_log(validated_data, repair_id, log_id):
-    """Update an existing repair log entry."""
+    """Update an existing repair log entry.
+    ---
+    operationId: updateRepairLog
+    tags:
+      - Repair Logs
+    parameters:
+      - name: repair_id
+        in: path
+        required: true
+        type: integer
+        description: Repair ID
+      - name: log_id
+        in: path
+        required: true
+        type: integer
+        description: Repair log ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/RepairLogUpdate'
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: '#/definitions/RepairLogSingleResponse'
+      404:
+        description: Repair log not found
+    """
     try:
         log = RepairLog.query.filter_by(id=log_id, repair_id=repair_id).first()
         if not log:
@@ -289,16 +318,16 @@ def api_delete_repair_log(repair_id, log_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
       - name: log_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
     responses:
       200:
         description: Repair log deleted successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       403:
         description: Not an admin and not the creator
       404:

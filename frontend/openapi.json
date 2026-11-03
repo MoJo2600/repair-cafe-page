@@ -1,0 +1,4196 @@
+{
+  "basePath": "/",
+  "consumes": [
+    "application/json"
+  ],
+  "definitions": {
+    "APIResponse": {
+      "properties": {
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "type": "object"
+    },
+    "AppConfigResponse": {
+      "properties": {
+        "app_url": {
+          "default": "",
+          "description": "Application base URL used for QR code links on labels",
+          "type": "string"
+        },
+        "org_name": {
+          "default": "Repair Caf\u00e9",
+          "description": "Organisation display name",
+          "type": "string"
+        },
+        "org_website": {
+          "default": "",
+          "description": "Organisation website URL printed on the label",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "AuthConfigResponse": {
+      "properties": {
+        "oidc_enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "oidc_enabled"
+      ],
+      "type": "object"
+    },
+    "AuthResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "type": "object"
+    },
+    "CustomerCreate": {
+      "properties": {
+        "email": {
+          "default": null,
+          "format": "email",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "nachname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "telefon": {
+          "default": null,
+          "maxLength": 40,
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "vorname",
+        "nachname"
+      ],
+      "type": "object"
+    },
+    "CustomerResponse": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "email": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "type": "integer"
+        },
+        "nachname": {
+          "type": "string"
+        },
+        "telefon": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "vorname",
+        "nachname",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "CustomerSearchResponse": {
+      "properties": {
+        "data": {
+          "items": {
+            "$ref": "#/definitions/CustomerResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "CustomerSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/CustomerResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "CustomerWithRepairCountResponse": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "email": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "type": "integer"
+        },
+        "nachname": {
+          "type": "string"
+        },
+        "repair_count": {
+          "default": 0,
+          "description": "Number of repairs for this customer",
+          "type": "integer"
+        },
+        "telefon": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "vorname",
+        "nachname",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "DropdownConfigResponse": {
+      "properties": {
+        "repair_type": {
+          "items": {
+            "$ref": "#/definitions/SettingOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "repair_type"
+      ],
+      "type": "object"
+    },
+    "FeaturesResponse": {
+      "properties": {
+        "label_printer": {
+          "default": false,
+          "description": "Whether the label printer is enabled",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "IdResponse": {
+      "properties": {
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "type": "integer"
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "id"
+      ],
+      "type": "object"
+    },
+    "LoginRequest": {
+      "properties": {
+        "password": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "username": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ],
+      "type": "object"
+    },
+    "PinAutoLockRequest": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "PinDashboardCategoryCount": {
+      "properties": {
+        "count": {
+          "description": "Total repairs in this category",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Predefined repair category name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "count"
+      ],
+      "type": "object"
+    },
+    "PinDashboardRepairItem": {
+      "properties": {
+        "category": {
+          "default": null,
+          "description": "Predefined repair category name",
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "description": "Repair ID",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "PinDashboardSummaryResponse": {
+      "properties": {
+        "in_progress_items": {
+          "items": {
+            "$ref": "#/definitions/PinDashboardRepairItem"
+          },
+          "type": "array"
+        },
+        "in_progress_repairs": {
+          "type": "integer"
+        },
+        "next_repair_category": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "next_repair_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "not_repaired_repairs": {
+          "type": "integer"
+        },
+        "open_repairs": {
+          "type": "integer"
+        },
+        "repaired_repairs": {
+          "type": "integer"
+        },
+        "success_rate": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/definitions/RepairsTimelinePoint"
+          },
+          "type": "array"
+        },
+        "top_categories": {
+          "items": {
+            "$ref": "#/definitions/PinDashboardCategoryCount"
+          },
+          "type": "array"
+        },
+        "total_repairs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_repairs",
+        "open_repairs",
+        "in_progress_repairs",
+        "repaired_repairs",
+        "not_repaired_repairs"
+      ],
+      "type": "object"
+    },
+    "PinGenerateRequest": {
+      "properties": {
+        "replace": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "PinGeneratedResponse": {
+      "properties": {
+        "pin_code": {
+          "pattern": "^[0-9]{6}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pin_code"
+      ],
+      "type": "object"
+    },
+    "PinSessionActionResponse": {
+      "properties": {
+        "locked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "locked"
+      ],
+      "type": "object"
+    },
+    "PinSessionStatusResponse": {
+      "properties": {
+        "auto_lock_enabled": {
+          "default": true,
+          "description": "Idle auto-lock active for this session",
+          "type": "boolean"
+        },
+        "eligible": {
+          "type": "boolean"
+        },
+        "idle_timeout_seconds": {
+          "default": 60,
+          "description": "Seconds without activity until auto-lock",
+          "type": "integer"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "pin_unlock_available": {
+          "default": true,
+          "type": "boolean"
+        },
+        "user": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "eligible",
+        "locked"
+      ],
+      "type": "object"
+    },
+    "PinStatusResponse": {
+      "properties": {
+        "can_generate": {
+          "type": "boolean"
+        },
+        "has_pin": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "local",
+            "oidc"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "has_pin",
+        "can_generate"
+      ],
+      "type": "object"
+    },
+    "PinUnlockRequest": {
+      "properties": {
+        "pin_code": {
+          "pattern": "^[0-9]{6}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pin_code"
+      ],
+      "type": "object"
+    },
+    "PruefgeraetResponse": {
+      "properties": {
+        "id": {
+          "description": "Setting ID",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Device name",
+          "type": "string"
+        },
+        "serial_number": {
+          "default": null,
+          "description": "Device serial number",
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "RepairAttachmentListResponse": {
+      "properties": {
+        "data": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RepairAttachmentResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        },
+        "total": {
+          "description": "Total number of attachments",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reply",
+        "total"
+      ],
+      "type": "object"
+    },
+    "RepairAttachmentResponse": {
+      "properties": {
+        "attachment_type": {
+          "description": "One of: log_entry, device_photo, disclaimer, misc",
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "log_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "original_filename": {
+          "type": "string"
+        },
+        "repair_id": {
+          "type": "integer"
+        },
+        "size": {
+          "description": "File size in bytes",
+          "type": "integer"
+        },
+        "stored_filename": {
+          "type": "string"
+        },
+        "uploaded_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "uploaded_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "uploaded_by_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "id",
+        "repair_id",
+        "attachment_type",
+        "original_filename",
+        "stored_filename",
+        "content_type",
+        "size",
+        "uploaded_at"
+      ],
+      "type": "object"
+    },
+    "RepairCreate": {
+      "properties": {
+        "customer_id": {
+          "default": null,
+          "description": "Link to existing customer",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "datum": {
+          "description": "Date of repair intake",
+          "format": "date",
+          "type": "string"
+        },
+        "defekt_besch": {
+          "default": null,
+          "description": "Defect description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "email": {
+          "default": null,
+          "description": "Email address",
+          "format": "email",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "description": "Device type",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "nachname": {
+          "description": "Last name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "repair_type_id": {
+          "description": "FK to repair type setting",
+          "type": "integer"
+        },
+        "telefon": {
+          "default": null,
+          "description": "Phone number",
+          "maxLength": 40,
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift": {
+          "default": null,
+          "description": "Signature image as base64",
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "description": "First name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "datum",
+        "geraet_art",
+        "repair_type_id",
+        "vorname",
+        "nachname"
+      ],
+      "type": "object"
+    },
+    "RepairCreateResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RepairResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "default": null,
+          "description": "Created repair ID",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "type": "object"
+    },
+    "RepairListItem": {
+      "properties": {
+        "closed_at": {
+          "default": null,
+          "description": "Timestamp when the repair was closed",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "created_by_id": {
+          "default": null,
+          "description": "User who created the repair record",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "customer": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CustomerResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "customer_id": {
+          "default": null,
+          "description": "Linked customer ID",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "datum": {
+          "description": "Date of repair intake",
+          "format": "date",
+          "type": "string"
+        },
+        "defekt_besch": {
+          "default": null,
+          "description": "Defect description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "device_photo_id": {
+          "default": null,
+          "description": "Attachment ID of the newest device photo, if any",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "din_pruef": {
+          "default": null,
+          "description": "DIN test performed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "description": "Device type",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "description": "Repair ID",
+          "type": "integer"
+        },
+        "latest_log": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RepairLogResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "qr_token": {
+          "description": "QR code token",
+          "maxLength": 32,
+          "type": "string"
+        },
+        "repair_type": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SettingResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "repair_type_id": {
+          "default": null,
+          "description": "FK to repair type setting",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "reparatur_besch": {
+          "default": null,
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "reparatur_dauer": {
+          "default": null,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "status": {
+          "default": "Offen",
+          "description": "Repair status",
+          "pattern": "^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
+          "type": "string"
+        },
+        "status_detail": {
+          "default": null,
+          "description": "Additional detail for repair status",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift": {
+          "default": null,
+          "description": "Signature image as base64",
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift_haft": {
+          "default": null,
+          "description": "Liability disclaimer signed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "user": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "datum",
+        "geraet_art",
+        "id",
+        "qr_token"
+      ],
+      "type": "object"
+    },
+    "RepairListResponse": {
+      "properties": {
+        "count": {
+          "description": "Number of repairs returned",
+          "type": "integer"
+        },
+        "data": {
+          "items": {
+            "$ref": "#/definitions/RepairListItem"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data",
+        "count"
+      ],
+      "type": "object"
+    },
+    "RepairLogCreate": {
+      "properties": {
+        "log_type": {
+          "default": "work",
+          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions",
+          "maxLength": 20,
+          "type": "string"
+        },
+        "repair_id": {
+          "description": "Repair ID this log belongs to",
+          "type": "integer"
+        },
+        "reparatur_besch": {
+          "default": "",
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string"
+        },
+        "reparatur_dauer": {
+          "default": 0,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status_from": {
+          "default": null,
+          "description": "Status before the transition",
+          "maxLength": 20,
+          "type": "string",
+          "x-nullable": true
+        },
+        "status_to": {
+          "default": null,
+          "description": "Status after the transition",
+          "maxLength": 20,
+          "type": "string",
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "repair_id"
+      ],
+      "type": "object"
+    },
+    "RepairLogCreateResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/RepairLogResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "description": "Created repair log ID",
+          "type": "integer"
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "id",
+        "data"
+      ],
+      "type": "object"
+    },
+    "RepairLogListResponse": {
+      "properties": {
+        "data": {
+          "items": {
+            "$ref": "#/definitions/RepairLogResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        },
+        "total": {
+          "description": "Total number of repair logs",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reply",
+        "data",
+        "total"
+      ],
+      "type": "object"
+    },
+    "RepairLogResponse": {
+      "properties": {
+        "created_at": {
+          "description": "When this log entry was created",
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "description": "Repair log ID",
+          "type": "integer"
+        },
+        "log_type": {
+          "default": "work",
+          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions",
+          "maxLength": 20,
+          "type": "string"
+        },
+        "repair_id": {
+          "description": "Repair ID this log belongs to",
+          "type": "integer"
+        },
+        "reparatur_besch": {
+          "default": "",
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string"
+        },
+        "reparatur_dauer": {
+          "default": 0,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status_from": {
+          "default": null,
+          "description": "Status before the transition",
+          "maxLength": 20,
+          "type": "string",
+          "x-nullable": true
+        },
+        "status_to": {
+          "default": null,
+          "description": "Status after the transition",
+          "maxLength": 20,
+          "type": "string",
+          "x-nullable": true
+        },
+        "user": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "id",
+        "repair_id",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "RepairLogSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/RepairLogResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "RepairLogUpdate": {
+      "properties": {
+        "reparatur_besch": {
+          "default": null,
+          "maxLength": 400,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "reparatur_dauer": {
+          "default": null,
+          "minimum": 0,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "RepairResponse": {
+      "properties": {
+        "closed_at": {
+          "default": null,
+          "description": "Timestamp when the repair was closed",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "created_by_id": {
+          "default": null,
+          "description": "User who created the repair record",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "customer": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CustomerResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "customer_id": {
+          "default": null,
+          "description": "Linked customer ID",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "datum": {
+          "description": "Date of repair intake",
+          "format": "date",
+          "type": "string"
+        },
+        "defekt_besch": {
+          "default": null,
+          "description": "Defect description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "din_pruef": {
+          "default": null,
+          "description": "DIN test performed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "description": "Device type",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "description": "Repair ID",
+          "type": "integer"
+        },
+        "qr_token": {
+          "description": "QR code token",
+          "maxLength": 32,
+          "type": "string"
+        },
+        "repair_type": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SettingResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "repair_type_id": {
+          "default": null,
+          "description": "FK to repair type setting",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "reparatur_besch": {
+          "default": null,
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "reparatur_dauer": {
+          "default": null,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "status": {
+          "default": "Offen",
+          "description": "Repair status",
+          "pattern": "^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
+          "type": "string"
+        },
+        "status_detail": {
+          "default": null,
+          "description": "Additional detail for repair status",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift": {
+          "default": null,
+          "description": "Signature image as base64",
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift_haft": {
+          "default": null,
+          "description": "Liability disclaimer signed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "user": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "datum",
+        "geraet_art",
+        "id",
+        "qr_token"
+      ],
+      "type": "object"
+    },
+    "RepairSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/RepairResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "RepairUpdate": {
+      "properties": {
+        "datum": {
+          "default": null,
+          "description": "Date of repair intake",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "defekt_besch": {
+          "default": null,
+          "description": "Defect description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "din_pruef": {
+          "default": null,
+          "description": "DIN test performed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "default": null,
+          "description": "Device type",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "repair_type_id": {
+          "default": null,
+          "description": "FK to repair type setting",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "reparatur_besch": {
+          "default": null,
+          "description": "Repair description",
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "reparatur_dauer": {
+          "default": null,
+          "description": "Repair duration in minutes",
+          "minimum": 0,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "status": {
+          "default": null,
+          "description": "Repair status",
+          "pattern": "^(Offen|In Bearbeitung|Repariert|Nicht Repariert)$",
+          "type": "string",
+          "x-nullable": true
+        },
+        "status_detail": {
+          "default": null,
+          "description": "Additional detail for repair status",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift": {
+          "default": null,
+          "description": "Signature image as base64",
+          "type": "string",
+          "x-nullable": true
+        },
+        "unterschrift_haft": {
+          "default": null,
+          "description": "Liability disclaimer signed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "user_id": {
+          "default": null,
+          "description": "Assigned reparateur (user FK)",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "RepairsTimelinePoint": {
+      "properties": {
+        "abgeschlossen": {
+          "default": 0,
+          "description": "Repairs with status 'Repariert'",
+          "type": "integer"
+        },
+        "in_bearbeitung": {
+          "default": 0,
+          "description": "Repairs with status 'In Bearbeitung'",
+          "type": "integer"
+        },
+        "label": {
+          "description": "Human-readable label, e.g. 'KW 20 2026'",
+          "type": "string"
+        },
+        "nicht_repariert": {
+          "default": 0,
+          "description": "Repairs with status 'Nicht Repariert'",
+          "type": "integer"
+        },
+        "offen": {
+          "default": 0,
+          "description": "Repairs with status 'Offen'",
+          "type": "integer"
+        },
+        "week": {
+          "description": "ISO year-week, e.g. '2026-20'",
+          "type": "string"
+        }
+      },
+      "required": [
+        "week",
+        "label"
+      ],
+      "type": "object"
+    },
+    "RepairsTimelineResponse": {
+      "properties": {
+        "data": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RepairsTimelinePoint"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "SettingCreate": {
+      "properties": {
+        "category": {
+          "maxLength": 50,
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        "serial_number": {
+          "default": null,
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "sort_order": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category",
+        "name"
+      ],
+      "type": "object"
+    },
+    "SettingOption": {
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "serial_number": {
+          "default": null,
+          "description": "Only set for testing devices",
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "SettingResponse": {
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "serial_number": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "sort_order": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "name",
+        "sort_order",
+        "is_active",
+        "created_at",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "SettingSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/SettingResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "SettingUpdate": {
+      "properties": {
+        "is_active": {
+          "default": null,
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "name": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "serial_number": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "sort_order": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "SettingsGroupedResponse": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/definitions/SettingOption"
+        },
+        "type": "array"
+      },
+      "type": "object"
+    },
+    "UserCreate": {
+      "properties": {
+        "email": {
+          "format": "email",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "is_active": {
+          "default": true,
+          "type": "boolean"
+        },
+        "is_admin": {
+          "default": false,
+          "type": "boolean"
+        },
+        "nachname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "password": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "username": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "vorname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "vorname",
+        "nachname",
+        "email",
+        "password"
+      ],
+      "type": "object"
+    },
+    "UserListResponse": {
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "data": {
+          "items": {
+            "$ref": "#/definitions/UserResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data",
+        "count"
+      ],
+      "type": "object"
+    },
+    "UserResponse": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "is_admin": {
+          "type": "boolean"
+        },
+        "nachname": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        },
+        "username": {
+          "type": "string"
+        },
+        "vorname": {
+          "default": null,
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "is_admin",
+        "is_active",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "UserSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/UserResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "UserUpdate": {
+      "properties": {
+        "email": {
+          "default": null,
+          "format": "email",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "is_active": {
+          "default": null,
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "is_admin": {
+          "default": null,
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "nachname": {
+          "default": null,
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "password": {
+          "default": null,
+          "minLength": 8,
+          "type": "string",
+          "x-nullable": true
+        },
+        "username": {
+          "default": null,
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "default": null,
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "VdeTestCreate": {
+      "properties": {
+        "ableitstrom_pruefung": {
+          "default": null,
+          "description": "Leakage current test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "bemerkungen": {
+          "default": null,
+          "description": "Comments/Defects",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_at": {
+          "default": null,
+          "description": "When this test was performed (defaults to now)",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "electrician": {
+          "default": null,
+          "description": "Electrician supervising EuP test",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "gesamtergebnis": {
+          "description": "Overall result: True=passed, False=failed",
+          "type": "boolean"
+        },
+        "isolationspruefung": {
+          "default": null,
+          "description": "Insulation test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "pruefgeraet_name": {
+          "default": null,
+          "description": "Testing device name",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "pruefgeraet_serial": {
+          "default": null,
+          "description": "Testing device serial number",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "prufer": {
+          "default": null,
+          "description": "Tester name (legacy text, derived from prufer_user_id)",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "prufer_user_id": {
+          "default": null,
+          "description": "FK to users table \u2014 who performed the test",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "repair_id": {
+          "description": "Repair ID this test belongs to",
+          "type": "integer"
+        },
+        "schutzklasse": {
+          "default": null,
+          "description": "Protection class",
+          "type": "string",
+          "x-nullable": true
+        },
+        "schutzleiter_pruefung": {
+          "default": null,
+          "description": "Protective conductor test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_gehaeuse": {
+          "default": null,
+          "description": "Housing inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_kabel": {
+          "default": null,
+          "description": "Cable inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_sicherheit": {
+          "default": null,
+          "description": "Safety devices inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_stecker": {
+          "default": null,
+          "description": "Plug inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_zugentlastung": {
+          "default": null,
+          "description": "Strain relief inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "gesamtergebnis",
+        "repair_id"
+      ],
+      "type": "object"
+    },
+    "VdeTestCreateResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/VdeTestResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "id": {
+          "default": null,
+          "description": "Created VDE test ID",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "type": "object"
+    },
+    "VdeTestListResponse": {
+      "properties": {
+        "data": {
+          "items": {
+            "$ref": "#/definitions/VdeTestResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        },
+        "total": {
+          "description": "Total number of VDE tests",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reply",
+        "data",
+        "total"
+      ],
+      "type": "object"
+    },
+    "VdeTestResponse": {
+      "properties": {
+        "ableitstrom_pruefung": {
+          "default": null,
+          "description": "Leakage current test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "bemerkungen": {
+          "default": null,
+          "description": "Comments/Defects",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_at": {
+          "description": "When this test was performed",
+          "format": "date-time",
+          "type": "string"
+        },
+        "electrician": {
+          "default": null,
+          "description": "Electrician supervising EuP test",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "gesamtergebnis": {
+          "description": "Overall result: True=passed, False=failed",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "VDE test ID",
+          "type": "integer"
+        },
+        "isolationspruefung": {
+          "default": null,
+          "description": "Insulation test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "pruefgeraet_name": {
+          "default": null,
+          "description": "Testing device name",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "pruefgeraet_serial": {
+          "default": null,
+          "description": "Testing device serial number",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "prufer": {
+          "default": null,
+          "description": "Tester name (legacy text, derived from prufer_user_id)",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "prufer_user_id": {
+          "default": null,
+          "description": "FK to users table \u2014 who performed the test",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "repair_id": {
+          "description": "Repair ID this test belongs to",
+          "type": "integer"
+        },
+        "schutzklasse": {
+          "default": null,
+          "description": "Protection class",
+          "type": "string",
+          "x-nullable": true
+        },
+        "schutzleiter_pruefung": {
+          "default": null,
+          "description": "Protective conductor test: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_gehaeuse": {
+          "default": null,
+          "description": "Housing inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_kabel": {
+          "default": null,
+          "description": "Cable inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_sicherheit": {
+          "default": null,
+          "description": "Safety devices inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_stecker": {
+          "default": null,
+          "description": "Plug inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "sichtpruefung_zugentlastung": {
+          "default": null,
+          "description": "Strain relief inspection: True=passed, False=failed",
+          "type": "boolean",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "gesamtergebnis",
+        "id",
+        "repair_id",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "VdeTestSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/VdeTestResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    }
+  },
+  "info": {
+    "description": "API for managing repair records",
+    "title": "RepairCafe API"
+  },
+  "paths": {
+    "/api/auth/config": {
+      "get": {
+        "operationId": "authConfig",
+        "responses": {
+          "200": {
+            "description": "Login methods",
+            "schema": {
+              "$ref": "#/definitions/AuthConfigResponse"
+            }
+          }
+        },
+        "summary": "Login options for the login page.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful, session cookie set",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "403": {
+            "description": "Account disabled"
+          },
+          "429": {
+            "description": "Too many failed logins"
+          }
+        },
+        "summary": "Authenticate with username and password.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "summary": "Invalidate the current session cookie.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "Current user profile",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "summary": "Return the currently authenticated user's profile.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me/pin": {
+      "get": {
+        "operationId": "pinStatus",
+        "responses": {
+          "200": {
+            "description": "PIN mode and availability",
+            "schema": {
+              "$ref": "#/definitions/PinStatusResponse"
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Account disabled"
+          },
+          "503": {
+            "description": "Deployment PIN mode mismatch"
+          }
+        },
+        "summary": "Return the current user's PIN status, never the PIN itself.",
+        "tags": [
+          "Auth"
+        ]
+      },
+      "post": {
+        "operationId": "generatePin",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PinGenerateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New PIN, shown only in this response",
+            "schema": {
+              "$ref": "#/definitions/PinGeneratedResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Provider-managed PIN, disabled account or cross-site request"
+          },
+          "409": {
+            "description": "PIN exists and replacement was not confirmed"
+          },
+          "503": {
+            "description": "PIN allocation unavailable"
+          }
+        },
+        "summary": "Generate or explicitly replace the current user's local PIN, revealing it once.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/callback": {
+      "get": {
+        "operationId": "oidcCallback",
+        "responses": {
+          "302": {
+            "description": "Redirect into the app, or to /login?error=... on failure"
+          }
+        },
+        "summary": "SSO callback; logs the user in and redirects into the app.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/login": {
+      "get": {
+        "operationId": "oidcLogin",
+        "parameters": [
+          {
+            "description": "Relative path to return to after login",
+            "in": "query",
+            "name": "next",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the identity provider"
+          },
+          "404": {
+            "description": "OIDC not configured"
+          }
+        },
+        "summary": "Start the SSO login (redirects to the identity provider).",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session": {
+      "get": {
+        "operationId": "pinSessionStatus",
+        "responses": {
+          "200": {
+            "description": "PIN session state",
+            "schema": {
+              "$ref": "#/definitions/PinSessionStatusResponse"
+            }
+          },
+          "401": {
+            "description": "Primary login required"
+          }
+        },
+        "summary": "Return whether the current authenticated browser session is unlocked.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/activity": {
+      "post": {
+        "operationId": "recordPinSessionActivity",
+        "responses": {
+          "200": {
+            "description": "Session remains unlocked",
+            "schema": {
+              "$ref": "#/definitions/PinSessionActionResponse"
+            }
+          },
+          "401": {
+            "description": "Primary login required"
+          },
+          "423": {
+            "description": "Session has expired and is locked"
+          }
+        },
+        "summary": "Record real user activity for the session idle timeout.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/auto-lock": {
+      "put": {
+        "operationId": "setPinAutoLock",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PinAutoLockRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New auto-lock state",
+            "schema": {
+              "$ref": "#/definitions/PinSessionActionResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Primary login required"
+          },
+          "403": {
+            "description": "Only in the workshop network (elsewhere there is no auto-lock)"
+          },
+          "423": {
+            "description": "Session is locked"
+          }
+        },
+        "summary": "Switch the idle auto-lock for this browser session (e.g. off on a personal device).",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/dashboard": {
+      "get": {
+        "operationId": "pinDashboardSummary",
+        "responses": {
+          "200": {
+            "description": "Non-identifying dashboard metrics and next repair ID",
+            "schema": {
+              "$ref": "#/definitions/PinDashboardSummaryResponse"
+            }
+          },
+          "401": {
+            "description": "Primary login required"
+          }
+        },
+        "summary": "Return aggregate dashboard metrics allowed on the PIN lock screen and unified dashboard.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/lock": {
+      "post": {
+        "operationId": "lockPinSession",
+        "responses": {
+          "200": {
+            "description": "Session locked",
+            "schema": {
+              "$ref": "#/definitions/PinSessionActionResponse"
+            }
+          },
+          "401": {
+            "description": "Primary login required"
+          }
+        },
+        "summary": "Lock the current authenticated browser session.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/unlock": {
+      "post": {
+        "operationId": "unlockPinSession",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PinUnlockRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session unlocked as the PIN owner",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Incorrect PIN or primary login required"
+          },
+          "423": {
+            "description": "Session is not locked"
+          },
+          "429": {
+            "description": "PIN attempts temporarily limited"
+          }
+        },
+        "summary": "Switch to the active helper who owns the submitted PIN.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/config/app-config": {
+      "get": {
+        "operationId": "getAppConfig",
+        "responses": {
+          "200": {
+            "description": "Current application configuration",
+            "schema": {
+              "$ref": "#/definitions/AppConfigResponse"
+            }
+          }
+        },
+        "summary": "Get application-level configuration (organisation name and website).",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "put": {
+        "operationId": "updateAppConfig",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "properties": {
+                "app_url": {
+                  "description": "Application base URL for QR code links on printed labels",
+                  "type": "string"
+                },
+                "org_name": {
+                  "type": "string"
+                },
+                "org_website": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated configuration",
+            "schema": {
+              "$ref": "#/definitions/AppConfigResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          }
+        },
+        "summary": "Update application-level configuration (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/cancellation": {
+      "get": {
+        "operationId": "getCancellationTemplate",
+        "responses": {
+          "200": {
+            "description": "Active cancellation PDF"
+          },
+          "404": {
+            "description": "No cancellation template configured"
+          }
+        },
+        "summary": "Serve the active cancellation PDF template for inline display.",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "The PDF must contain AcroForm fields named 'date' and 'signature'.<br/>Takes effect immediately without a server restart.<br/>",
+        "operationId": "uploadCancellationTemplate",
+        "parameters": [
+          {
+            "description": "PDF file with required AcroForm fields",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template replaced successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid file"
+          },
+          "422": {
+            "description": "PDF is missing required AcroForm fields"
+          }
+        },
+        "summary": "Upload and activate a new cancellation PDF template (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/disclaimer": {
+      "get": {
+        "operationId": "getDisclaimerTemplate",
+        "responses": {
+          "200": {
+            "description": "Active disclaimer PDF"
+          },
+          "404": {
+            "description": "No disclaimer configured"
+          }
+        },
+        "summary": "Serve the active disclaimer PDF template for inline display.",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "The PDF must contain AcroForm fields named 'date' and 'signature'.<br/>Takes effect immediately without a server restart.<br/>",
+        "operationId": "uploadDisclaimerTemplate",
+        "parameters": [
+          {
+            "description": "PDF file with required AcroForm fields",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template replaced successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid file"
+          },
+          "422": {
+            "description": "PDF is missing required AcroForm fields"
+          }
+        },
+        "summary": "Upload and activate a new disclaimer PDF template (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/dropdowns": {
+      "get": {
+        "operationId": "getDropdownConfig",
+        "responses": {
+          "200": {
+            "description": "Dropdown configuration data keyed by English category name",
+            "schema": {
+              "$ref": "#/definitions/DropdownConfigResponse"
+            }
+          }
+        },
+        "summary": "Get dropdown configuration data from DB.",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/features": {
+      "get": {
+        "operationId": "getFeatures",
+        "responses": {
+          "200": {
+            "description": "Feature flags",
+            "schema": {
+              "$ref": "#/definitions/FeaturesResponse"
+            }
+          }
+        },
+        "summary": "Return server-side feature flags derived from environment variables.",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/logo": {
+      "get": {
+        "description": "Falls back to the bundled default when no custom logo has been uploaded.<br/>",
+        "operationId": "getLogo",
+        "produces": [
+          "image/png",
+          "image/jpeg"
+        ],
+        "responses": {
+          "200": {
+            "description": "Logo image"
+          },
+          "404": {
+            "description": "No logo available"
+          }
+        },
+        "summary": "Serve the active logo image.",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Accepts PNG or JPEG. The image is validated and stored as PNG.<br/>Takes effect immediately without a server restart.<br/>",
+        "operationId": "uploadLogo",
+        "parameters": [
+          {
+            "description": "PNG or JPEG image file",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logo replaced successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid or missing file"
+          }
+        },
+        "summary": "Upload and activate a new logo image (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/config/pruefgeraete": {
+      "get": {
+        "operationId": "getPruefgeraete",
+        "responses": {
+          "200": {
+            "description": "List of testing devices with name and serial_number",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/PruefgeraetResponse"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "summary": "Get list of testing devices (Pr\u00fcfger\u00e4te) from DB.",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
+    "/api/customers": {
+      "get": {
+        "operationId": "listCustomers",
+        "responses": {
+          "200": {
+            "description": "List of customers with repair counts",
+            "schema": {
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "data": {
+                  "items": {
+                    "$ref": "#/definitions/CustomerWithRepairCountResponse"
+                  },
+                  "type": "array"
+                },
+                "reply": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "List all customers with their repair count.",
+        "tags": [
+          "Customers"
+        ]
+      },
+      "post": {
+        "operationId": "createCustomer",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CustomerSingleResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        },
+        "summary": "Create a new customer.",
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/customers/search": {
+      "get": {
+        "operationId": "searchCustomers",
+        "parameters": [
+          {
+            "description": "Search text (name, phone or email)",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CustomerSearchResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Search customers by name, phone or email.",
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/customers/{customer_id}": {
+      "delete": {
+        "operationId": "deleteCustomer",
+        "parameters": [
+          {
+            "description": "Customer ID",
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/IdResponse"
+            }
+          },
+          "403": {
+            "description": "Admin only"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "summary": "Delete a customer (sets customer_id to NULL on linked repairs).",
+        "tags": [
+          "Customers"
+        ]
+      },
+      "get": {
+        "operationId": "getCustomer",
+        "parameters": [
+          {
+            "description": "Customer ID",
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CustomerSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "summary": "Get a single customer by ID.",
+        "tags": [
+          "Customers"
+        ]
+      },
+      "put": {
+        "operationId": "updateCustomer",
+        "parameters": [
+          {
+            "description": "Customer ID",
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerCreate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CustomerSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "summary": "Update a customer.",
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/healthz": {
+      "get": {
+        "operationId": "healthcheck",
+        "responses": {
+          "204": {
+            "description": "Database connection is healthy"
+          },
+          "504": {
+            "description": "Database connection failed"
+          }
+        },
+        "summary": "Health check endpoint",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/list": {
+      "get": {
+        "operationId": "listRepairs",
+        "parameters": [
+          {
+            "description": "Filter repairs by customer ID",
+            "in": "query",
+            "name": "customer_id",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all repairs",
+            "schema": {
+              "$ref": "#/definitions/RepairListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - database query failed"
+          }
+        },
+        "summary": "Get all repairs as JSON",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs": {
+      "post": {
+        "operationId": "createRepair",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RepairCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Repair record created successfully",
+            "schema": {
+              "$ref": "#/definitions/RepairCreateResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Create a new repair record",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/by-token/{token}": {
+      "get": {
+        "operationId": "getRepairByQrToken",
+        "parameters": [
+          {
+            "description": "QR token of the repair",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repair record found",
+            "schema": {
+              "$ref": "#/definitions/RepairSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get a repair record by QR token",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/stats/timeline": {
+      "get": {
+        "operationId": "getRepairsTimeline",
+        "responses": {
+          "200": {
+            "description": "Weekly repair counts per status",
+            "schema": {
+              "$ref": "#/definitions/RepairsTimelineResponse"
+            }
+          }
+        },
+        "summary": "Get repair counts grouped by week and status for the last 12 months.",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{id}": {
+      "delete": {
+        "operationId": "deleteRepair",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/IdResponse"
+            }
+          },
+          "403": {
+            "description": "Admin only"
+          },
+          "404": {
+            "description": "Repair not found"
+          }
+        },
+        "summary": "Delete a repair record and its associated files on disk.",
+        "tags": [
+          "Repairs"
+        ]
+      },
+      "put": {
+        "operationId": "updateRepair",
+        "parameters": [
+          {
+            "description": "ID of the repair to update",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RepairUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repair record updated successfully",
+            "schema": {
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/RepairResponse"
+                },
+                "reply": {
+                  "example": "done",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Update an existing repair record",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{id}/cancellation": {
+      "get": {
+        "operationId": "getRepairCancellation",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed cancellation PDF"
+          },
+          "404": {
+            "description": "Repair or cancellation PDF not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Download the signed cancellation PDF for a repair",
+        "tags": [
+          "Repairs"
+        ]
+      },
+      "post": {
+        "operationId": "createOrUploadRepairCancellation",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "Signature as PNG data URL (alternatively a multipart \"file\" with a signed PDF)",
+            "in": "body",
+            "name": "body",
+            "required": false,
+            "schema": {
+              "properties": {
+                "signature": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "signature"
+              ],
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Signed cancellation PDF stored",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Missing or invalid signature / file"
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Generate a signed cancellation PDF from a base64 signature or upload a pre-signed PDF.",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{id}/disclaimer": {
+      "get": {
+        "operationId": "getRepairDisclaimer",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed disclaimer PDF"
+          },
+          "404": {
+            "description": "Repair or disclaimer not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Download the signed disclaimer PDF for a repair",
+        "tags": [
+          "Repairs"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "operationId": "uploadRepairDisclaimer",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "Signed disclaimer PDF",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disclaimer stored",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Missing or invalid PDF"
+          }
+        },
+        "summary": "Upload a pre-signed disclaimer PDF for a repair.",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{id}/print-label": {
+      "post": {
+        "operationId": "printRepairLabel",
+        "parameters": [
+          {
+            "description": "ID of the repair to print a label for",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": false,
+            "schema": {
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Label printed successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Print error"
+          },
+          "503": {
+            "description": "Label printer not enabled"
+          }
+        },
+        "summary": "Print a QR code label for a repair on a label printer.",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/attachments": {
+      "get": {
+        "operationId": "listRepairAttachments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "attachment_type",
+            "required": false,
+            "schema": {
+              "enum": [
+                "log_entry",
+                "device_photo",
+                "disclaimer",
+                "misc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "log_id",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of attachments",
+            "schema": {
+              "$ref": "#/definitions/RepairAttachmentListResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "List all attachments for a repair",
+        "tags": [
+          "Attachments"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "operationId": "uploadRepairAttachments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "One or more files to upload",
+            "in": "formData",
+            "items": {
+              "type": "file"
+            },
+            "name": "files",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo.",
+            "in": "formData",
+            "name": "attachment_type",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Link to a repair log entry",
+            "in": "formData",
+            "name": "log_id",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "User ID of the uploader",
+            "in": "formData",
+            "name": "uploaded_by_id",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Attachments uploaded successfully",
+            "schema": {
+              "$ref": "#/definitions/RepairAttachmentListResponse"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Upload one or more files to a repair",
+        "tags": [
+          "Attachments"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "deleteRepairAttachment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment deleted",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "Not an admin and not the creator"
+          },
+          "404": {
+            "description": "Attachment not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Delete a repair attachment (record + file on disk)",
+        "tags": [
+          "Attachments"
+        ]
+      },
+      "get": {
+        "operationId": "getRepairAttachment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File contents"
+          },
+          "404": {
+            "description": "Attachment not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Download / serve a single attachment file",
+        "tags": [
+          "Attachments"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/logs": {
+      "get": {
+        "operationId": "listRepairLogs",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of repair log entries",
+            "schema": {
+              "$ref": "#/definitions/RepairLogListResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get all log entries for a specific repair",
+        "tags": [
+          "Repair Logs"
+        ]
+      },
+      "post": {
+        "operationId": "createRepairLog",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/definitions/RepairLogCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Repair log created successfully",
+            "schema": {
+              "$ref": "#/definitions/RepairLogCreateResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Create a new repair log entry",
+        "tags": [
+          "Repair Logs"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/logs/{log_id}": {
+      "delete": {
+        "operationId": "deleteRepairLog",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repair log deleted successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "Not an admin and not the creator"
+          },
+          "404": {
+            "description": "Repair log not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Delete a repair log entry",
+        "tags": [
+          "Repair Logs"
+        ]
+      },
+      "get": {
+        "operationId": "getRepairLog",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "The repair log ID",
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repair log details",
+            "schema": {
+              "$ref": "#/definitions/RepairLogSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Repair log not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get a specific repair log entry",
+        "tags": [
+          "Repair Logs"
+        ]
+      },
+      "put": {
+        "operationId": "updateRepairLog",
+        "parameters": [
+          {
+            "description": "Repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "Repair log ID",
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RepairLogUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/RepairLogSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Repair log not found"
+          }
+        },
+        "summary": "Update an existing repair log entry.",
+        "tags": [
+          "Repair Logs"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/vde-tests": {
+      "get": {
+        "operationId": "listVdeTests",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of VDE test entries",
+            "schema": {
+              "$ref": "#/definitions/VdeTestListResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get all VDE test entries for a specific repair",
+        "tags": [
+          "VDE Tests"
+        ]
+      },
+      "post": {
+        "operationId": "createVdeTest",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/definitions/VdeTestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "VDE test created successfully",
+            "schema": {
+              "$ref": "#/definitions/VdeTestCreateResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Create a new VDE test entry",
+        "tags": [
+          "VDE Tests"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/vde-tests/{test_id}": {
+      "get": {
+        "operationId": "getVdeTest",
+        "parameters": [
+          {
+            "description": "The repair ID",
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "The VDE test ID",
+            "in": "path",
+            "name": "test_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VDE test details",
+            "schema": {
+              "$ref": "#/definitions/VdeTestSingleResponse"
+            }
+          },
+          "404": {
+            "description": "VDE test not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get a specific VDE test entry",
+        "tags": [
+          "VDE Tests"
+        ]
+      }
+    },
+    "/api/repairs/{repair_id}/vde-tests/{test_id}/pdf": {
+      "get": {
+        "operationId": "getVdeTestPdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repair_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "path",
+            "name": "test_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "produces": [
+          "application/pdf"
+        ],
+        "responses": {
+          "200": {
+            "description": "Pr\u00fcfprotokoll PDF"
+          },
+          "404": {
+            "description": "Repair or VDE test not found"
+          }
+        },
+        "summary": "Download a VDE Pr\u00fcfprotokoll as PDF for the given test.",
+        "tags": [
+          "VDE Tests"
+        ]
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "listSettings",
+        "responses": {
+          "200": {
+            "description": "Settings grouped by category",
+            "schema": {
+              "$ref": "#/definitions/SettingsGroupedResponse"
+            }
+          }
+        },
+        "summary": "List all active settings grouped by category.",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "post": {
+        "operationId": "createSetting",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SettingCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/SettingSingleResponse"
+            }
+          },
+          "409": {
+            "description": "Duplicate name in category"
+          }
+        },
+        "summary": "Create a new setting entry.",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/settings/all": {
+      "get": {
+        "operationId": "listAllSettings",
+        "responses": {
+          "200": {
+            "description": "All settings",
+            "schema": {
+              "properties": {
+                "data": {
+                  "items": {
+                    "$ref": "#/definitions/SettingResponse"
+                  },
+                  "type": "array"
+                },
+                "reply": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        },
+        "summary": "List all settings (including inactive) for admin management.",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/settings/{setting_id}": {
+      "delete": {
+        "operationId": "deleteSetting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "setting_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "summary": "Delete a setting entry.",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "put": {
+        "operationId": "updateSetting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "setting_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SettingUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "schema": {
+              "$ref": "#/definitions/SettingSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Duplicate name in category"
+          }
+        },
+        "summary": "Update a setting entry.",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/stat-data/{type}": {
+      "get": {
+        "operationId": "getStatData",
+        "parameters": [
+          {
+            "enum": [
+              "repairs",
+              "devices",
+              "time"
+            ],
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistics data as JSON array"
+          }
+        },
+        "summary": "Get statistics data for charts",
+        "tags": [
+          "Data"
+        ]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/UserListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "List all users.",
+        "tags": [
+          "Users"
+        ]
+      },
+      "post": {
+        "operationId": "createUser",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/UserSingleResponse"
+            }
+          },
+          "403": {
+            "description": "Admin only"
+          },
+          "409": {
+            "description": "Username or email already in use"
+          }
+        },
+        "summary": "Create a new user.",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/{user_id}": {
+      "delete": {
+        "operationId": "deactivateUser",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "Admin only"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Soft-delete a user by setting is_active=False.",
+        "tags": [
+          "Users"
+        ]
+      },
+      "get": {
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/UserSingleResponse"
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Get a single user by ID.",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/UserSingleResponse"
+            }
+          },
+          "403": {
+            "description": "Admin only"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "409": {
+            "description": "Username or email already in use"
+          }
+        },
+        "summary": "Update an existing user.",
+        "tags": [
+          "Users"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json"
+  ],
+  "swagger": "2.0"
+}

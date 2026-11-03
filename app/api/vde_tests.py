@@ -33,14 +33,13 @@ def api_list_vde_tests(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     responses:
       200:
         description: List of VDE test entries
         schema:
-          $ref: '#/components/schemas/VdeTestListResponse'
+          $ref: '#/definitions/VdeTestListResponse'
       404:
         description: Repair not found
       500:
@@ -95,20 +94,19 @@ def api_create_vde_test(repair_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/VdeTestCreate'
+            $ref: '#/definitions/VdeTestCreate'
     responses:
       201:
         description: VDE test created successfully
         schema:
-          $ref: '#/components/schemas/VdeTestCreateResponse'
+          $ref: '#/definitions/VdeTestCreateResponse'
       400:
         description: Invalid input
       404:
@@ -186,18 +184,18 @@ def api_get_vde_test(repair_id, test_id):
       - name: repair_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The repair ID
       - name: test_id
         in: path
         required: true
-        schema:
-          type: integer
+        type: integer
         description: The VDE test ID
     responses:
       200:
         description: VDE test details
+        schema:
+          $ref: '#/definitions/VdeTestSingleResponse'
       404:
         description: VDE test not found
       500:
@@ -235,7 +233,28 @@ def api_get_vde_test(repair_id, test_id):
 )
 @login_required_api
 def api_get_vde_test_pdf(repair_id, test_id):
-    """Download a VDE Prüfprotokoll as PDF for the given test."""
+    """Download a VDE Prüfprotokoll as PDF for the given test.
+    ---
+    operationId: getVdeTestPdf
+    tags:
+      - VDE Tests
+    produces:
+      - application/pdf
+    parameters:
+      - name: repair_id
+        in: path
+        required: true
+        type: integer
+      - name: test_id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Prüfprotokoll PDF
+      404:
+        description: Repair or VDE test not found
+    """
     repair = Repair.query.get(repair_id)
     if not repair:
         return Response(

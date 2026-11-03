@@ -51,6 +51,8 @@ def get_dropdown_config():
     responses:
       200:
         description: Dropdown configuration data keyed by English category name
+        schema:
+          $ref: '#/definitions/DropdownConfigResponse'
     """
     repair_types = (
         Setting.query.filter_by(category="repair_type", is_active=True)
@@ -77,7 +79,7 @@ def get_pruefgeraete():
         schema:
           type: array
           items:
-            $ref: '#/components/schemas/PruefgeraetResponse'
+            $ref: '#/definitions/PruefgeraetResponse'
     """
     devices = (
         Setting.query.filter_by(category="test_device", is_active=True)
@@ -209,6 +211,8 @@ def upload_disclaimer_template():
     responses:
       200:
         description: Template replaced successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       400:
         description: Invalid file
       422:
@@ -268,6 +272,8 @@ def upload_cancellation_template():
     responses:
       200:
         description: Template replaced successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       400:
         description: Invalid file
       422:
@@ -333,6 +339,8 @@ def upload_logo():
     responses:
       200:
         description: Logo replaced successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
       400:
         description: Invalid or missing file
     """

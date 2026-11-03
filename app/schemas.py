@@ -153,7 +153,13 @@ class PinSessionStatusResponse(BaseModel):
     eligible: bool
     locked: bool
     pin_unlock_available: bool = True
+    auto_lock_enabled: bool = Field(True, description="Idle auto-lock active for this session")
+    idle_timeout_seconds: int = Field(60, description="Seconds without activity until auto-lock")
     user: Optional[UserResponse] = None
+
+
+class PinAutoLockRequest(BaseModel):
+    enabled: bool
 
 
 class PinUnlockRequest(BaseModel):
@@ -380,11 +386,23 @@ class RepairResponse(RepairBase):
         return _parse_date_value(value)
 
 
-class RepairListResponse(BaseModel):
-    """Schema for listing repairs"""
+class RepairListItem(RepairResponse):
+    """Repair as returned by GET /api/list"""
 
-    data: list[RepairResponse]
-    total: int = Field(..., description="Total number of repairs")
+    latest_log: Optional["RepairLogResponse"] = Field(
+        None, description="Most recent log entry of any type, if any"
+    )
+    device_photo_id: Optional[int] = Field(
+        None, description="Attachment ID of the newest device photo, if any"
+    )
+
+
+class RepairListResponse(BaseModel):
+    """GET /api/list"""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: list[RepairListItem]
+    count: int = Field(..., description="Number of repairs returned")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -461,6 +479,7 @@ class RepairLogResponse(RepairLogBase):
 class RepairLogListResponse(BaseModel):
     """Schema for listing repair logs"""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[RepairLogResponse]
     total: int = Field(..., description="Total number of repair logs")
 
@@ -548,6 +567,7 @@ class VdeTestResponse(VdeTestBase):
 class VdeTestListResponse(BaseModel):
     """Schema for listing VDE tests"""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[VdeTestResponse]
     total: int = Field(..., description="Total number of VDE tests")
 
@@ -730,7 +750,93 @@ class RepairAttachmentResponse(BaseModel):
 class RepairAttachmentListResponse(BaseModel):
     """Schema for listing repair attachments."""
 
+    reply: str = Field(..., description="Response status (done, error)")
     data: list[RepairAttachmentResponse] = []
     total: int = Field(..., description="Total number of attachments")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ── Response envelopes for single objects and lookups ─────────────────────────
+
+
+class RepairSingleResponse(APIResponse):
+    """A single repair (e.g. GET /api/repairs/by-token/{token})"""
+
+    data: RepairResponse
+
+
+class RepairLogSingleResponse(APIResponse):
+    """A single repair log (GET/PUT /api/repairs/{id}/logs/{log_id})"""
+
+    data: RepairLogResponse
+
+
+class RepairLogCreateResponse(APIResponse):
+    """POST /api/repairs/{id}/logs"""
+
+    id: int = Field(..., description="Created repair log ID")
+    data: RepairLogResponse
+
+
+class VdeTestSingleResponse(APIResponse):
+    """GET /api/repairs/{id}/vde-tests/{test_id}"""
+
+    data: VdeTestResponse
+
+
+class SettingOption(BaseModel):
+    """Active setting as offered in dropdowns"""
+
+    id: int
+    name: str
+    serial_number: Optional[str] = Field(None, description="Only set for testing devices")
+
+
+class DropdownConfigResponse(BaseModel):
+    """GET /api/config/dropdowns"""
+
+    repair_type: list[SettingOption]
+
+
+
+class IdResponse(APIResponse):
+    """Deletes that echo the affected ID"""
+
+    id: int
+
+
+class UserListResponse(BaseModel):
+    """GET /api/users"""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: list[UserResponse]
+    count: int
+
+
+class UserSingleResponse(APIResponse):
+    """A single user"""
+
+    data: UserResponse
+
+
+class CustomerSingleResponse(APIResponse):
+    """A single customer"""
+
+    data: CustomerResponse
+
+
+class SettingSingleResponse(APIResponse):
+    """A single setting (POST/PUT /api/settings)"""
+
+    data: SettingResponse
+
+
+class CustomerSearchResponse(BaseModel):
+    """GET /api/customers/search"""
+
+    reply: str = Field(..., description="Response status (done, error)")
+    data: list[CustomerResponse]
+
+RepairListItem.model_rebuild()
+RepairListResponse.model_rebuild()

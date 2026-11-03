@@ -1,7 +1,7 @@
 <template>
-    <v-dialog :model-value="modelValue" max-width="800px" persistent scrollable @update:model-value="onDialogToggle">
+    <ResponsiveDialog v-model="open" max-width="800px" persistent>
         <v-card>
-            <v-card-title class="text-h5">
+            <v-card-title class="text-headline-small">
                 <v-icon start>mdi-flash</v-icon>
                 Elektrische Sicherheitspruefung nach VDE-Normen
             </v-card-title>
@@ -17,8 +17,8 @@
                 </v-alert>
 
                 <v-form ref="inlineVdeForm" v-model="inlineVdeFormValid">
-                    <h4 class="text-subtitle-2 mb-2">Allgemeine Angaben</h4>
-                    <v-row dense>
+                    <h4 class="text-title-small mb-2">Allgemeine Angaben</h4>
+                    <v-row density="compact">
                         <v-col cols="12" sm="6">
                             <v-text-field
 v-model="form.created_at" label="Prüfung nach DIN VDE 0701 am"
@@ -32,7 +32,7 @@ v-model="form.created_at" label="Prüfung nach DIN VDE 0701 am"
                         </v-col>
                     </v-row>
 
-                    <v-row dense>
+                    <v-row density="compact">
                         <v-col cols="12" sm="6">
                             <v-select
 v-model="selectedPruefgeraet" :items="pruefgeraete" item-title="name"
@@ -45,7 +45,7 @@ v-model="selectedPruefgeraet" :items="pruefgeraete" item-title="name"
                         </v-col>
                     </v-row>
 
-                    <v-row dense>
+                    <v-row density="compact">
                         <v-col cols="12" sm="6">
                             <v-autocomplete
 v-model="form.prufer_user_id" :items="userItems" item-title="label"
@@ -59,7 +59,7 @@ v-model="form.electrician" label="Falls EuP, im Beisein von Elektrofachkraft"
                         </v-col>
                     </v-row>
 
-                    <v-row dense>
+                    <v-row density="compact">
                         <v-col cols="12">
                             <v-textarea
 v-model="form.bemerkungen" label="Bemerkungen / Mängel" rows="2"
@@ -69,10 +69,10 @@ v-model="form.bemerkungen" label="Bemerkungen / Mängel" rows="2"
 
                     <v-divider class="my-3" />
 
-                    <h4 class="text-subtitle-2 mb-2">Sichtprüfung</h4>
-                    <v-row dense align="center">
+                    <h4 class="text-title-small mb-2">Sichtprüfung</h4>
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Gehäuse i.O.? <span class="text-error">*</span></span>
+                            <span class="text-body-medium">Gehäuse i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group
@@ -83,9 +83,9 @@ v-model="form.sichtpruefung_gehaeuse" inline density="compact"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Kabel i.O.? <span class="text-error">*</span></span>
+                            <span class="text-body-medium">Kabel i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group
@@ -96,9 +96,9 @@ v-model="form.sichtpruefung_kabel" inline density="compact"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Stecker i.O.? <span class="text-error">*</span></span>
+                            <span class="text-body-medium">Stecker i.O.? <span class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group
@@ -109,9 +109,9 @@ v-model="form.sichtpruefung_stecker" inline density="compact"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Zugentlastungsvorrichtung i.O.? <span
+                            <span class="text-body-medium">Zugentlastungsvorrichtung i.O.? <span
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
@@ -123,9 +123,9 @@ v-model="form.sichtpruefung_zugentlastung" inline density="compact"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Sicherheitseinrichtungen i.O.? <span
+                            <span class="text-body-medium">Sicherheitseinrichtungen i.O.? <span
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
@@ -140,10 +140,10 @@ v-model="form.sichtpruefung_sicherheit" inline density="compact"
 
                     <v-divider class="my-3" />
 
-                    <h4 class="text-subtitle-2 mb-2">Messung</h4>
-                    <v-row dense align="center">
+                    <h4 class="text-title-small mb-2">Messung</h4>
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Schutzklasse</span>
+                            <span class="text-body-medium">Schutzklasse</span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-select
@@ -152,9 +152,9 @@ v-model="form.schutzklasse"
                                 hide-details />
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Schutzleiterpruefung i.O.?</span>
+                            <span class="text-body-medium">Schutzleiterpruefung i.O.?</span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group v-model="form.schutzleiter_pruefung" inline density="compact" hide-details>
@@ -163,9 +163,9 @@ v-model="form.schutzklasse"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Isolationspruefung i.O.?</span>
+                            <span class="text-body-medium">Isolationspruefung i.O.?</span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group v-model="form.isolationspruefung" inline density="compact" hide-details>
@@ -174,9 +174,9 @@ v-model="form.schutzklasse"
                             </v-radio-group>
                         </v-col>
                     </v-row>
-                    <v-row dense align="center">
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2">Ableitstrompruefung i.O.?</span>
+                            <span class="text-body-medium">Ableitstrompruefung i.O.?</span>
                         </v-col>
                         <v-col cols="6" sm="8">
                             <v-radio-group v-model="form.ableitstrom_pruefung" inline density="compact" hide-details>
@@ -188,10 +188,10 @@ v-model="form.schutzklasse"
 
                     <v-divider class="my-3" />
 
-                    <h4 class="text-subtitle-2 mb-2">Ergebnis</h4>
-                    <v-row dense align="center">
+                    <h4 class="text-title-small mb-2">Ergebnis</h4>
+                    <v-row class="align-center" density="compact">
                         <v-col cols="6" sm="4">
-                            <span class="text-body-2 font-weight-bold">Geraetetest bestanden? <span
+                            <span class="text-body-medium font-weight-bold">Geraetetest bestanden? <span
                                     class="text-error">*</span></span>
                         </v-col>
                         <v-col cols="6" sm="8">
@@ -222,11 +222,14 @@ v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
                 </v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import { personName } from '@/utils/person'
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { computed, ref, watch } from 'vue'
+import type { VForm } from 'vuetify/components'
 import type { UserResponse, PruefgeraetResponse } from '@/api/types'
 
 export interface VdeFormData {
@@ -249,7 +252,6 @@ export interface VdeFormData {
 }
 
 interface Props {
-    modelValue: boolean
     saving: boolean
     repairId?: number
     selectedRepairStatus?: string
@@ -260,6 +262,8 @@ interface Props {
     pruefgeraete: PruefgeraetResponse[]
 }
 
+const open = defineModel<boolean>({ required: true })
+
 const props = withDefaults(defineProps<Props>(), {
     repairId: undefined,
     selectedRepairStatus: '',
@@ -269,18 +273,17 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void
     (e: 'submit', payload: VdeFormData): void
 }>()
 
 const inlineVdeFormValid = ref(false)
-const inlineVdeForm = ref<{ validate: () => Promise<{ valid: boolean }>; resetValidation?: () => void } | null>(null)
+const inlineVdeForm = ref<InstanceType<typeof VForm> | null>(null)
 const selectedPruefgeraet = ref<string>('')
 
 const userItems = computed(() =>
     props.users.map((u) => ({
         id: u.id,
-        label: [u.vorname, u.nachname].filter(Boolean).join(' ') || `User #${u.id}`
+        label: personName(u),
     }))
 )
 
@@ -317,18 +320,13 @@ function createEmptyForm(): VdeFormData {
 
 const form = ref<VdeFormData>(createEmptyForm())
 
-watch(
-    () => props.modelValue,
-    (isOpen) => {
-        if (isOpen) {
-            form.value = createEmptyForm()
-            selectedPruefgeraet.value = ''
-            if (inlineVdeForm.value?.resetValidation) {
-                inlineVdeForm.value.resetValidation()
-            }
-        }
+watch(open, (isOpen) => {
+    if (isOpen) {
+        form.value = createEmptyForm()
+        selectedPruefgeraet.value = ''
+        inlineVdeForm.value?.resetValidation()
     }
-)
+})
 
 const selectedPruefgeraetSerial = computed(() => {
     if (!selectedPruefgeraet.value) return ''
@@ -409,10 +407,6 @@ async function onSubmit() {
 }
 
 function onCancel() {
-    emit('update:modelValue', false)
-}
-
-function onDialogToggle(isOpen: boolean) {
-    emit('update:modelValue', isOpen)
+    open.value = false
 }
 </script>

@@ -1,520 +1,90 @@
-<template>
-  <v-container class="d-flex justify-center align-center" style="min-height: 80vh">
-    <v-card max-width="800px" width="100%">
-      <v-card-title class="text-h5">Neue Reparatur erfassen</v-card-title>
-      <v-card-text>
-        <v-stepper v-model="step" alt-labels>
-          <v-stepper-header>
-            <v-stepper-item title="Kundendaten" :value="1" :complete="step > 1"></v-stepper-item>
-            <v-divider></v-divider>
-            <v-stepper-item title="Reparaturdaten" :value="2" :complete="step > 2"></v-stepper-item>
-            <v-divider></v-divider>
-            <v-stepper-item
-              title="Haftungsbegrenzung"
-              :value="3"
-              :complete="step > 3"
-            ></v-stepper-item>
-            <v-divider></v-divider>
-            <v-stepper-item
-              title="Zusammenfassung"
-              :value="4"
-              :complete="step > 4"
-            ></v-stepper-item>
-            <v-divider></v-divider>
-            <v-stepper-item title="Bestätigung" :value="5" :complete="step > 5"></v-stepper-item>
-          </v-stepper-header>
-          <v-stepper-window>
-            <!-- Step 1: Customer Information -->
-            <v-stepper-window-item :value="1">
-              <v-form ref="step1Form" v-model="step1Valid">
-                <!-- Customer search -->
-                <v-card variant="tonal" color="primary" class="mb-4">
-                  <v-card-text>
-                    <div class="text-subtitle-2 mb-2">Bestehenden Kunden suchen</div>
-                    <v-autocomplete
-                      v-model:search="customerSearchQuery"
-                      :items="customerSearchResults"
-                      :loading="customerSearchLoading"
-                      :item-title="
-                        (c: CustomerResponse) =>
-                          `${c.vorname} ${c.nachname}${c.telefon ? ' · ' + c.telefon : ''}${c.email ? ' · ' + c.email : ''}`
-                      "
-                      item-value="id"
-                      label="Name, Telefon oder E-Mail eingeben…"
-                      prepend-inner-icon="mdi-account-search"
-                      clearable
-                      no-filter
-                      return-object
-                      hide-no-data
-                      :no-data-text="
-                        customerSearchQuery.length >= 2
-                          ? 'Kein Kunde gefunden'
-                          : 'Mindestens 2 Zeichen eingeben'
-                      "
-                      @update:search="onCustomerSearchInput"
-                      @update:model-value="selectCustomer"
-                    ></v-autocomplete>
-                    <div v-if="selectedCustomerId" class="text-caption text-success">
-                      <v-icon size="x-small">mdi-check-circle</v-icon>
-                      Kunde verknüpft · Felder wurden ausgefüllt
-                    </div>
-                    <div v-else class="text-caption text-medium-emphasis">
-                      Kein Kunde ausgewählt — beim Speichern wird ein neuer Eintrag erstellt
-                    </div>
-                  </v-card-text>
-                </v-card>
-
-                <v-text-field
-                  v-model="formData.datum"
-                  label="Datum"
-                  type="date"
-                  required
-                  :rules="[(v) => !!v || 'Datum ist erforderlich']"
-                ></v-text-field>
-                <v-text-field
-                  v-model="formData.customer.nachname"
-                  label="Nachname"
-                  required
-                  :rules="[(v) => !!v || 'Nachname ist erforderlich']"
-                ></v-text-field>
-                <v-text-field
-                  v-model="formData.customer.vorname"
-                  label="Vorname"
-                  required
-                  :rules="[(v) => !!v || 'Vorname ist erforderlich']"
-                ></v-text-field>
-                <v-text-field v-model="formData.customer.telefon" label="Telefon"></v-text-field>
-                <v-text-field
-                  v-model="formData.customer.email"
-                  label="Email (optional)"
-                  type="email"
-                  :rules="emailRules"
-                ></v-text-field>
-              </v-form>
-            </v-stepper-window-item>
-
-            <!-- Step 2: Repair Information -->
-            <v-stepper-window-item :value="2">
-              <v-form ref="step2Form" v-model="step2Valid">
-                <v-select
-                  v-model="formData.repair_type_id"
-                  label="Kategorie"
-                  :items="repairTypes"
-                  item-value="id"
-                  item-title="name"
-                  required
-                  :rules="[(v) => !!v || 'Kategorie ist erforderlich']"
-                  @update:model-value="onRepairTypeChange"
-                ></v-select>
-                <v-text-field
-                  v-model="formData.geraet_art"
-                  label="Geräte Art / Bezeichnung"
-                  required
-                  :rules="[(v) => !!v || 'Geräte Art / Bezeichnung ist erforderlich']"
-                ></v-text-field>
-                <v-textarea
-                  v-model="formData.defekt_besch"
-                  label="Beschreibung des Defekts"
-                  rows="3"
-                  required
-                  :rules="[(v) => !!v || 'Beschreibung ist erforderlich']"
-                ></v-textarea>
-
-                <!-- Photo Capture Section -->
-                <v-card class="mt-4">
-                  <v-card-title class="text-subtitle-1">
-                    <v-icon class="mr-2">mdi-camera</v-icon>
-                    Fotos des Geräts
-                  </v-card-title>
-                  <v-card-text>
-                    <p class="text-caption mb-3">
-                      Nehmen Sie Fotos des Geräts auf, um den Zustand zu dokumentieren.
-                    </p>
-
-                    <!-- Camera preview -->
-                    <div v-if="cameraActive" class="mb-3">
-                      <video
-                        ref="videoElement"
-                        autoplay
-                        playsinline
-                        style="width: 100%; max-height: 400px; background: #000; border-radius: 4px"
-                      ></video>
-                      <canvas ref="photoCanvas" style="display: none"></canvas>
-                    </div>
-
-                    <!-- Camera controls -->
-                    <div class="d-flex gap-2 mb-3">
-                      <v-btn
-                        v-if="!cameraActive"
-                        color="primary"
-                        prepend-icon="mdi-camera"
-                        :disabled="cameraPermissionDenied"
-                        @click="startCamera"
-                      >
-                        Kamera starten
-                      </v-btn>
-                      <v-btn
-                        v-if="cameraActive"
-                        color="success"
-                        prepend-icon="mdi-camera"
-                        @click="capturePhoto"
-                      >
-                        Foto aufnehmen
-                      </v-btn>
-                      <v-btn
-                        v-if="cameraActive"
-                        color="grey"
-                        prepend-icon="mdi-close"
-                        @click="stopCamera"
-                      >
-                        Kamera stoppen
-                      </v-btn>
-                    </div>
-
-                    <v-alert v-if="cameraPermissionDenied" type="error" class="mb-3">
-                      Kamerazugriff wurde verweigert. Bitte erlauben Sie den Kamerazugriff in Ihren
-                      Browser-Einstellungen.
-                    </v-alert>
-
-                    <!-- Captured photos gallery -->
-                    <div v-if="devicePhotos.length > 0">
-                      <v-divider class="mb-3"></v-divider>
-                      <div class="text-subtitle-2 mb-2">
-                        Aufgenommene Fotos ({{ devicePhotos.length }})
-                      </div>
-                      <v-row>
-                        <v-col
-                          v-for="(photo, index) in devicePhotos"
-                          :key="index"
-                          cols="6"
-                          sm="4"
-                          md="3"
-                        >
-                          <v-card>
-                            <v-img
-                              :src="photo"
-                              aspect-ratio="1"
-                              cover
-                              class="cursor-pointer"
-                              @click="viewPhoto(photo)"
-                            >
-                              <template #placeholder>
-                                <v-row class="fill-height ma-0" align="center" justify="center">
-                                  <v-progress-circular
-                                    indeterminate
-                                    color="grey-lighten-5"
-                                  ></v-progress-circular>
-                                </v-row>
-                              </template>
-                            </v-img>
-                            <v-card-actions>
-                              <v-spacer></v-spacer>
-                              <v-btn
-                                icon="mdi-delete"
-                                size="small"
-                                color="error"
-                                variant="text"
-                                @click="deletePhoto(index)"
-                              ></v-btn>
-                            </v-card-actions>
-                          </v-card>
-                        </v-col>
-                      </v-row>
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-form>
-            </v-stepper-window-item>
-
-            <!-- Step 3: Haftungsbegrenzung -->
-            <v-stepper-window-item :value="3">
-              <v-form ref="step3Form" v-model="step3Valid">
-                <v-card class="mb-4">
-                  <v-card-title class="text-h6">Bedingungen</v-card-title>
-                  <v-card-text>
-                    <iframe
-                      src="/api/config/disclaimer"
-                      width="100%"
-                      height="500px"
-                      style="border: none"
-                      title="Disclaimer"
-                    ></iframe>
-                  </v-card-text>
-                </v-card>
-
-                <!-- Mode toggle -->
-                <v-btn-toggle
-                  v-model="disclaimerMode"
-                  mandatory
-                  color="primary"
-                  class="mb-4"
-                  density="comfortable"
-                >
-                  <v-btn value="sign" prepend-icon="mdi-draw"> Unterschreiben </v-btn>
-                  <v-btn value="upload" prepend-icon="mdi-upload" @click="openPdfDialog">
-                    PDF hochladen
-                  </v-btn>
-                </v-btn-toggle>
-
-                <!-- Signature card -->
-                <v-card v-if="disclaimerMode === 'sign'" class="mb-4">
-                  <v-card-title class="text-h6">Unterschrift</v-card-title>
-                  <v-card-text>
-                    <p class="mb-3">
-                      Mit meiner Unterschrift bestätige ich die Bedingungen und bestätige die
-                      Datenschutzerklärung gelesen und verstanden zu haben:
-                    </p>
-                    <div class="signature-container" :class="{ 'error-border': signatureError }">
-                      <canvas
-                        ref="signatureCanvas"
-                        width="700"
-                        height="200"
-                        style="
-                          border: 1px solid #ccc;
-                          cursor: crosshair;
-                          width: 100%;
-                          max-width: 700px;
-                          touch-action: none;
-                        "
-                        @mousedown="startDrawing"
-                        @mousemove="draw"
-                        @mouseup="stopDrawing"
-                        @mouseleave="stopDrawing"
-                        @touchstart="startDrawingTouch"
-                        @touchmove="drawTouch"
-                        @touchend="stopDrawing"
-                      ></canvas>
-                    </div>
-                    <v-btn size="small" class="mt-2" @click="clearSignature">
-                      Unterschrift löschen
-                    </v-btn>
-                    <div v-if="signatureError" class="text-error text-caption mt-1">
-                      {{ signatureError }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-
-                <!-- Upload card -->
-                <v-card v-else class="mb-4">
-                  <v-card-title class="text-h6">PDF hochladen</v-card-title>
-                  <v-card-text>
-                    <p class="mb-3">
-                      Laden Sie eine bereits unterschriebene Haftungsausschluss-PDF hoch:
-                    </p>
-                    <v-file-input
-                      ref="pdfFileInput"
-                      v-model="uploadedPdfFile"
-                      label="PDF-Datei auswählen"
-                      accept=".pdf,application/pdf"
-                      prepend-icon="mdi-file-pdf-box"
-                      :error-messages="uploadedPdfError"
-                      show-size
-                      @update:model-value="uploadedPdfError = ''"
-                    ></v-file-input>
-                  </v-card-text>
-                </v-card>
-              </v-form>
-            </v-stepper-window-item>
-
-            <!-- Step 4: Review -->
-            <v-stepper-window-item :value="4">
-              <RepairSummaryCard :repair-data="formData" />
-            </v-stepper-window-item>
-
-            <!-- Step 4: Confirmation -->
-            <v-stepper-window-item :value="5">
-              <v-card class="mb-4">
-                <v-card-text class="text-center pa-8">
-                  <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>
-                  <h2 class="text-h4 mb-4">Reparatur erfolgreich erstellt!</h2>
-                  <v-divider class="my-4"></v-divider>
-                  <div class="text-h5 mb-2">Reparatur ID:</div>
-                  <div class="text-h3 font-weight-bold primary--text mb-4">
-                    <router-link :to="`/edit/${createdRepairQrToken}`">{{ createdRepairId }}</router-link>
-                  </div>
-                  <p class="text-body-1 mb-4">
-                    Die Reparatur wurde erfolgreich im System erfasst. Sie können diese ID
-                    verwenden, um den Status der Reparatur zu verfolgen.
-                  </p>
-                  <v-card class="mt-4 pa-4">
-                    <div class="text-subtitle-1 font-weight-bold mb-2">Nächste Schritte:</div>
-                    <v-list density="compact">
-                      <v-list-item prepend-icon="mdi-printer">
-                        <v-list-item-title
-                          >Kleben Sie den gedrucken QR Code auf das Gerät</v-list-item-title
-                        >
-                      </v-list-item>
-                      <v-list-item prepend-icon="mdi-clipboard-check">
-                        <v-list-item-title>Übergeben Sie das Gerät zur Reparatur</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item prepend-icon="mdi-qrcode">
-                        <v-list-item-title
-                          >Scannen Sie den QR-Code für schnellen Zugriff</v-list-item-title
-                        >
-                      </v-list-item>
-                    </v-list>
-                  </v-card>
-
-                  <v-btn
-                    v-if="disclaimerUrl"
-                    :href="disclaimerUrl"
-                    target="_blank"
-                    color="primary"
-                    prepend-icon="mdi-file-pdf-box"
-                    class="mt-6"
-                    download
-                  >
-                    Haftungsausschluss herunterladen &amp; drucken
-                  </v-btn>
-
-                  <div v-if="labelPrinterEnabled" class="mt-4">
-                    <v-btn
-                      color="secondary"
-                      variant="tonal"
-                      prepend-icon="mdi-printer"
-                      :loading="printingLabel"
-                      :disabled="createdRepairId === null"
-                      @click="printLabel"
-                    >
-                      Etikett drucken
-                    </v-btn>
-                    <div v-if="printLabelError" class="text-error text-caption mt-1">
-                      {{ printLabelError }}
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-stepper-window-item>
-          </v-stepper-window>
-        </v-stepper>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn v-if="step < 4" @click="goBack">Abbrechen</v-btn>
-        <v-spacer></v-spacer>
-        <v-btn v-if="step > 1 && step < 4" @click="step--">Zurück</v-btn>
-        <v-btn v-if="step < 4" color="primary" @click="nextStep">Weiter</v-btn>
-        <v-btn v-if="step === 4" color="primary" :loading="submitting" @click="submitForm"
-          >Speichern</v-btn
-        >
-        <v-btn v-if="step === 5" color="primary" @click="goToRepairsList">Zur Reparaturliste</v-btn>
-        <v-btn v-if="step === 5" color="secondary" @click="createAnother"
-          >Weitere Reparatur erfassen</v-btn
-        >
-      </v-card-actions>
-    </v-card>
-  </v-container>
-</template>
-
 <script setup lang="ts">
-import { ref, inject, computed, onMounted, nextTick } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ConfigService } from '@/api/services/ConfigService'
-import { RepairsService } from '@/api/services/RepairsService'
-import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
+import { useDisplay } from 'vuetify'
+import type { VForm } from 'vuetify/components'
+import { api, asFormData } from '@/api/client'
+import { documentUrl } from '@/api/documents'
+import type { CustomerResponse, RepairCreate } from '@/api/types'
+import { useToast } from '@/composables/useToast'
+import { errorMessage } from '@/utils/errors'
+import { personName } from '@/utils/person'
+import DevicePhotoCapture from '@/components/DevicePhotoCapture.vue'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
+import SignaturePad from '@/components/SignaturePad.vue'
+import DateField from '@/components/ui/DateField.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import RepairNumber from '@/components/ui/RepairNumber.vue'
 
-const step = ref(1)
-const step1Valid = ref(false)
-const step2Valid = ref(false)
-const step3Valid = ref(false)
-const step1Form = ref<any>(null)
-const step2Form = ref<any>(null)
-const step3Form = ref<any>(null)
-const submitting = ref(false)
-const createdRepairId = ref<number | null>(null)
-const createdRepairQrToken = ref<number | null>(null)
-const printingLabel = ref(false)
-const printLabelError = ref('')
-const labelPrinterEnabled = ref(false)
+/**
+ * New repair in five steps: customer, device, disclaimer (read and signed by the
+ * customer, hence "Sie"), review, done. Helpers are addressed with "du".
+ */
+const router = useRouter()
+const toast = useToast()
+const { smAndDown } = useDisplay()
 
-const disclaimerUrl = computed(() =>
-  createdRepairId.value !== null ? `/api/repairs/${createdRepairId.value}/disclaimer` : null
-)
+const STEPS = [
+  { value: 1, title: 'Kunde' },
+  { value: 2, title: 'Gerät' },
+  { value: 3, title: 'Haftung' },
+  { value: 4, title: 'Prüfen' },
+  { value: 5, title: 'Fertig' },
+]
+const step = shallowRef(1)
 
-const showToast = inject('showToast') as
-  | undefined
-  | ((message: string, options?: { color?: string; timeout?: number }) => void)
-
-// Repair types loaded from settings API
-const repairTypes = ref<Array<{ id: number; name: string }>>([])
-
-onMounted(async () => {
-  try {
-    const features = await ConfigService.getFeatures()
-    labelPrinterEnabled.value = features.label_printer ?? false
-  } catch {
-    labelPrinterEnabled.value = false
-  }
-  try {
-    const cfg = await ConfigService.getDropdownConfig()
-    repairTypes.value = cfg.repair_type ?? []
-  } catch {
-    repairTypes.value = []
-  }
-})
-
-// Initialize with current date
-const now = new Date()
-const year = now.getFullYear()
-const month = String(now.getMonth() + 1).padStart(2, '0')
-const day = String(now.getDate()).padStart(2, '0')
-
-const formData = ref({
-  datum: `${year}-${month}-${day}`,
-  customer: {
-    vorname: '',
-    nachname: '',
-    telefon: '',
-    email: '',
-  },
-  repair_type_id: null as number | null,
-  repair_type: null as { id: number; name: string } | null,
-  geraet_art: '',
-  defekt_besch: '',
-  status: 'Offen',
-})
-
-const termsAccepted = ref(false)
-
-// Disclaimer mode: 'sign' or 'upload'
-const disclaimerMode = ref<'sign' | 'upload'>('sign')
-const uploadedPdfFile = ref<File | null>(null)
-const uploadedPdfError = ref('')
-const pdfFileInput = ref<{ $el: HTMLElement } | null>(null)
-
-// Switch to upload mode and immediately open the native file picker
-function openPdfDialog() {
-  disclaimerMode.value = 'upload'
-  nextTick(() => {
-    pdfFileInput.value?.$el?.querySelector('input')?.click()
-  })
+// ── Form state ───────────────────────────────────────────────────────────────
+function today(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-// Signature pad variables
-const signatureCanvas = ref<HTMLCanvasElement | null>(null)
-const isDrawing = ref(false)
-const signatureData = ref<string | null>(null)
-const signatureError = ref('')
+function initialForm() {
+  return {
+    datum: today(),
+    customer: { vorname: '', nachname: '', telefon: '', email: '' },
+    repair_type_id: null as number | null,
+    repair_type: null as { id: number; name: string } | null,
+    geraet_art: '',
+    defekt_besch: '',
+    status: 'Offen',
+  }
+}
 
-// Camera and photo variables
-const videoElement = ref<HTMLVideoElement | null>(null)
-const photoCanvas = ref<HTMLCanvasElement | null>(null)
-const cameraActive = ref(false)
-const cameraPermissionDenied = ref(false)
-const devicePhotos = ref<string[]>([])
-let cameraStream: MediaStream | null = null
+const formData = ref(initialForm())
+const devicePhoto = ref<File | null>(null)
+const repairTypes = ref<Array<{ id: number; name: string }>>([])
+const labelPrinterEnabled = shallowRef(false)
 
-// Email validation rules: optional but must be valid if provided
-const emailRules = [(v: string) => !v || /.+@.+\..+/.test(v) || 'Email muss gültig sein']
+const customerForm = ref<InstanceType<typeof VForm> | null>(null)
+const deviceForm = ref<InstanceType<typeof VForm> | null>(null)
 
-// Customer search state
-const customerSearchQuery = ref('')
+const requiredRule = (message: string) => (v: unknown) => !!v || message
+const emailRules = [(v: string) => !v || /.+@.+\..+/.test(v) || 'E-Mail-Adresse ist ungültig']
+
+onMounted(async () => {
+  const [features, dropdowns] = await Promise.allSettled([
+    api.getFeatures(),
+    api.getDropdownConfig(),
+  ])
+  labelPrinterEnabled.value =
+    features.status === 'fulfilled' ? (features.value.label_printer ?? false) : false
+  repairTypes.value = dropdowns.status === 'fulfilled' ? dropdowns.value.repair_type : []
+})
+
+function onRepairTypeChange(id: number | null) {
+  formData.value.repair_type = repairTypes.value.find((t) => t.id === id) ?? null
+}
+
+// ── Customer search (step 1) ─────────────────────────────────────────────────
+const customerSearchQuery = shallowRef('')
 const customerSearchResults = ref<CustomerResponse[]>([])
-const customerSearchLoading = ref(false)
+const customerSearchLoading = shallowRef(false)
 const selectedCustomerId = ref<number | null>(null)
 let customerSearchTimer: ReturnType<typeof setTimeout> | null = null
 
-async function onCustomerSearchInput(query: string) {
+function onCustomerSearchInput(query: string) {
   customerSearchQuery.value = query
   if (customerSearchTimer) clearTimeout(customerSearchTimer)
   if (!query || query.length < 2) {
@@ -524,8 +94,7 @@ async function onCustomerSearchInput(query: string) {
   customerSearchTimer = setTimeout(async () => {
     customerSearchLoading.value = true
     try {
-      const res = await CustomersService.searchCustomers(query)
-      customerSearchResults.value = res.data ?? []
+      customerSearchResults.value = (await api.searchCustomers({ q: query })).data
     } catch {
       customerSearchResults.value = []
     } finally {
@@ -534,378 +103,446 @@ async function onCustomerSearchInput(query: string) {
   }, 300)
 }
 
+const customerItemProps = (c: CustomerResponse) => ({
+  title: personName(c),
+  subtitle: [c.telefon, c.email].filter(Boolean).join(' · '),
+  prependIcon: 'mdi-account',
+})
+
 function selectCustomer(customer: CustomerResponse | null) {
-  if (!customer) {
-    selectedCustomerId.value = null
+  selectedCustomerId.value = customer?.id ?? null
+  if (!customer) return
+  formData.value.customer = {
+    vorname: customer.vorname,
+    nachname: customer.nachname,
+    telefon: customer.telefon ?? '',
+    email: customer.email ?? '',
+  }
+}
+
+// Device photo for the review step; object URL released when it changes
+const reviewPhotoUrl = computed(() =>
+  devicePhoto.value ? URL.createObjectURL(devicePhoto.value) : null
+)
+watch(reviewPhotoUrl, (_next, previous) => {
+  if (previous) URL.revokeObjectURL(previous)
+})
+onUnmounted(() => {
+  if (reviewPhotoUrl.value) URL.revokeObjectURL(reviewPhotoUrl.value)
+})
+
+// ── Disclaimer (step 3) ──────────────────────────────────────────────────────
+const disclaimerMode = ref<'sign' | 'upload'>('sign')
+const signatureData = ref<string | null>(null)
+const signatureError = shallowRef('')
+const uploadedPdfFile = ref<File | null>(null)
+const uploadedPdfError = shallowRef('')
+const pdfFileInput = ref<{ $el: HTMLElement } | null>(null)
+
+watch(signatureData, (value) => {
+  if (value) signatureError.value = ''
+})
+
+// Switch to upload mode and immediately open the native file picker
+function openPdfDialog() {
+  disclaimerMode.value = 'upload'
+  void nextTick(() => pdfFileInput.value?.$el.querySelector('input')?.click())
+}
+
+/** The customer has either signed or a signed PDF is attached. */
+function disclaimerComplete(): boolean {
+  if (disclaimerMode.value === 'sign') {
+    if (!signatureData.value) signatureError.value = 'Bitte unterschreiben Sie, um fortzufahren'
+    return !!signatureData.value
+  }
+  if (!uploadedPdfFile.value) uploadedPdfError.value = 'Bitte eine unterschriebene PDF-Datei wählen'
+  return !!uploadedPdfFile.value
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+async function isFormValid(form: InstanceType<typeof VForm> | null): Promise<boolean> {
+  return (await form?.validate())?.valid ?? false
+}
+
+async function next() {
+  if (step.value === 1 && !(await isFormValid(customerForm.value))) return
+  if (step.value === 2) {
+    if (!(await isFormValid(deviceForm.value))) return
+    // The customer signs fresh for this repair
+    signatureData.value = null
+  }
+  if (step.value === 3 && !disclaimerComplete()) return
+  step.value++
+}
+
+function cancel() {
+  router.back()
+}
+
+// ── Save (step 4) ────────────────────────────────────────────────────────────
+const submitting = shallowRef(false)
+const createdRepairId = ref<number | null>(null)
+const createdRepairQrToken = ref<string | null>(null)
+
+async function uploadExtras(repairId: number) {
+  const problems: string[] = []
+  if (disclaimerMode.value === 'upload' && uploadedPdfFile.value) {
+    try {
+      await api.uploadRepairDisclaimer({ id: repairId }, { file: uploadedPdfFile.value })
+    } catch (err) {
+      console.error('Error uploading disclaimer PDF:', err)
+      problems.push('der Haftungsausschluss')
+    }
+  }
+  if (devicePhoto.value) {
+    try {
+      await api.uploadRepairAttachments(
+        { repairId },
+        asFormData({ files: [devicePhoto.value], attachment_type: 'device_photo' })
+      )
+    } catch (err) {
+      console.error('Error uploading device photo:', err)
+      problems.push('das Gerätefoto')
+    }
+  }
+  if (problems.length > 0) {
+    // The repair exists; don't report the whole save as failed (risk of duplicates)
+    const verb = problems.length === 1 ? 'konnte' : 'konnten'
+    toast.warning(
+      `Reparatur erstellt, aber ${problems.join(' und ')} ${verb} nicht hochgeladen werden. ` +
+        'Bitte in der Reparatur erneut hochladen.',
+      8000
+    )
+  }
+}
+
+async function submit() {
+  if (!disclaimerComplete()) {
+    step.value = 3
     return
   }
-  selectedCustomerId.value = customer.id
-  formData.value.customer.nachname = customer.nachname
-  formData.value.customer.vorname = customer.vorname
-  formData.value.customer.telefon = customer.telefon ?? ''
-  formData.value.customer.email = customer.email ?? ''
-}
-
-function onRepairTypeChange(id: number | null) {
-  const found = repairTypes.value.find((t) => t.id === id) ?? null
-  formData.value.repair_type = found
-}
-
-const router = useRouter()
-
-// Signature pad functions
-function getContext(): CanvasRenderingContext2D | null {
-  if (!signatureCanvas.value) return null
-  return signatureCanvas.value.getContext('2d')
-}
-
-function startDrawing(event: MouseEvent) {
-  isDrawing.value = true
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-
-  ctx.beginPath()
-  ctx.moveTo((event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY)
-  signatureError.value = ''
-}
-
-function draw(event: MouseEvent) {
-  if (!isDrawing.value) return
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-
-  ctx.lineTo((event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY)
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 2
-  ctx.lineCap = 'round'
-  ctx.stroke()
-}
-
-function stopDrawing() {
-  if (isDrawing.value) {
-    isDrawing.value = false
-    saveSignature()
-  }
-}
-
-function startDrawingTouch(event: TouchEvent) {
-  event.preventDefault()
-  isDrawing.value = true
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-  const touch = event.touches[0]
-
-  ctx.beginPath()
-  ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)
-  signatureError.value = ''
-}
-
-function drawTouch(event: TouchEvent) {
-  event.preventDefault()
-  if (!isDrawing.value) return
-  const ctx = getContext()
-  if (!ctx) return
-
-  const rect = signatureCanvas.value!.getBoundingClientRect()
-  const scaleX = signatureCanvas.value!.width / rect.width
-  const scaleY = signatureCanvas.value!.height / rect.height
-  const touch = event.touches[0]
-
-  ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 2
-  ctx.lineCap = 'round'
-  ctx.stroke()
-}
-
-function saveSignature() {
-  if (!signatureCanvas.value) return
-  signatureData.value = signatureCanvas.value.toDataURL()
-}
-
-function clearSignature() {
-  const ctx = getContext()
-  if (!ctx || !signatureCanvas.value) return
-
-  ctx.clearRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height)
-  signatureData.value = null
-  signatureError.value = ''
-}
-
-function isCanvasEmpty(): boolean {
-  if (!signatureCanvas.value) return true
-  const ctx = getContext()
-  if (!ctx) return true
-
-  const pixelData = ctx.getImageData(
-    0,
-    0,
-    signatureCanvas.value.width,
-    signatureCanvas.value.height
-  )
-  return !pixelData.data.some((channel) => channel !== 0)
-}
-
-async function nextStep() {
-  if (step.value === 1) {
-    const { valid } = await step1Form.value.validate()
-    if (valid) {
-      step.value++
+  submitting.value = true
+  try {
+    const payload: RepairCreate = {
+      datum: formData.value.datum,
+      vorname: formData.value.customer.vorname,
+      nachname: formData.value.customer.nachname,
+      telefon: formData.value.customer.telefon || null,
+      email: formData.value.customer.email || null,
+      repair_type_id: formData.value.repair_type_id!,
+      geraet_art: formData.value.geraet_art,
+      defekt_besch: formData.value.defekt_besch,
+      customer_id: selectedCustomerId.value,
+      unterschrift: disclaimerMode.value === 'sign' ? signatureData.value : null,
     }
-  } else if (step.value === 2) {
-    const { valid } = await step2Form.value.validate()
-    if (valid) {
-      // Stop camera when leaving step 2
-      if (cameraActive.value) {
-        stopCamera()
-      }
-      termsAccepted.value = false
-      clearSignature() // Clear signature when moving to review
-      step.value++
-    }
-  } else if (step.value === 3) {
-    const { valid } = await step3Form.value.validate()
-    if (valid) {
-      // Stop camera when leaving step 3
-      step.value++
-    }
-  }
-}
-
-async function submitForm() {
-  // Validate disclaimer
-  if (disclaimerMode.value === 'sign') {
-    if (isCanvasEmpty()) {
-      signatureError.value = 'Bitte unterschreiben Sie, um fortzufahren'
+    const response = await api.createRepair(payload)
+    if (response.reply !== 'done' || !response.id) {
+      toast.error('Fehler beim Speichern der Reparatur')
       return
     }
-  } else {
-    if (!uploadedPdfFile.value) {
-      uploadedPdfError.value = 'Bitte laden Sie eine PDF-Datei hoch'
-      step.value = 3
-      return
-    }
-  }
-
-  const { valid } = await step3Form.value.validate()
-  if (valid) {
-    submitting.value = true
-    try {
-      // Prepare data for API
-      const repairData: Record<string, unknown> = {
-        datum: formData.value.datum,
-        nachname: formData.value.customer.nachname,
-        vorname: formData.value.customer.vorname,
-        telefon: formData.value.customer.telefon,
-        email: formData.value.customer.email,
-        repair_type_id: formData.value.repair_type_id,
-        geraet_art: formData.value.geraet_art,
-        defekt_besch: formData.value.defekt_besch,
-      }
-      if (selectedCustomerId.value !== null) {
-        repairData.customer_id = selectedCustomerId.value
-      }
-      if (disclaimerMode.value === 'sign') {
-        repairData.unterschrift = signatureData.value
-      }
-
-      // Call API to create repair
-      const response = await RepairsService.createRepair(repairData as any)
-
-      if (response.reply === 'done') {
-        createdRepairId.value = response.id || null
-        createdRepairQrToken.value = response.data.qr_token || null
-
-        // Upload pre-signed PDF if applicable
-        if (
-          disclaimerMode.value === 'upload' &&
-          uploadedPdfFile.value &&
-          createdRepairId.value !== null
-        ) {
-          const fd = new FormData()
-          fd.append('file', uploadedPdfFile.value)
-          await fetch(`/api/repairs/${createdRepairId.value}/disclaimer`, {
-            method: 'POST',
-            body: fd,
-          })
-        }
-
-        showToast?.('Reparatur erfolgreich erstellt', { color: 'success' })
-        // Move to confirmation step
-        step.value = 5
-      } else {
-        console.error('Error creating repair:', response)
-        showToast?.('Fehler beim Speichern der Reparatur', { color: 'error' })
-      }
-    } catch (error) {
-      console.error('Error submitting repair:', error)
-      const errorMessage =
-        (error as any)?.body?.error || (error as Error).message || 'Unbekannter Fehler'
-      showToast?.(`Fehler beim Speichern der Reparatur: ${errorMessage}`, { color: 'error' })
-    } finally {
-      submitting.value = false
-    }
+    createdRepairId.value = response.id
+    createdRepairQrToken.value = response.data?.qr_token ?? null
+    await uploadExtras(response.id)
+    toast.success('Reparatur erstellt')
+    step.value = 5
+  } catch (err) {
+    console.error('Error submitting repair:', err)
+    toast.error('Fehler beim Speichern der Reparatur: ' + errorMessage(err, 'Unbekannter Fehler'))
+  } finally {
+    submitting.value = false
   }
 }
 
-function goToRepairsList() {
-  router.push('/repairs')
+// ── Done (step 5) ────────────────────────────────────────────────────────────
+const printingLabel = shallowRef(false)
+const createdDisclaimerUrl = computed(() =>
+  createdRepairId.value !== null ? documentUrl(createdRepairId.value, 'disclaimer') : null
+)
+
+async function printLabel() {
+  if (createdRepairId.value === null) return
+  printingLabel.value = true
+  try {
+    const result = await api.printRepairLabel({ id: createdRepairId.value }, {})
+    toast.success(result.message || 'Etikett gedruckt')
+  } catch (err) {
+    toast.error('Fehler beim Drucken: ' + errorMessage(err, 'Unbekannter Fehler'))
+  } finally {
+    printingLabel.value = false
+  }
+}
+
+function openCreatedRepair() {
+  if (createdRepairQrToken.value) void router.push(`/edit/${createdRepairQrToken.value}`)
 }
 
 function createAnother() {
-  // Reset form
-  step.value = 1
-  createdRepairId.value = null
-  printLabelError.value = ''
-  formData.value = {
-    datum: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
-    customer: {
-      nachname: '',
-      vorname: '',
-      telefon: '',
-      email: '',
-    },
-    repair_type_id: null,
-    repair_type: null,
-    geraet_art: '',
-    defekt_besch: '',
-    status: 'Offen',
-  }
+  formData.value = initialForm()
+  devicePhoto.value = null
   signatureData.value = null
   signatureError.value = ''
-  clearSignature()
   disclaimerMode.value = 'sign'
   uploadedPdfFile.value = null
   uploadedPdfError.value = ''
   selectedCustomerId.value = null
   customerSearchQuery.value = ''
   customerSearchResults.value = []
-}
-
-async function printLabel() {
-  if (createdRepairId.value === null) return
-  printingLabel.value = true
-  printLabelError.value = ''
-  try {
-    const result = await RepairsService.printLabel(createdRepairId.value)
-    if (result.reply === 'done') {
-      showToast?.('Etikett erfolgreich gedruckt', { color: 'success' })
-    } else {
-      printLabelError.value = result.error ?? 'Drucken fehlgeschlagen'
-      showToast?.(printLabelError.value, { color: 'error' })
-    }
-  } catch (error) {
-    printLabelError.value =
-      (error as any)?.body?.error ?? (error as Error).message ?? 'Unbekannter Fehler'
-    showToast?.(`Fehler beim Drucken: ${printLabelError.value}`, { color: 'error' })
-  } finally {
-    printingLabel.value = false
-  }
-}
-
-// Camera functions
-async function startCamera() {
-  try {
-    cameraPermissionDenied.value = false
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, // Use back camera on mobile if available
-      audio: false,
-    })
-    cameraStream = stream
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream
-      cameraActive.value = true
-    }
-  } catch (error) {
-    console.error('Error accessing camera:', error)
-    cameraPermissionDenied.value = true
-    showToast?.('Fehler beim Zugriff auf die Kamera', { color: 'error' })
-  }
-}
-
-function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach((track) => track.stop())
-    cameraStream = null
-  }
-  if (videoElement.value) {
-    videoElement.value.srcObject = null
-  }
-  cameraActive.value = false
-}
-
-function capturePhoto() {
-  if (!videoElement.value || !photoCanvas.value) return
-
-  const video = videoElement.value
-  const canvas = photoCanvas.value
-
-  // Set canvas dimensions to match video
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
-
-  // Draw the current video frame to the canvas
-  const context = canvas.getContext('2d')
-  if (context) {
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Convert canvas to base64 image
-    const photoData = canvas.toDataURL('image/jpeg', 0.8)
-    devicePhotos.value.push(photoData)
-
-    showToast?.('Foto aufgenommen', { color: 'success', timeout: 2000 })
-  }
-}
-
-function deletePhoto(index: number) {
-  devicePhotos.value.splice(index, 1)
-  showToast?.('Foto gelöscht', { color: 'info', timeout: 2000 })
-}
-
-function viewPhoto(photo: string) {
-  // Open photo in new window/tab
-  const win = window.open()
-  if (win) {
-    win.document.write(`<img src="${photo}" style="max-width: 100%; height: auto;" />`)
-  }
-}
-
-function goBack() {
-  // Stop camera if active
-  if (cameraActive.value) {
-    stopCamera()
-  }
-  router.back()
+  createdRepairId.value = null
+  createdRepairQrToken.value = null
+  step.value = 1
 }
 </script>
 
+<template>
+  <v-container fluid class="page-container pb-16">
+    <PageHeader title="Neue Reparatur" />
+
+    <!-- The mobile stepper shows numbers only; name the current step -->
+    <div v-if="smAndDown" class="text-title-medium mb-2">
+      Schritt {{ step }} von {{ STEPS.length }} · {{ STEPS[step - 1]?.title }}
+    </div>
+    <v-stepper v-model="step" :items="STEPS" :mobile="smAndDown" hide-actions flat>
+      <!-- Step 1: customer -->
+      <template #[`item.1`]>
+        <v-form ref="customerForm">
+          <v-autocomplete
+            v-model:search="customerSearchQuery"
+            :items="customerSearchResults"
+            :item-props="customerItemProps"
+            :loading="customerSearchLoading"
+            label="Bestehenden Kunden suchen"
+            placeholder="Name, Telefon oder E-Mail"
+            prepend-inner-icon="mdi-account-search"
+            clearable
+            no-filter
+            return-object
+            :hide-no-data="customerSearchQuery.length < 2"
+            no-data-text="Kein Kunde gefunden"
+            @update:search="onCustomerSearchInput"
+            @update:model-value="selectCustomer"
+          />
+          <p class="text-body-small text-medium-emphasis mb-4">
+            <template v-if="selectedCustomerId">
+              <v-icon icon="mdi-link-variant" size="small" /> Kunde verknüpft, Felder übernommen
+            </template>
+            <template v-else>Kein Kunde gewählt: beim Speichern wird ein neuer angelegt</template>
+          </p>
+
+          <v-row density="compact">
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="formData.customer.vorname"
+                label="Vorname"
+                :rules="[requiredRule('Vorname ist erforderlich')]"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="formData.customer.nachname"
+                label="Nachname"
+                :rules="[requiredRule('Nachname ist erforderlich')]"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field v-model="formData.customer.telefon" label="Telefon" type="tel" />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="formData.customer.email"
+                label="E-Mail (optional)"
+                type="email"
+                :rules="emailRules"
+              />
+            </v-col>
+          </v-row>
+        </v-form>
+      </template>
+
+      <!-- Step 2: device -->
+      <template #[`item.2`]>
+        <v-form ref="deviceForm">
+          <v-row density="compact">
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="formData.geraet_art"
+                label="Gerät"
+                placeholder="z. B. Toaster, Stehlampe"
+                :rules="[requiredRule('Gerät ist erforderlich')]"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-select
+                v-model="formData.repair_type_id"
+                label="Kategorie"
+                :items="repairTypes"
+                item-value="id"
+                item-title="name"
+                :rules="[requiredRule('Kategorie ist erforderlich')]"
+                @update:model-value="onRepairTypeChange"
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-textarea
+                v-model="formData.defekt_besch"
+                label="Beschreibung des Defekts"
+                rows="3"
+                :rules="[requiredRule('Beschreibung ist erforderlich')]"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <DateField
+                v-model="formData.datum"
+                label="Angenommen am"
+                :rules="[requiredRule('Datum ist erforderlich')]"
+              />
+            </v-col>
+          </v-row>
+        </v-form>
+
+        <div class="text-title-small text-medium-emphasis mb-1">Foto des Geräts (optional)</div>
+        <p class="text-body-small text-medium-emphasis mb-3">
+          Ein Foto zeigt den Zustand bei der Annahme. Weitere Fotos kannst du später in
+          Logeinträgen hinzufügen.
+        </p>
+        <DevicePhotoCapture
+          v-model="devicePhoto"
+          :active="step === 2"
+          :category="formData.repair_type?.name"
+        />
+      </template>
+
+      <!-- Step 3: disclaimer, read and signed by the customer -->
+      <template #[`item.3`]>
+        <p class="text-body-medium mb-3">
+          Bitte lesen Sie die Bedingungen und bestätigen Sie diese mit Ihrer Unterschrift.
+        </p>
+        <iframe src="/api/config/disclaimer" class="disclaimer-frame mb-4" title="Haftungsbedingungen" />
+
+        <v-btn-toggle v-model="disclaimerMode" mandatory color="primary" variant="outlined" class="mb-4">
+          <v-btn value="sign" prepend-icon="mdi-draw">Unterschreiben</v-btn>
+          <v-btn value="upload" prepend-icon="mdi-upload" @click="openPdfDialog">PDF hochladen</v-btn>
+        </v-btn-toggle>
+
+        <template v-if="disclaimerMode === 'sign'">
+          <p class="text-body-medium mb-2">
+            Mit meiner Unterschrift bestätige ich die Bedingungen und habe die
+            Datenschutzerklärung gelesen und verstanden.
+          </p>
+          <SignaturePad v-model="signatureData" :width="900" :height="260" :error="signatureError" />
+        </template>
+        <v-file-input
+          v-else
+          ref="pdfFileInput"
+          v-model="uploadedPdfFile"
+          label="Unterschriebene PDF-Datei"
+          accept=".pdf,application/pdf"
+          prepend-icon="mdi-file-pdf-box"
+          :error-messages="uploadedPdfError"
+          show-size
+          @update:model-value="uploadedPdfError = ''"
+        />
+      </template>
+
+      <!-- Step 4: review -->
+      <template #[`item.4`]>
+        <RepairSummaryCard :repair-data="formData" :photo-url="reviewPhotoUrl" />
+        <div class="d-flex flex-wrap ga-4 text-body-medium text-medium-emphasis">
+          <span>
+            <v-icon :icon="disclaimerMode === 'sign' ? 'mdi-draw' : 'mdi-file-pdf-box'" size="small" />
+            {{ disclaimerMode === 'sign' ? 'Unterschrieben' : 'Unterschriebene PDF' }}
+          </span>
+        </div>
+      </template>
+
+      <!-- Step 5: done -->
+      <template #[`item.5`]>
+        <v-empty-state icon="mdi-check-circle" color="success" title="Reparatur erstellt">
+          <template #media>
+            <RepairNumber :id="createdRepairId ?? undefined" status="Offen" :size="72" class="mb-4" />
+          </template>
+          <template #text>
+            Klebe das Etikett auf das Gerät und gib es zur Reparatur weiter.
+          </template>
+          <template #actions>
+            <div class="d-flex flex-wrap justify-center ga-2">
+              <v-btn
+                v-if="labelPrinterEnabled"
+                color="primary"
+                variant="flat"
+                size="large"
+                prepend-icon="mdi-printer"
+                :loading="printingLabel"
+                @click="printLabel"
+              >
+                Etikett drucken
+              </v-btn>
+              <v-btn
+                v-if="createdDisclaimerUrl"
+                :href="createdDisclaimerUrl"
+                target="_blank"
+                variant="tonal"
+                size="large"
+                prepend-icon="mdi-file-pdf-box"
+              >
+                Haftungsausschluss
+              </v-btn>
+              <v-btn variant="tonal" size="large" prepend-icon="mdi-clipboard-edit" @click="openCreatedRepair">
+                Reparatur öffnen
+              </v-btn>
+            </div>
+          </template>
+        </v-empty-state>
+      </template>
+    </v-stepper>
+
+    <!-- Actions within thumb reach -->
+    <div class="action-bar d-flex align-center ga-2 py-3">
+      <template v-if="step < 5">
+        <v-btn variant="text" size="large" @click="cancel">Abbrechen</v-btn>
+        <v-spacer />
+        <v-btn v-if="step > 1" variant="tonal" size="large" @click="step--">Zurück</v-btn>
+        <v-btn v-if="step < 4" color="primary" variant="flat" size="large" @click="next">Weiter</v-btn>
+        <v-btn
+          v-else
+          color="primary"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-content-save"
+          :loading="submitting"
+          @click="submit"
+        >
+          Speichern
+        </v-btn>
+      </template>
+      <template v-else>
+        <v-btn variant="text" size="large" to="/">Zur Übersicht</v-btn>
+        <v-spacer />
+        <v-btn color="primary" variant="flat" size="large" prepend-icon="mdi-plus" @click="createAnother">
+          Weitere Reparatur
+        </v-btn>
+      </template>
+    </div>
+  </v-container>
+</template>
+
 <style scoped>
-.signature-container {
-  display: inline-block;
+/* Step content flush with the stepper header and the action bar */
+:deep(.v-stepper-window) {
+  margin-inline: 0;
 }
 
-.signature-container.error-border canvas {
-  border-color: rgb(var(--v-theme-error)) !important;
-  border-width: 2px;
+.disclaimer-frame {
+  width: 100%;
+  height: min(60vh, 600px);
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
 }
 
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.gap-2 {
-  gap: 8px;
+.action-bar {
+  position: sticky;
+  bottom: var(--v-layout-bottom, 0px);
+  z-index: 2;
+  background: rgb(var(--v-theme-surface));
+  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>

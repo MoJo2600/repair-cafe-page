@@ -5,7 +5,7 @@
       "name": "Frontend: Vite + Chrome",
       "type": "node-terminal",
       "request": "launch",
-      "command": "corepack pnpm dev",
+      "command": "pnpm dev",
       "cwd": "${workspaceFolder}/frontend",
       "serverReadyAction": {
         "pattern": "Local:\\s+(http://localhost:5173/)",

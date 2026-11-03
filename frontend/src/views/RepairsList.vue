@@ -1,19 +1,15 @@
 <template>
-  <v-container fluid class="pa-4">
-    <!-- Header -->
-    <v-row align="center" class="mb-4">
-      <v-col>
-        <h1 class="text-h5 font-weight-bold">Reparaturliste</h1>
-      </v-col>
-      <v-col cols="auto">
-        <v-btn color="success" prepend-icon="mdi-plus" class="mr-2" @click="createNewRepair">
-          Neue Reparatur
-        </v-btn>
-        <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="loadRepairs">
+  <v-container fluid class="page-container">
+    <PageHeader title="Reparaturliste">
+      <template #actions>
+        <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="loadRepairs()">
           Aktualisieren
         </v-btn>
-      </v-col>
-    </v-row>
+        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="createNewRepair">
+          Neue Reparatur
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <!-- Filter row -->
     <v-row class="mb-2">
@@ -37,7 +33,7 @@
         />
       </v-col>
       <v-spacer />
-      <v-col cols="auto" class="text-body-2 text-medium-emphasis align-self-center">
+      <v-col cols="auto" class="text-body-medium text-medium-emphasis align-self-center">
         {{ filteredRepairs.length }} von {{ totalCount }}
       </v-col>
     </v-row>
@@ -60,17 +56,73 @@
         :custom-filter="customerNameFilter"
         :loading="loading"
         :items-per-page="10"
+        :mobile="false"
+        :hide-default-header="smAndDown"
         hover
         @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
       >
+        <!-- Small screens: one compact entry per repair instead of 12 columns -->
+        <template v-if="smAndDown" #item="{ item }">
+          <tr class="mobile-row" @click="editRepair(item)">
+            <td :colspan="headers.length" class="py-3">
+              <div class="d-flex align-start ga-3">
+                <RepairNumber :id="item.id" :status="item.status" :size="40" />
+                <div class="flex-grow-1 mobile-row__body">
+                  <div class="text-title-medium">{{ item.geraet_art }}</div>
+                  <RepairMeta :status="item.status" :category="item.repair_type?.name" class="my-1" />
+                  <div class="d-flex flex-column ga-1 text-body-medium">
+                    <PersonLabel :person="item.customer" role="customer" />
+                    <PersonLabel v-if="item.user" :person="item.user" role="repairer" />
+                  </div>
+                  <div class="text-body-small text-medium-emphasis mt-1">
+                    Angenommen am {{ formatDate(item.datum) }}
+                    <template v-if="item.closed_at"> · abgeschlossen {{ formatDate(item.closed_at) }}</template>
+                  </div>
+                </div>
+                <v-menu v-if="labelPrinterEnabled || authStore.isAdmin" location="bottom end">
+                  <template #activator="{ props: menuProps }">
+                    <v-btn
+                      v-bind="menuProps"
+                      icon="mdi-dots-vertical"
+                      variant="text"
+                      aria-label="Weitere Aktionen"
+                      @click.stop
+                    />
+                  </template>
+                  <v-list>
+                    <v-list-item
+                      v-if="labelPrinterEnabled"
+                      prepend-icon="mdi-printer"
+                      title="Etikett drucken"
+                      @click="printLabel(item.id)"
+                    />
+                    <v-list-item
+                      v-if="authStore.isAdmin"
+                      prepend-icon="mdi-delete"
+                      title="Löschen"
+                      base-color="error"
+                      @click="deleteRepair(item.id)"
+                    />
+                  </v-list>
+                </v-menu>
+              </div>
+            </td>
+          </tr>
+        </template>
         <template #item.status="{ item }">
-          <v-chip :color="getRepairStatusColor(item.status)" size="small">
-            {{ item.status }}
-          </v-chip>
+          <StatusChip :status="item.status" />
+        </template>
+
+        <template #item.customer="{ item }">
+          <PersonLabel :person="item.customer" role="customer" />
+        </template>
+
+        <template #item.user="{ item }">
+          <PersonLabel v-if="item.user" :person="item.user" role="repairer" />
         </template>
 
         <template #item.repair_type="{ item }">
-          {{ item.repair_type?.name || '-' }}
+          <TagChip v-if="item.repair_type" :label="item.repair_type.name" />
         </template>
 
         <template #item.geraet_art="{ item }">
@@ -78,17 +130,19 @@
         </template>
 
         <template #item.status_detail="{ item }">
-          {{ item.status_detail || '-' }}
+          {{ item.status_detail || '–' }}
         </template>
 
-        <template #item.reparatur_dauer="{ item }"> {{ item.reparatur_dauer }} min </template>
+        <template #item.reparatur_dauer="{ item }">
+          {{ item.reparatur_dauer ? `${item.reparatur_dauer} Min.` : '–' }}
+        </template>
 
         <template #item.datum="{ item }">
           {{ formatDate(item.datum) }}
         </template>
 
         <template #item.closed_at="{ item }">
-          {{ item.closed_at ? formatDateTime(item.closed_at) : '-' }}
+          {{ item.closed_at ? formatDateTime(item.closed_at) : '–' }}
         </template>
 
         <template #item.din_pruef="{ item }">
@@ -111,7 +165,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
         </template>
 
         <template #no-data>
-          <v-alert type="info" class="ma-4"> Keine Reparaturen gefunden. </v-alert>
+          <v-empty-state icon="mdi-clipboard-search-outline" title="Keine Reparaturen gefunden" size="56" />
         </template>
       </v-data-table>
     </v-card>
@@ -119,7 +173,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="deleteDialog" max-width="420">
       <v-card>
-        <v-card-title class="text-h6">
+        <v-card-title class="text-title-large">
           <v-icon color="error" class="mr-2">mdi-delete-alert</v-icon>
           Reparatur löschen?
         </v-card-title>
@@ -138,13 +192,13 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
     <!-- Edit Dialog -->
     <v-dialog v-model="editDialog" max-width="800" persistent>
       <v-card>
-        <v-card-title class="text-h5">
+        <v-card-title class="text-headline-small">
           <v-icon icon="mdi-pencil" class="mr-2" />
           Reparatur bearbeiten #{{ editedItem.id }}
         </v-card-title>
         <v-card-text>
           <v-form ref="editForm">
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12" sm="6">
                 <v-text-field v-model="editedItem.datum" label="Datum" type="date" />
               </v-col>
@@ -218,9 +272,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
               <v-col cols="12" sm="6">
                 <v-autocomplete
                   v-model="editedItem.user_id"
-                  :items="userStore.users"
-                  item-value="id"
-                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`"
+                  :items="userStore.userOptions"
                   label="Reparateur"
                   clearable
                   :loading="userStore.loading"
@@ -249,17 +301,21 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-      {{ snackbarText }}
-    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
+import { useDisplay } from 'vuetify'
+import { personName } from '@/utils/person'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
+import TagChip from '@/components/ui/TagChip.vue'
+import { api } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { RepairsService } from '@/api/services/RepairsService'
-import { ConfigService } from '@/api/services/ConfigService'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { Repair } from '@/api/types'
@@ -267,11 +323,13 @@ import { formatDate, formatDateTime } from '@/utils/date'
 import {
   REPAIR_STATUSES,
   REPAIR_STATUS_DETAIL_OPTIONS,
-  getRepairStatusColor,
   isOpenRepairStatus,
   isClosedRepairStatus,
   type RepairStatus,
-} from '@/stores/repairStore'
+} from '@/domain/repairStatus'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
   status?: RepairStatus
@@ -279,6 +337,7 @@ type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
 }
 
 const router = useRouter()
+const { smAndDown } = useDisplay()
 const route = useRoute()
 const userStore = useUserStore()
 const authStore = useAuthStore()
@@ -290,15 +349,7 @@ const totalCount = ref(0)
 const labelPrinterEnabled = ref(false)
 const printingLabelId = ref<number | null>(null)
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-const snackbarColor = ref('success')
 
-function showMsg(text: string, color = 'success') {
-  snackbarText.value = text
-  snackbarColor.value = color
-  snackbar.value = true
-}
 const filterStatus = ref<'open' | 'closed' | 'all'>('open')
 const search = ref('')
 const customerFilter = ref<{ id: number; name: string } | null>(null)
@@ -353,7 +404,7 @@ const repairTypes = ref<Array<{ id: number; name: string }>>([])
 // Load dropdown options from backend
 async function loadDropdownOptions() {
   try {
-    const config = await ConfigService.getDropdownConfig()
+    const config = await api.getDropdownConfig()
     if (config.repair_type) {
       repairTypes.value = config.repair_type
     }
@@ -366,7 +417,7 @@ function customerNameFilter(value: unknown, query: string, item?: { raw: Repair 
   if (!query) return true
   const q = query.toLowerCase()
   if (item?.raw?.customer) {
-    const fullName = `${item.raw.customer.vorname} ${item.raw.customer.nachname}`.toLowerCase()
+    const fullName = personName(item.raw.customer).toLowerCase()
     if (fullName.includes(q)) return true
   }
   if (value == null) return false
@@ -374,30 +425,30 @@ function customerNameFilter(value: unknown, query: string, item?: { raw: Repair 
 }
 
 const headers = [
-  { title: 'ID', key: 'id', sortable: true },
+  { title: 'Nr.', key: 'id', sortable: true },
   { title: 'Status', key: 'status', sortable: true },
-  { title: 'Device Type', key: 'geraet_art', sortable: true },
-  { title: 'First Name', key: 'customer.vorname', sortable: false },
-  { title: 'Last Name', key: 'customer.nachname', sortable: false },
-  { title: 'Repair Type', key: 'repair_type', sortable: false },
-  { title: 'Status Detail', key: 'status_detail', sortable: true },
-  { title: 'Duration', key: 'reparatur_dauer', sortable: true },
-  { title: 'Date', key: 'datum', sortable: true },
-  { title: 'Closed', key: 'closed_at', sortable: true },
+  { title: 'Gerät', key: 'geraet_art', sortable: true },
+  { title: 'Kunde', key: 'customer', sortable: false },
+  { title: 'Reparateur', key: 'user', sortable: false },
+  { title: 'Kategorie', key: 'repair_type', sortable: false },
+  { title: 'Abschlussgrund', key: 'status_detail', sortable: true },
+  { title: 'Dauer', key: 'reparatur_dauer', sortable: true },
+  { title: 'Angenommen', key: 'datum', sortable: true },
+  { title: 'Abgeschlossen', key: 'closed_at', sortable: true },
   { title: 'DIN', key: 'din_pruef', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: '', key: 'actions', sortable: false },
 ]
 
 const loadRepairs = async (customerId?: number) => {
   loading.value = true
 
   try {
-    const response = await RepairsService.listRepairs(customerId)
+    const response = await api.listRepairs({ customer_id: customerId })
     repairs.value = response.data || []
     totalCount.value = response.count || 0
   } catch (err: any) {
     console.error('Error loading repairs:', err)
-    showMsg(err.message || 'Fehler beim Laden der Reparaturen', 'error')
+    toast.error(err.message || 'Fehler beim Laden der Reparaturen')
   } finally {
     loading.value = false
   }
@@ -421,10 +472,10 @@ const saveRepair = async () => {
 
   saving.value = true
   try {
-    const data = await RepairsService.updateRepair(editedItem.value.id, editedItem.value)
+    const data = await api.updateRepair({ id: editedItem.value.id }, editedItem.value)
 
     if (data.reply === 'done') {
-      showMsg('Reparatur gespeichert')
+      toast.success('Reparatur gespeichert')
       closeEditDialog()
       await loadRepairs(customerFilter.value?.id)
     } else {
@@ -432,7 +483,7 @@ const saveRepair = async () => {
     }
   } catch (err: any) {
     console.error('Error updating repair:', err)
-    showMsg(err.message || 'Fehler beim Speichern', 'error')
+    toast.error(err.message || 'Fehler beim Speichern')
   } finally {
     saving.value = false
   }
@@ -456,12 +507,12 @@ const confirmDelete = async () => {
   if (!deleteTargetId.value) return
   deleting.value = true
   try {
-    await RepairsService.deleteRepair(deleteTargetId.value)
+    await api.deleteRepair({ id: deleteTargetId.value })
     deleteDialog.value = false
-    showMsg('Reparatur gelöscht')
+    toast.success('Reparatur gelöscht')
     await loadRepairs(customerFilter.value?.id)
   } catch (err) {
-    showMsg('Fehler beim Löschen: ' + (err as Error).message, 'error')
+    toast.error('Fehler beim Löschen: ' + (err as Error).message)
   } finally {
     deleting.value = false
     deleteTargetId.value = null
@@ -494,11 +545,11 @@ watch(
 const printLabel = async (id: number) => {
   printingLabelId.value = id
   try {
-    const result = await RepairsService.printLabel(id)
-    showMsg(result.message || 'Label gedruckt')
+    const result = await api.printRepairLabel({ id: id }, {})
+    toast.success(result.message || 'Label gedruckt')
   } catch (err: any) {
     const msg = err?.body?.error || err?.message || 'Fehler beim Drucken'
-    showMsg(msg, 'error')
+    toast.error(msg)
   } finally {
     printingLabelId.value = null
   }
@@ -528,10 +579,20 @@ onMounted(() => {
   loadDropdownOptions()
   userStore.fetchUsers()
   loadRepairs(customerId)
-  ConfigService.getFeatures()
+  api.getFeatures()
     .then((f) => {
       labelPrinterEnabled.value = f.label_printer ?? false
     })
     .catch(() => { })
 })
 </script>
+
+<style scoped>
+.mobile-row {
+  cursor: pointer;
+}
+
+.mobile-row__body {
+  min-width: 0;
+}
+</style>

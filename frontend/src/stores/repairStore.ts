@@ -1,103 +1,12 @@
+import { api } from "@/api/client";
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { RepairsService } from "@/api/services/RepairsService";
-import type { Repair, RepairLog, RepairUpdate } from "@/api/types";
-
-export const REPAIR_STATUSES = [
-  "Offen",
-  "In Bearbeitung",
-  "Repariert",
-  "Nicht Repariert",
-] as const;
-
-export const REPAIR_STATUS_DETAIL_OPTIONS: Record<RepairStatus, string[]> = {
-  Offen: [],
-  "In Bearbeitung": ["Ersatzteilbesorgung"],
-  Repariert: [],
-  "Nicht Repariert": ["Nicht moeglich", "Abbruch", "Wartezeit zu lang"],
-};
-
-export const OPEN_REPAIR_STATUSES: RepairStatus[] = ["Offen", "In Bearbeitung"];
-export const CLOSED_REPAIR_STATUSES: RepairStatus[] = [
-  "Repariert",
-  "Nicht Repariert",
-];
-
-export type RepairStatus = (typeof REPAIR_STATUSES)[number];
-
-export function normalizeRepairStatus(status?: string): RepairStatus {
-  if ((REPAIR_STATUSES as readonly string[]).includes(status || "")) {
-    return status as RepairStatus;
-  }
-  return "Offen";
-}
-
-export function getRepairStatusColor(status?: string): string {
-  switch (normalizeRepairStatus(status)) {
-    case "Offen":
-      return "warning";
-    case "In Bearbeitung":
-      return "info";
-    case "Repariert":
-      return "success";
-    case "Nicht Repariert":
-      return "error";
-    default:
-      return "grey";
-  }
-}
-
-export function getRepairStatusIcon(status?: string): string {
-  switch (normalizeRepairStatus(status)) {
-    case "Offen":
-      return "mdi-clock-outline";
-    case "In Bearbeitung":
-      return "mdi-progress-wrench";
-    case "Repariert":
-      return "mdi-check-circle";
-    case "Nicht Repariert":
-      return "mdi-close-circle";
-    default:
-      return "mdi-help-circle";
-  }
-}
-
-export function getRepairStatusDetailOptions(status?: string): string[] {
-  return REPAIR_STATUS_DETAIL_OPTIONS[normalizeRepairStatus(status)] || [];
-}
-
-export function isOpenRepairStatus(status?: string): boolean {
-  return OPEN_REPAIR_STATUSES.includes(normalizeRepairStatus(status));
-}
-
-export function isClosedRepairStatus(status?: string): boolean {
-  return CLOSED_REPAIR_STATUSES.includes(normalizeRepairStatus(status));
-}
-
-export function requiresCompletionDetailsForTransition(
-  fromStatus: RepairStatus,
-  toStatus: RepairStatus,
-): boolean {
-  return fromStatus === "In Bearbeitung" && toStatus === "Repariert";
-}
-
-export function requiresFailureDetailsForTransition(
-  fromStatus: RepairStatus,
-  toStatus: RepairStatus,
-): boolean {
-  return fromStatus === "In Bearbeitung" && toStatus === "Nicht Repariert";
-}
-
-export function calculateRepairDurationFromLogs(logs: RepairLog[]): number {
-  return logs.reduce((total, log) => total + (log.reparatur_dauer || 0), 0);
-}
-
-const STATUS_TRANSITIONS: Record<RepairStatus, RepairStatus[]> = {
-  Offen: ["In Bearbeitung"],
-  "In Bearbeitung": ["Offen", "Repariert", "Nicht Repariert"],
-  Repariert: ["Offen", "In Bearbeitung", "Nicht Repariert"],
-  "Nicht Repariert": ["Offen", "In Bearbeitung"],
-};
+import type { RepairListItem, RepairUpdate } from "@/api/types";
+import {
+  canTransitionStatus,
+  requiresReparateurForTransition,
+  type RepairStatus,
+} from "@/domain/repairStatus";
 
 type RepairStatusTransitionInput = {
   repairId: number;
@@ -127,7 +36,8 @@ type CompleteFailedRepairInput = {
 
 export const useRepairStore = defineStore("repair", () => {
   // State
-  const repairs = ref<Repair[]>([]);
+  // List items carry each repair's latest log (GET /api/list)
+  const repairs = ref<RepairListItem[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const autoRefreshInterval = ref<number | null>(null);
@@ -184,7 +94,7 @@ export const useRepairStore = defineStore("repair", () => {
     error.value = null;
 
     try {
-      const response = await RepairsService.listRepairs();
+      const response = await api.listRepairs();
       if (response.data && revision === fetchRevision) {
         repairs.value = response.data;
       }
@@ -250,30 +160,13 @@ export const useRepairStore = defineStore("repair", () => {
 
   async function updateRepair(id: number, updates: RepairUpdate) {
     try {
-      await RepairsService.updateRepair(id, updates);
+      await api.updateRepair({ id: id }, updates);
       // Refresh the list after update
       await fetchRepairs(false);
     } catch (err) {
       console.error("Error updating repair:", err);
       throw err;
     }
-  }
-
-  function canTransitionStatus(
-    fromStatus: RepairStatus,
-    toStatus: RepairStatus,
-  ): boolean {
-    if (fromStatus === toStatus) {
-      return true;
-    }
-    return STATUS_TRANSITIONS[fromStatus].includes(toStatus);
-  }
-
-  function requiresReparateurForTransition(
-    fromStatus: RepairStatus,
-    toStatus: RepairStatus,
-  ): boolean {
-    return fromStatus === "Offen" && toStatus === "In Bearbeitung";
   }
 
   async function transitionRepairStatus(input: RepairStatusTransitionInput) {
@@ -301,7 +194,7 @@ export const useRepairStore = defineStore("repair", () => {
       updates.user_id = user_id;
     }
 
-    await RepairsService.updateRepair(repairId, updates);
+    await api.updateRepair({ id: repairId }, updates);
     await fetchRepairs(false);
   }
 
@@ -333,7 +226,7 @@ export const useRepairStore = defineStore("repair", () => {
       throw new Error("Reparaturdauer muss 0 oder groesser sein");
     }
 
-    await RepairsService.updateRepair(repairId, {
+    await api.updateRepair({ id: repairId }, {
       status: toStatus,
       status_detail: statusDetail || undefined,
       user_id: user_id || undefined,
@@ -359,7 +252,7 @@ export const useRepairStore = defineStore("repair", () => {
       throw new Error("Begründung ist erforderlich");
     }
 
-    await RepairsService.updateRepair(repairId, {
+    await api.updateRepair({ id: repairId }, {
       status: toStatus,
       status_detail: statusDetail || undefined,
       user_id: user_id || undefined,
@@ -369,11 +262,11 @@ export const useRepairStore = defineStore("repair", () => {
     await fetchRepairs(false);
   }
 
-  function getRepairById(id: number): Repair | undefined {
+  function getRepairById(id: number): RepairListItem | undefined {
     return repairs.value.find((repair) => repair.id === id);
   }
 
-  function getRepairByQrToken(qrToken: string): Repair | undefined {
+  function getRepairByQrToken(qrToken: string): RepairListItem | undefined {
     return repairs.value.find((repair) => repair.qr_token === qrToken);
   }
 
@@ -408,9 +301,6 @@ export const useRepairStore = defineStore("repair", () => {
     resumeAutoRefresh,
     setRefreshInterval,
     updateRepair,
-    canTransitionStatus,
-    requiresReparateurForTransition,
-    requiresCompletionDetailsForTransition,
     transitionRepairStatus,
     completeSuccessfulRepair,
     completeFailedRepair,

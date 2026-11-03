@@ -1,117 +1,33 @@
 <template>
   <v-app>
-    <v-app-bar v-if="canUseApp" color="primary" prominent>
-      <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+    <v-app-bar v-if="canUseApp" color="primary">
+      <!-- Larger screens have a permanent menu; small ones open it as an overlay -->
+      <v-app-bar-nav-icon
+        v-if="smAndDown"
+        variant="text"
+        aria-label="Menü öffnen"
+        @click.stop="navOpen = !navOpen"
+      ></v-app-bar-nav-icon>
       <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
-      <v-toolbar-title>Repair Cafe</v-toolbar-title>
+      <!-- Phones: the logo is enough, the actions need the room -->
+      <v-toolbar-title class="d-none d-sm-flex">Repair Cafe</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="router.push('/create-repair')">
+      <v-btn icon aria-label="Neue Reparatur" @click="router.push('/create-repair')">
         <v-icon>mdi-plus</v-icon>
       </v-btn>
-      <v-btn icon @click="openQrScanner">
+      <v-btn icon aria-label="QR-Code scannen" @click="qrScannerOpen = true">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>
-      <v-btn v-if="authStore.pinUnlockAvailable" icon aria-label="Bildschirm sperren" @click="lockNow">
-        <v-icon>mdi-lock-outline</v-icon>
-      </v-btn>
-      <v-btn icon>
-        <v-icon>mdi-magnify</v-icon>
-      </v-btn>
+      <AutoLockMenu
+        v-if="authStore.pinUnlockAvailable"
+        :seconds-until-lock="secondsUntilLock"
+        :auto-lock-enabled="authStore.autoLockEnabled"
+        :set-auto-lock="setAutoLockForDevice"
+        @lock="lockNow"
+      />
     </v-app-bar>
 
-    <v-navigation-drawer
-      v-if="canUseApp"
-      v-model="drawer"
-      :temporary="false"
-      width="180"
-      app
-    >
-      <v-list nav>
-        <v-list-item :to="'/dashboard'" value="dashboard" class="text-center" min-height="64">
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-view-dashboard" class="mb-1" />
-            <span class="text-caption">Dashboard</span>
-          </div>
-        </v-list-item>
-        <v-list-item :to="'/'" value="home" class="text-center" min-height="64">
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-home" class="mb-1" />
-            <span class="text-caption">Reparaturen</span>
-          </div>
-        </v-list-item>
-        <v-list-item :to="'/repairs'" value="list" class="text-center" min-height="64">
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-format-list-bulleted" class="mb-1" />
-            <span class="text-caption">Reparaturliste</span>
-          </div>
-        </v-list-item>
-        <v-list-item :to="'/customers'" value="customers" class="text-center" min-height="64">
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-account-group" class="mb-1" />
-            <span class="text-caption">Kunden</span>
-          </div>
-        </v-list-item>
-        <v-list-item
-          v-if="authStore.isAdmin"
-          :to="'/users'"
-          value="users"
-          class="text-center"
-          min-height="64"
-        >
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-account-cog" class="mb-1" />
-            <span class="text-caption">Benutzerverwaltung</span>
-          </div>
-        </v-list-item>
-        <v-list-item
-          v-if="authStore.isAdmin"
-          :to="'/settings'"
-          value="settings"
-          class="text-center"
-          min-height="64"
-        >
-          <div class="d-flex flex-column align-center justify-center py-1">
-            <v-icon icon="mdi-cog" class="mb-1" />
-            <span class="text-caption">Einstellungen</span>
-          </div>
-        </v-list-item>
-      </v-list>
-      <template #append>
-        <v-divider />
-        <v-list v-if="authStore.currentUser" aria-label="Benutzerkonto">
-          <v-list-item
-            :to="{ name: 'Profile' }"
-            prepend-icon="mdi-account-circle"
-            aria-label="Mein Profil"
-          >
-            <v-list-item-title class="text-body-2 text-wrap">{{
-              currentUserName
-            }}</v-list-item-title>
-            <v-list-item-subtitle class="text-wrap">{{
-              authStore.currentUser.username
-            }}</v-list-item-subtitle>
-          </v-list-item>
-          <v-list-item
-            prepend-icon="mdi-logout"
-            title="Abmelden"
-            :disabled="loggingOut"
-            @click="logout"
-          >
-            <template v-if="loggingOut" #append>
-              <v-progress-circular
-                indeterminate
-                size="20"
-                width="2"
-                aria-label="Abmeldung laeuft"
-              />
-            </template>
-          </v-list-item>
-        </v-list>
-        <v-list v-else>
-          <v-list-item :to="{ name: 'Login' }" prepend-icon="mdi-login" title="Anmelden" />
-        </v-list>
-      </template>
-    </v-navigation-drawer>
+    <AppNavigation v-if="canUseApp" v-model:open="navOpen" />
 
     <v-main>
       <v-container fluid :class="{ 'pa-0': !canUseApp }">
@@ -124,363 +40,49 @@
       </v-container>
     </v-main>
 
-    <!-- Global snackbar -->
-    <v-snackbar
-      v-if="canUseApp"
-      v-model="toastVisible"
-      :timeout="toastTimeout"
-      :color="toastColor"
-      location="bottom right"
-    >
-      {{ toastMessage }}
-      <template #actions>
-        <v-btn icon="mdi-close" variant="text" @click="toastVisible = false"></v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Global toasts (useToast); unmounted while locked so nothing shows on the PIN screen -->
+    <v-snackbar-queue v-if="canUseApp" v-model="toastQueue" location="bottom right" closable />
 
-    <!-- QR Scanner Dialog -->
-    <v-dialog v-if="canUseApp" v-model="qrScannerDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon icon="mdi-qrcode-scan" class="mr-2"></v-icon>
-          <span>Scan QR Code</span>
-          <v-spacer></v-spacer>
-          <v-btn icon="mdi-close" variant="text" @click="closeQrScanner"></v-btn>
-        </v-card-title>
-        <v-card-text>
-          <div v-if="!cameraPermissionDenied">
-            <video
-              ref="videoElement"
-              autoplay
-              playsinline
-              style="width: 100%; max-height: 400px; background: #000"
-            ></video>
-            <canvas ref="canvasElement" style="display: none"></canvas>
-            <div v-if="scanning" class="text-center mt-3">
-              <v-progress-circular indeterminate color="primary"></v-progress-circular>
-              <p class="mt-2">Scanning for QR codes...</p>
-            </div>
-          </div>
-          <v-alert v-else type="error" class="mt-3">
-            Camera permission denied. Please allow camera access in your browser settings.
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="closeQrScanner"> Cancel </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-footer v-if="canUseApp" app>
-      <v-spacer></v-spacer>
-      <div>&copy; {{ new Date().getFullYear() }} Repair Cafe</div>
-    </v-footer>
+    <QrScannerDialog v-if="canUseApp" v-model="qrScannerOpen" />
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, provide, onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/authStore'
-import { useRepairStore } from '@/stores/repairStore'
-import { useUserStore } from '@/stores/userStore'
-import jsQR from 'jsqr'
+import { usePinSession } from '@/composables/usePinSession'
+import { useToastQueue } from '@/composables/useToast'
+import AppNavigation from '@/components/AppNavigation.vue'
+import AutoLockMenu from '@/components/AutoLockMenu.vue'
+import QrScannerDialog from '@/components/QrScannerDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
-const repairStore = useRepairStore()
-const userStore = useUserStore()
-const canUseApp = computed(() => authStore.isAuthenticated && !authStore.isLocked)
-const drawer = ref(true)
-const loggingOut = ref(false)
-const currentUserName = computed(() => {
-  const user = authStore.currentUser
-  return [user?.vorname, user?.nachname].filter(Boolean).join(' ') || user?.username || ''
-})
+const toastQueue = useToastQueue()
+const { canUseApp, lockNow, secondsUntilLock, setAutoLockForDevice } = usePinSession()
+const { smAndDown } = useDisplay()
 
-async function logout() {
-  if (loggingOut.value) return
-  loggingOut.value = true
-  try {
-    await authStore.logout()
-    await router.replace({ name: 'Login' })
-  } catch {
-    showToast('Abmelden fehlgeschlagen. Bitte erneut versuchen.', { color: 'error' })
-  } finally {
-    loggingOut.value = false
+const navOpen = ref(false)
+const qrScannerOpen = ref(false)
+
+// Nothing from the previous user may stay visible behind the PIN screen
+watch(canUseApp, (active) => {
+  if (!active) {
+    navOpen.value = false
+    qrScannerOpen.value = false
+    toastQueue.value = []
   }
-}
+})
 
 // Set all favicon / touch-icon links to the dynamic logo endpoint
 onMounted(() => {
-  const logoUrl = '/api/config/logo'
   document
     .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
     .forEach((el) => {
-      el.href = logoUrl
+      el.href = '/api/config/logo'
     })
-  document.addEventListener('pointerdown', handleUserActivity, { passive: true })
-  document.addEventListener('pointermove', handleUserActivity, { passive: true })
-  document.addEventListener('keydown', handleUserActivity)
-  document.addEventListener('touchstart', handleUserActivity, { passive: true })
-  document.addEventListener('scroll', handleUserActivity, { passive: true })
-  document.addEventListener('visibilitychange', revalidatePinSession)
-  scheduleIdleLock()
 })
-
-// Global toast state
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastColor = ref<'success' | 'error' | 'warning' | 'info' | string>('info')
-const toastTimeout = ref(4000)
-let idleTimer: number | null = null
-let lastActivityRequest = 0
-let lastActivityBroadcast = 0
-const IDLE_TIMEOUT_MS = 60_000
-const lockChannel = typeof BroadcastChannel !== 'undefined'
-  ? new BroadcastChannel('repaircafe-pin-session')
-  : null
-
-function clearIdleTimer() {
-  if (idleTimer !== null) {
-    window.clearTimeout(idleTimer)
-    idleTimer = null
-  }
-}
-
-function scheduleIdleLock() {
-  clearIdleTimer()
-  // No idle lock outside the workshop: the PIN pad only works there
-  if (!canUseApp.value || !authStore.pinUnlockAvailable) return
-  idleTimer = window.setTimeout(() => void lockNow(), IDLE_TIMEOUT_MS)
-}
-
-function handleUserActivity() {
-  if (!canUseApp.value || document.visibilityState !== 'visible') return
-  scheduleIdleLock()
-  const now = Date.now()
-  if (now - lastActivityBroadcast >= 1_000) {
-    lastActivityBroadcast = now
-    lockChannel?.postMessage('activity')
-  }
-  if (now - lastActivityRequest < 5_000) return
-  lastActivityRequest = now
-  void authStore.recordActivity().then((active) => {
-    if (!active && authStore.isLocked) {
-      void router.replace({ name: 'PinLock' })
-    }
-  })
-}
-
-async function lockNow() {
-  clearIdleTimer()
-  if (!authStore.pinSessionEligible || authStore.isLocked || !authStore.pinUnlockAvailable) return
-  const locked = await authStore.lockSession()
-  if (locked) {
-    closeQrScanner()
-    lockChannel?.postMessage('session-changed')
-    await router.replace({ name: 'PinLock' })
-  } else {
-    scheduleIdleLock()
-  }
-}
-
-async function revalidatePinSession() {
-  if (document.visibilityState !== 'visible') return
-  const eligible = await authStore.fetchMe()
-  if (!eligible) {
-    await router.replace({ name: 'Login' })
-  } else if (authStore.isLocked) {
-    await router.replace({ name: 'PinLock' })
-  } else {
-    handleUserActivity()
-    if (route.name === 'PinLock') {
-      await router.replace({ name: 'Home' })
-    }
-  }
-}
-
-watch(
-  () => authStore.isLocked,
-  (locked) => {
-    if (locked) {
-      repairStore.clear()
-      userStore.clear()
-      closeQrScanner()
-      lockChannel?.postMessage('session-changed')
-      if (authStore.pinSessionEligible && route.name !== 'PinLock') {
-        void router.replace({ name: 'PinLock' })
-      }
-    } else if (canUseApp.value) {
-      scheduleIdleLock()
-    }
-  }
-)
-
-watch(canUseApp, (active) => {
-  if (active) {
-    scheduleIdleLock()
-  } else {
-    clearIdleTimer()
-  }
-})
-
-watch(
-  () => authStore.currentUser?.id,
-  (nextId, previousId) => {
-    if (nextId !== previousId) {
-      repairStore.clear()
-      userStore.clear()
-      if (nextId && previousId) {
-        void router.replace({ name: 'Home' })
-      }
-      if (nextId || previousId) {
-        lockChannel?.postMessage('session-changed')
-      }
-    }
-  }
-)
-
-lockChannel?.addEventListener('message', (event: MessageEvent<string>) => {
-  if (event.data === 'activity') {
-    scheduleIdleLock()
-    return
-  }
-  void revalidatePinSession()
-})
-
-// QR Scanner state
-const qrScannerDialog = ref(false)
-const videoElement = ref<HTMLVideoElement | null>(null)
-const canvasElement = ref<HTMLCanvasElement | null>(null)
-const scanning = ref(false)
-const cameraPermissionDenied = ref(false)
-let mediaStream: MediaStream | null = null
-let animationFrameId: number | null = null
-
-function showToast(message: string, options?: { color?: string; timeout?: number }) {
-  toastMessage.value = message
-  toastColor.value = options?.color ?? 'error'
-  toastTimeout.value = options?.timeout ?? 4000
-  toastVisible.value = true
-}
-
-async function openQrScanner() {
-  qrScannerDialog.value = true
-  cameraPermissionDenied.value = false
-
-  try {
-    // Request camera access
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, // Use back camera on mobile
-    })
-
-    if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream
-      videoElement.value.play()
-      scanning.value = true
-      scanQRCode()
-    }
-  } catch (error) {
-    console.error('Error accessing camera:', error)
-    cameraPermissionDenied.value = true
-    showToast('Could not access camera. Please check permissions.', { color: 'error' })
-  }
-}
-
-function scanQRCode() {
-  if (!videoElement.value || !canvasElement.value || !scanning.value) return
-
-  const video = videoElement.value
-  const canvas = canvasElement.value
-  const ctx = canvas.getContext('2d')
-
-  if (!ctx) return
-
-  // Set canvas size to match video
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
-
-  if (canvas.width > 0 && canvas.height > 0) {
-    // Draw video frame to canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Get image data
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-    // Scan for QR code
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
-    })
-
-    if (code) {
-      handleQRCodeDetected(code.data)
-      return
-    }
-  }
-
-  // Continue scanning
-  animationFrameId = requestAnimationFrame(scanQRCode)
-}
-
-function handleQRCodeDetected(data: string) {
-  // Extract token from URL or use data directly
-  let token = data
-
-  // Labels encode <APP_URL>/edit/<qr_token> (see label_service.py)
-  const urlMatch = data.match(/\/edit\/([a-f0-9]{32})\b/)
-  if (urlMatch) {
-    token = urlMatch[1]!
-
-    // Navigate to edit page with token
-    closeQrScanner()
-    router.push(`/edit/${token}`)
-    showToast('QR Code scanned successfully!', { color: 'success' })
-    return
-  }
-
-  // If it's just a token or repair ID, show it
-  closeQrScanner()
-  showToast(`Scanned: ${data}`, { color: 'info', timeout: 6000 })
-}
-
-function closeQrScanner() {
-  scanning.value = false
-  qrScannerDialog.value = false
-
-  // Stop animation frame
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId)
-    animationFrameId = null
-  }
-
-  // Stop media stream
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop())
-    mediaStream = null
-  }
-
-  // Clear video source
-  if (videoElement.value) {
-    videoElement.value.srcObject = null
-  }
-}
-
-// Cleanup on component unmount
-onUnmounted(() => {
-  closeQrScanner()
-  clearIdleTimer()
-  document.removeEventListener('pointerdown', handleUserActivity)
-  document.removeEventListener('pointermove', handleUserActivity)
-  document.removeEventListener('keydown', handleUserActivity)
-  document.removeEventListener('touchstart', handleUserActivity)
-  document.removeEventListener('scroll', handleUserActivity)
-  document.removeEventListener('visibilitychange', revalidatePinSession)
-  lockChannel?.close()
-})
-
-// Expose globally via provide/inject
-provide('showToast', showToast)
 </script>

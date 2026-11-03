@@ -60,6 +60,10 @@ class PinUnlockSession(db.Model):
     is_locked: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )
+    # Off on personal devices: the session is then never idle-locked
+    auto_lock_enabled: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=True, server_default=db.true()
+    )
     last_activity_at: Mapped[datetime] = mapped_column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )

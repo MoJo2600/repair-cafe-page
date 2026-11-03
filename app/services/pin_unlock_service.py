@@ -91,11 +91,26 @@ def end_browser_session() -> None:
 def expire_pin_session_if_idle(grant: PinUnlockSession) -> bool:
     if grant.is_locked:
         return True
+    if not grant.auto_lock_enabled:
+        return False
     if grant.last_activity_at <= utc_now() - IDLE_TIMEOUT:
         grant.is_locked = True
         db.session.commit()
         return True
     return False
+
+
+def set_auto_lock(enabled: bool) -> PinUnlockSession:
+    """Switch the idle auto-lock for the current browser session."""
+    grant = current_pin_session()
+    if not grant:
+        raise PinError("PIN session is unavailable", 401)
+    grant.auto_lock_enabled = enabled
+    if enabled:
+        # Start a fresh idle period instead of locking right away
+        grant.last_activity_at = utc_now()
+    db.session.commit()
+    return grant
 
 
 def lock_pin_session() -> None:

@@ -1,29 +1,25 @@
 <template>
-    <v-container fluid class="pa-4">
-        <!-- Header -->
-        <v-row align="center" class="mb-4">
-            <v-col>
-                <h1 class="text-h5 font-weight-bold">Kunden</h1>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn color="success" prepend-icon="mdi-account-plus" class="mr-2" @click="openCreateDialog">
-                    Neuer Kunde
-                </v-btn>
-                <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="loadCustomers">
+    <v-container fluid class="page-container">
+        <PageHeader title="Kunden">
+            <template #actions>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="loadCustomers">
                     Aktualisieren
                 </v-btn>
-            </v-col>
-        </v-row>
+                <v-btn color="primary" variant="flat" prepend-icon="mdi-account-plus" @click="openCreateDialog">
+                    Neuer Kunde
+                </v-btn>
+            </template>
+        </PageHeader>
 
         <!-- Filter row -->
-        <v-row class="mb-2" align="center">
+        <v-row class="mb-2 align-center">
             <v-col cols="12" sm="4">
                 <v-text-field
 v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="compact"
                     clearable hide-details />
             </v-col>
             <v-spacer />
-            <v-col cols="auto" class="text-body-2 text-medium-emphasis">
+            <v-col cols="auto" class="text-body-medium text-medium-emphasis">
                 Gesamt: {{ customers.length }}
             </v-col>
         </v-row>
@@ -32,13 +28,79 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
         <v-card>
             <v-data-table
 :headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
+                :mobile="false" :hide-default-header="smAndDown"
                 hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
+                <!-- Small screens: one compact entry per customer -->
+                <template v-if="smAndDown" #item="{ item }">
+                    <tr class="mobile-row" @click="openEditDialog(item)">
+                        <td :colspan="headers.length" class="py-3">
+                            <div class="d-flex align-start ga-2">
+                                <div class="flex-grow-1 mobile-row__body d-flex flex-column ga-1">
+                                    <PersonLabel :person="item" role="customer" class="text-title-medium" />
+                                    <a v-if="item.telefon" :href="`tel:${item.telefon}`" class="text-body-medium" @click.stop>
+                                        <v-icon icon="mdi-phone" size="small" class="mr-1" />{{ item.telefon }}
+                                    </a>
+                                    <a v-if="item.email" :href="`mailto:${item.email}`" class="text-body-medium" @click.stop>
+                                        <v-icon icon="mdi-email" size="small" class="mr-1" />{{ item.email }}
+                                    </a>
+                                    <div class="text-body-small text-medium-emphasis">
+                                        Kunde seit {{ formatDate(item.created_at) }}
+                                    </div>
+                                </div>
+                                <v-btn
+                                    v-if="item.repair_count"
+                                    variant="tonal"
+                                    prepend-icon="mdi-wrench"
+                                    @click.stop="goToRepairs(item)"
+                                >
+                                    {{ item.repair_count }}
+                                </v-btn>
+                                <v-menu v-if="authStore.isAdmin" location="bottom end">
+                                    <template #activator="{ props: menuProps }">
+                                        <v-btn
+                                            v-bind="menuProps"
+                                            icon="mdi-dots-vertical"
+                                            variant="text"
+                                            aria-label="Weitere Aktionen"
+                                            @click.stop
+                                        />
+                                    </template>
+                                    <v-list>
+                                        <v-list-item
+                                            prepend-icon="mdi-delete"
+                                            title="Löschen"
+                                            base-color="error"
+                                            @click="openDeleteDialog(item.id)"
+                                        />
+                                    </v-list>
+                                </v-menu>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
                 <template #item.repair_count="{ item }">
-                    <v-chip
-:color="item.repair_count ? 'primary' : 'grey'" size="small" variant="tonal"
-                        style="cursor: pointer" @click.stop="goToRepairs(item)">
-                        {{ item.repair_count ?? 0 }}
-                    </v-chip>
+                    <v-btn
+                        v-if="item.repair_count"
+                        variant="text"
+                        size="small"
+                        prepend-icon="mdi-wrench"
+                        @click.stop="goToRepairs(item)"
+                    >
+                        {{ item.repair_count }}
+                    </v-btn>
+                    <span v-else class="text-medium-emphasis">0</span>
+                </template>
+
+                <template #item.name="{ item }">
+                    <PersonLabel :person="item" role="customer" />
+                </template>
+
+                <template #item.telefon="{ item }">
+                    <a v-if="item.telefon" :href="`tel:${item.telefon}`" @click.stop>{{ item.telefon }}</a>
+                </template>
+
+                <template #item.email="{ item }">
+                    <a v-if="item.email" :href="`mailto:${item.email}`" @click.stop>{{ item.email }}</a>
                 </template>
 
                 <template #item.created_at="{ item }">
@@ -59,9 +121,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
                 </template>
 
                 <template #no-data>
-                    <v-alert type="info" class="ma-4">
-                        Noch keine Kunden vorhanden.
-                    </v-alert>
+                    <v-empty-state icon="mdi-account-search-outline" title="Noch keine Kunden" size="56" />
                 </template>
             </v-data-table>
         </v-card>
@@ -69,13 +129,13 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
         <!-- Create / Edit Dialog -->
         <v-dialog v-model="editDialog" max-width="500" persistent>
             <v-card>
-                <v-card-title class="text-h5">
+                <v-card-title class="text-headline-small">
                     <v-icon :icon="editedCustomer.id ? 'mdi-account-edit' : 'mdi-account-plus'" class="mr-2" />
                     {{ editedCustomer.id ? 'Kunde bearbeiten' : 'Neuer Kunde' }}
                 </v-card-title>
                 <v-card-text>
                     <v-form ref="editForm" v-model="editFormValid">
-                        <v-row dense>
+                        <v-row density="compact">
                             <v-col cols="12">
                                 <v-text-field
 v-model="editedCustomer.vorname" label="Vorname *"
@@ -112,7 +172,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
         <!-- Delete Confirmation Dialog -->
         <v-dialog v-model="deleteDialog" max-width="420">
             <v-card>
-                <v-card-title class="text-h6">
+                <v-card-title class="text-title-large">
                     <v-icon color="error" class="mr-2">mdi-account-remove</v-icon>
                     Kunden löschen?
                 </v-card-title>
@@ -128,40 +188,37 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-            {{ snackbarText }}
-        </v-snackbar>
     </v-container>
 </template>
 
 <script setup lang="ts">
+import { useDisplay } from 'vuetify'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
+import { personName } from '@/utils/person'
+import { api } from '@/api/client'
+import type { CustomerWithRepairCountResponse as CustomerResponse } from '@/api/types'
 import { ref, onMounted } from 'vue'
+import type { VForm } from 'vuetify/components'
 import { formatDate } from '@/utils/date'
 import { useRouter } from 'vue-router'
-import { CustomersService, type CustomerResponse } from '@/api/services/CustomersService'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { smAndDown } = useDisplay()
 
 const customers = ref<CustomerResponse[]>([])
 const loading = ref(false)
 const search = ref('')
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-const snackbarColor = ref('success')
-
-function showMsg(text: string, color = 'success') {
-    snackbarText.value = text
-    snackbarColor.value = color
-    snackbar.value = true
-}
 
 const headers = [
     { title: 'ID', key: 'id', sortable: true },
-    { title: 'Vorname', key: 'vorname', sortable: true },
-    { title: 'Nachname', key: 'nachname', sortable: true },
+    { title: 'Name', key: 'name', value: (c: CustomerResponse) => personName(c), sortable: true },
     { title: 'Telefon', key: 'telefon', sortable: false },
     { title: 'E-Mail', key: 'email', sortable: false },
     { title: 'Reparaturen', key: 'repair_count', sortable: true },
@@ -173,7 +230,7 @@ const headers = [
 const editDialog = ref(false)
 const editFormValid = ref(false)
 const saving = ref(false)
-const editForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const editForm = ref<InstanceType<typeof VForm> | null>(null)
 
 type EditableCustomer = { id?: number; vorname: string; nachname: string; telefon: string; email: string }
 const blankCustomer = (): EditableCustomer => ({ vorname: '', nachname: '', telefon: '', email: '' })
@@ -187,17 +244,17 @@ const deleting = ref(false)
 async function loadCustomers() {
     loading.value = true
     try {
-        const res = await CustomersService.listCustomers()
+        const res = await api.listCustomers()
         customers.value = res.data ?? []
     } catch (err: any) {
-        showMsg(err.message || 'Fehler beim Laden der Kunden', 'error')
+        toast.error(err.message || 'Fehler beim Laden der Kunden')
     } finally {
         loading.value = false
     }
 }
 
 function goToRepairs(customer: CustomerResponse) {
-    router.push({ path: '/repairs', query: { customer_id: customer.id, customer_name: `${customer.vorname} ${customer.nachname}`, status: 'all' } })
+    router.push({ path: '/repairs', query: { customer_id: customer.id, customer_name: personName(customer), status: 'all' } })
 }
 
 function openCreateDialog() {
@@ -235,16 +292,16 @@ async function saveCustomer() {
             email: editedCustomer.value.email || null,
         }
         if (editedCustomer.value.id) {
-            await CustomersService.updateCustomer(editedCustomer.value.id, payload)
-            showMsg('Kunde aktualisiert')
+            await api.updateCustomer({ customerId: editedCustomer.value.id }, payload)
+            toast.success('Kunde aktualisiert')
         } else {
-            await CustomersService.createCustomer(payload)
-            showMsg('Kunde erstellt')
+            await api.createCustomer(payload)
+            toast.success('Kunde erstellt')
         }
         closeEditDialog()
         await loadCustomers()
     } catch (err: any) {
-        showMsg(err.message || 'Fehler beim Speichern', 'error')
+        toast.error(err.message || 'Fehler beim Speichern')
     } finally {
         saving.value = false
     }
@@ -260,12 +317,12 @@ async function confirmDelete() {
     if (!deleteTargetId.value) return
     deleting.value = true
     try {
-        await CustomersService.deleteCustomer(deleteTargetId.value)
+        await api.deleteCustomer({ customerId: deleteTargetId.value })
         deleteDialog.value = false
-        showMsg('Kunde gelöscht')
+        toast.success('Kunde gelöscht')
         await loadCustomers()
     } catch (err) {
-        showMsg('Fehler beim Löschen: ' + (err as Error).message, 'error')
+        toast.error('Fehler beim Löschen: ' + (err as Error).message)
     } finally {
         deleting.value = false
         deleteTargetId.value = null
@@ -274,3 +331,13 @@ async function confirmDelete() {
 
 onMounted(loadCustomers)
 </script>
+
+<style scoped>
+.mobile-row {
+  cursor: pointer;
+}
+
+.mobile-row__body {
+  min-width: 0;
+}
+</style>

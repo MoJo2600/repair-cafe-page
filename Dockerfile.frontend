@@ -3,7 +3,8 @@ FROM node:26-alpine AS frontend-builder
 
 WORKDIR /build
 
-RUN corepack enable
+# Node 25+ no longer bundles corepack; install it so pnpm follows "packageManager"
+RUN npm install -g corepack && corepack enable
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
