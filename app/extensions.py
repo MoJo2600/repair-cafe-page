@@ -64,6 +64,7 @@ def init_swagger(app):
         PinSessionStatusResponse,
         PinStatusResponse,
         PinUnlockRequest,
+        PinAutoLockRequest,
         PruefgeraetResponse,
         RepairAttachmentListResponse,
         RepairAttachmentResponse,
@@ -129,6 +130,7 @@ def init_swagger(app):
                     PinSessionStatusResponse
                 ),
                 "PinUnlockRequest": pydantic_to_swagger(PinUnlockRequest),
+                "PinAutoLockRequest": pydantic_to_swagger(PinAutoLockRequest),
                 "PinSessionActionResponse": pydantic_to_swagger(
                     PinSessionActionResponse
                 ),

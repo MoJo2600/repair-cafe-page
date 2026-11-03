@@ -153,7 +153,13 @@ class PinSessionStatusResponse(BaseModel):
     eligible: bool
     locked: bool
     pin_unlock_available: bool = True
+    auto_lock_enabled: bool = Field(True, description="Idle auto-lock active for this session")
+    idle_timeout_seconds: int = Field(60, description="Seconds without activity until auto-lock")
     user: Optional[UserResponse] = None
+
+
+class PinAutoLockRequest(BaseModel):
+    enabled: bool
 
 
 class PinUnlockRequest(BaseModel):

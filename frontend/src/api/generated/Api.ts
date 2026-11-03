@@ -48,6 +48,7 @@ import {
   ListVdeTestsParams,
   LoginRequest,
   OidcLoginParams,
+  PinAutoLockRequest,
   PinDashboardSummaryResponse,
   PinGenerateRequest,
   PinGeneratedResponse,
@@ -254,6 +255,23 @@ export class Api<
     this.request<PinSessionActionResponse, void>({
       path: `/api/auth/pin-session/activity`,
       method: "POST",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Auth
+   * @name SetPinAutoLock
+   * @summary Switch the idle auto-lock for this browser session (e.g. off on a personal device).
+   * @request PUT:/api/auth/pin-session/auto-lock
+   */
+  setPinAutoLock = (body: PinAutoLockRequest, params: RequestParams = {}) =>
+    this.request<PinSessionActionResponse, void>({
+      path: `/api/auth/pin-session/auto-lock`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
       format: "json",
       ...params,
     });

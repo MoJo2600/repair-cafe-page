@@ -171,6 +171,10 @@ export interface LoginRequest {
   username: string;
 }
 
+export interface PinAutoLockRequest {
+  enabled: boolean;
+}
+
 export interface PinDashboardCategoryCount {
   /** Total repairs in this category */
   count: number;
@@ -220,7 +224,17 @@ export interface PinSessionActionResponse {
 }
 
 export interface PinSessionStatusResponse {
+  /**
+   * Idle auto-lock active for this session
+   * @default true
+   */
+  auto_lock_enabled?: boolean;
   eligible: boolean;
+  /**
+   * Seconds without activity until auto-lock
+   * @default 60
+   */
+  idle_timeout_seconds?: number;
   locked: boolean;
   /** @default true */
   pin_unlock_available?: boolean;

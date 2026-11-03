@@ -17,9 +17,13 @@
       <v-btn icon aria-label="QR-Code scannen" @click="qrScannerOpen = true">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>
-      <v-btn v-if="authStore.pinUnlockAvailable" icon aria-label="Bildschirm sperren" @click="lockNow">
-        <v-icon>mdi-lock-outline</v-icon>
-      </v-btn>
+      <AutoLockMenu
+        v-if="authStore.pinUnlockAvailable"
+        :seconds-until-lock="secondsUntilLock"
+        :auto-lock-enabled="authStore.autoLockEnabled"
+        :set-auto-lock="setAutoLockForDevice"
+        @lock="lockNow"
+      />
     </v-app-bar>
 
     <AppNavigation v-if="canUseApp" v-model:open="navOpen" />
@@ -50,13 +54,14 @@ import { useAuthStore } from '@/stores/authStore'
 import { usePinSession } from '@/composables/usePinSession'
 import { useToastQueue } from '@/composables/useToast'
 import AppNavigation from '@/components/AppNavigation.vue'
+import AutoLockMenu from '@/components/AutoLockMenu.vue'
 import QrScannerDialog from '@/components/QrScannerDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const toastQueue = useToastQueue()
-const { canUseApp, lockNow } = usePinSession()
+const { canUseApp, lockNow, secondsUntilLock, setAutoLockForDevice } = usePinSession()
 const { smAndDown } = useDisplay()
 
 const navOpen = ref(false)

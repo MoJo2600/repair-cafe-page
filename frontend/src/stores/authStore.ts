@@ -19,6 +19,9 @@ export const useAuthStore = defineStore('auth', () => {
   /** PIN lock/unlock is only offered inside the workshop network. */
   const pinUnlockAvailable = ref(true)
   const sessionChecked = ref(false)
+  /** Idle auto-lock for this browser session (server-side switch, see usePinSession). */
+  const autoLockEnabled = ref(true)
+  const idleTimeoutSeconds = ref(60)
 
   const isAuthenticated = computed(() => currentUser.value !== null)
   const isAdmin = computed(() => currentUser.value?.is_admin ?? false)
@@ -35,6 +38,8 @@ export const useAuthStore = defineStore('auth', () => {
       pinSessionEligible.value = data.eligible
       isLocked.value = data.locked
       pinUnlockAvailable.value = data.pin_unlock_available ?? true
+      autoLockEnabled.value = data.auto_lock_enabled ?? true
+      idleTimeoutSeconds.value = data.idle_timeout_seconds ?? 60
       currentUser.value = data.locked ? null : (data.user ?? null)
       sessionChecked.value = true
       return data.eligible
@@ -115,6 +120,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function setAutoLock(enabled: boolean): Promise<boolean> {
+    try {
+      await api.setPinAutoLock({ enabled })
+      autoLockEnabled.value = enabled
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /** Server reported the PIN session as locked (HTTP 423). */
   function markLocked() {
     currentUser.value = null
@@ -138,6 +153,9 @@ export const useAuthStore = defineStore('auth', () => {
     isLocked,
     pinUnlockAvailable,
     sessionChecked,
+    autoLockEnabled,
+    idleTimeoutSeconds,
+    setAutoLock,
     fetchMe,
     login,
     logout,

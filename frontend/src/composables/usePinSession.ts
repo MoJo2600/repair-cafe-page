@@ -1,17 +1,35 @@
-import { computed, onScopeDispose, watch } from 'vue'
+import { computed, onScopeDispose, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useRepairStore } from '@/stores/repairStore'
 import { useUserStore } from '@/stores/userStore'
 
-/** Lock the UI after this long without user activity. */
-export const IDLE_TIMEOUT_MS = 60_000
 /** Minimum gap between activity heartbeats sent to the server. */
 const ACTIVITY_REQUEST_INTERVAL_MS = 5_000
 /** Minimum gap between activity messages to other tabs. */
 const ACTIVITY_BROADCAST_INTERVAL_MS = 1_000
 
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll'] as const
+
+/** Remembered per device: personal devices in the workshop network can switch it off. */
+const AUTO_LOCK_PREF_KEY = 'repaircafe.autoLock'
+
+function deviceWantsAutoLockOff(): boolean {
+  try {
+    return localStorage.getItem(AUTO_LOCK_PREF_KEY) === 'off'
+  } catch {
+    return false
+  }
+}
+
+function rememberAutoLockForDevice(enabled: boolean) {
+  try {
+    if (enabled) localStorage.removeItem(AUTO_LOCK_PREF_KEY)
+    else localStorage.setItem(AUTO_LOCK_PREF_KEY, 'off')
+  } catch {
+    // Storage unavailable (private mode): the switch then lasts for this login only
+  }
+}
 
 /**
  * PIN session lifecycle for the shared workshop PC: idle auto-lock, activity
@@ -26,8 +44,16 @@ export function usePinSession() {
   const userStore = useUserStore()
 
   const canUseApp = computed(() => authStore.isAuthenticated && !authStore.isLocked)
+  /** The PC locks itself when idle: only in the workshop network and unless switched off. */
+  const autoLockActive = computed(
+    () => canUseApp.value && authStore.pinUnlockAvailable && authStore.autoLockEnabled
+  )
+  /** Seconds until the auto-lock, for the countdown; null while there is none. */
+  const secondsUntilLock = shallowRef<number | null>(null)
 
   let idleTimer: number | null = null
+  let countdownTimer: number | null = null
+  let lockAt = 0
   let lastActivityRequest = 0
   let lastActivityBroadcast = 0
   const channel =
@@ -38,14 +64,54 @@ export function usePinSession() {
       window.clearTimeout(idleTimer)
       idleTimer = null
     }
+    if (countdownTimer !== null) {
+      window.clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+    secondsUntilLock.value = null
+  }
+
+  function updateCountdown() {
+    secondsUntilLock.value = Math.max(0, Math.ceil((lockAt - Date.now()) / 1000))
   }
 
   function scheduleIdleLock() {
     clearIdleTimer()
-    // No idle lock outside the workshop: the PIN pad only works there
-    if (!canUseApp.value || !authStore.pinUnlockAvailable) return
-    idleTimer = window.setTimeout(() => void lockNow(), IDLE_TIMEOUT_MS)
+    // No idle lock outside the workshop (the PIN pad only works there) or when switched off
+    if (!autoLockActive.value) return
+    const timeoutMs = authStore.idleTimeoutSeconds * 1000
+    lockAt = Date.now() + timeoutMs
+    idleTimer = window.setTimeout(() => void lockNow(), timeoutMs)
+    updateCountdown()
+    countdownTimer = window.setInterval(updateCountdown, 1000)
   }
+
+  /** Switch the auto-lock for this device; remembered for later logins. */
+  async function setAutoLockForDevice(enabled: boolean): Promise<boolean> {
+    const ok = await authStore.setAutoLock(enabled)
+    if (ok) {
+      rememberAutoLockForDevice(enabled)
+      // Other tabs of this browser share the session; let them re-read it
+      channel?.postMessage('session-changed')
+    }
+    return ok
+  }
+
+  // A fresh login starts with the auto-lock on; apply this device's choice again
+  watch(
+    canUseApp,
+    (active) => {
+      if (active && authStore.pinUnlockAvailable && authStore.autoLockEnabled && deviceWantsAutoLockOff()) {
+        void authStore.setAutoLock(false)
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(
+    () => authStore.autoLockEnabled,
+    () => scheduleIdleLock()
+  )
 
   function handleUserActivity() {
     if (!canUseApp.value || document.visibilityState !== 'visible') return
@@ -153,5 +219,5 @@ export function usePinSession() {
     channel?.close()
   })
 
-  return { canUseApp, lockNow }
+  return { canUseApp, lockNow, autoLockActive, secondsUntilLock, setAutoLockForDevice }
 }

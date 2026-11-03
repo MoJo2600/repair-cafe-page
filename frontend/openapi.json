@@ -307,6 +307,17 @@
       ],
       "type": "object"
     },
+    "PinAutoLockRequest": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
     "PinDashboardCategoryCount": {
       "properties": {
         "count": {
@@ -436,8 +447,18 @@
     },
     "PinSessionStatusResponse": {
       "properties": {
+        "auto_lock_enabled": {
+          "default": true,
+          "description": "Idle auto-lock active for this session",
+          "type": "boolean"
+        },
         "eligible": {
           "type": "boolean"
+        },
+        "idle_timeout_seconds": {
+          "default": 60,
+          "description": "Seconds without activity until auto-lock",
+          "type": "integer"
         },
         "locked": {
           "type": "boolean"
@@ -2343,6 +2364,45 @@
           }
         },
         "summary": "Record real user activity for the session idle timeout.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/pin-session/auto-lock": {
+      "put": {
+        "operationId": "setPinAutoLock",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PinAutoLockRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New auto-lock state",
+            "schema": {
+              "$ref": "#/definitions/PinSessionActionResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Primary login required"
+          },
+          "403": {
+            "description": "Only in the workshop network (elsewhere there is no auto-lock)"
+          },
+          "423": {
+            "description": "Session is locked"
+          }
+        },
+        "summary": "Switch the idle auto-lock for this browser session (e.g. off on a personal device).",
         "tags": [
           "Auth"
         ]

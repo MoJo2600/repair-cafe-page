@@ -6,6 +6,7 @@ import json
 
 import flask_login
 from flask import Blueprint, Response, current_app, request
+from pydantic import ValidationError
 from werkzeug.security import check_password_hash
 
 from app.auth.decorators import login_required_api, public_endpoint
@@ -20,6 +21,7 @@ from app.schemas import (
     PinDashboardRepairItem,
     PinDashboardSummaryResponse,
     PinGeneratedResponse,
+    PinAutoLockRequest,
     PinGenerateRequest,
     PinSessionActionResponse,
     PinSessionStatusResponse,
@@ -36,10 +38,12 @@ from app.services.pin_unlock_service import (
     current_pin_session,
     end_browser_session,
     expire_pin_session_if_idle,
+    IDLE_TIMEOUT,
     lock_pin_session,
     pin_unlock_available,
     record_pin_activity,
     revoke_pin_unlock_session,
+    set_auto_lock,
     unlock_pin_session,
     utc_now,
 )
@@ -241,6 +245,8 @@ def api_pin_session_status():
         eligible=True,
         locked=locked,
         pin_unlock_available=available,
+        auto_lock_enabled=grant.auto_lock_enabled,
+        idle_timeout_seconds=int(IDLE_TIMEOUT.total_seconds()),
         user=(
             None
             if locked
@@ -275,6 +281,50 @@ def api_pin_lock():
         return grant
     lock_pin_session()
     return _pin_response(PinSessionActionResponse(locked=True))
+
+
+@auth_bp.route("/auth/pin-session/auto-lock", methods=["PUT"])
+def api_pin_auto_lock():
+    """
+    Switch the idle auto-lock for this browser session (e.g. off on a personal device).
+    ---
+    tags:
+      - Auth
+    operationId: setPinAutoLock
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PinAutoLockRequest'
+    responses:
+      200:
+        description: New auto-lock state
+        schema:
+          $ref: '#/definitions/PinSessionActionResponse'
+      400:
+        description: Invalid request
+      401:
+        description: Primary login required
+      403:
+        description: Only in the workshop network (elsewhere there is no auto-lock)
+      423:
+        description: Session is locked
+    """
+    if not pin_unlock_available():
+        return _pin_error(_WORKSHOP_ONLY, 403)
+    grant = _get_pin_session()
+    if isinstance(grant, Response):
+        return grant
+    # Switching it off must not be a way around an expired session
+    if expire_pin_session_if_idle(grant):
+        return _pin_error("Session locked", 423)
+    try:
+        body = PinAutoLockRequest.model_validate(request.get_json(silent=True) or {})
+    except ValidationError:
+        return _pin_error("A JSON object with 'enabled' is required", 400)
+    set_auto_lock(body.enabled)
+    return _pin_response(PinSessionActionResponse(locked=False))
 
 
 @auth_bp.route("/auth/pin-session/activity", methods=["POST"])
