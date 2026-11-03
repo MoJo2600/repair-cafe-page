@@ -108,6 +108,9 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 - Spacing on the 4 px grid; between cards `mb-4`, inside groups `ga-2`.
 - Small screens: one column, tabs instead of side-by-side sections, the main action in
   a bottom bar or `v-fab`; dialogs fullscreen (`ResponsiveDialog`).
+- Tables on small screens: no column header; each row becomes one compact entry in the
+  same order as cards (number, title, meta row, people, meta line), secondary actions
+  in a ⋮ menu. Search, sorting and paging stay those of the table.
 - Loading: skeletons in the shape of the content; empty: `v-empty-state` with icon and
   one sentence.
 

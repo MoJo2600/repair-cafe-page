@@ -9,7 +9,8 @@
         @click.stop="navOpen = !navOpen"
       ></v-app-bar-nav-icon>
       <v-img src="/api/config/logo" max-height="40" max-width="40" class="mr-3" contain></v-img>
-      <v-toolbar-title>Repair Cafe</v-toolbar-title>
+      <!-- Phones: the logo is enough, the actions need the room -->
+      <v-toolbar-title class="d-none d-sm-flex">Repair Cafe</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon aria-label="Neue Reparatur" @click="router.push('/create-repair')">
         <v-icon>mdi-plus</v-icon>

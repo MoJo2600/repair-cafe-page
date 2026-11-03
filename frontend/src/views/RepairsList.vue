@@ -56,9 +56,59 @@
         :custom-filter="customerNameFilter"
         :loading="loading"
         :items-per-page="10"
+        :mobile="false"
+        :hide-default-header="smAndDown"
         hover
         @click:row="(_e: MouseEvent, { item }: { item: Repair }) => editRepair(item)"
       >
+        <!-- Small screens: one compact entry per repair instead of 12 columns -->
+        <template v-if="smAndDown" #item="{ item }">
+          <tr class="mobile-row" @click="editRepair(item)">
+            <td :colspan="headers.length" class="py-3">
+              <div class="d-flex align-start ga-3">
+                <RepairNumber :id="item.id" :status="item.status" :size="40" />
+                <div class="flex-grow-1 mobile-row__body">
+                  <div class="text-title-medium">{{ item.geraet_art }}</div>
+                  <RepairMeta :status="item.status" :category="item.repair_type?.name" class="my-1" />
+                  <div class="d-flex flex-column ga-1 text-body-medium">
+                    <PersonLabel :person="item.customer" role="customer" />
+                    <PersonLabel v-if="item.user" :person="item.user" role="repairer" />
+                  </div>
+                  <div class="text-body-small text-medium-emphasis mt-1">
+                    Angenommen am {{ formatDate(item.datum) }}
+                    <template v-if="item.closed_at"> · abgeschlossen {{ formatDate(item.closed_at) }}</template>
+                  </div>
+                </div>
+                <v-menu v-if="labelPrinterEnabled || authStore.isAdmin" location="bottom end">
+                  <template #activator="{ props: menuProps }">
+                    <v-btn
+                      v-bind="menuProps"
+                      icon="mdi-dots-vertical"
+                      variant="text"
+                      aria-label="Weitere Aktionen"
+                      @click.stop
+                    />
+                  </template>
+                  <v-list>
+                    <v-list-item
+                      v-if="labelPrinterEnabled"
+                      prepend-icon="mdi-printer"
+                      title="Etikett drucken"
+                      @click="printLabel(item.id)"
+                    />
+                    <v-list-item
+                      v-if="authStore.isAdmin"
+                      prepend-icon="mdi-delete"
+                      title="Löschen"
+                      base-color="error"
+                      @click="deleteRepair(item.id)"
+                    />
+                  </v-list>
+                </v-menu>
+              </div>
+            </td>
+          </tr>
+        </template>
         <template #item.status="{ item }">
           <StatusChip :status="item.status" />
         </template>
@@ -115,7 +165,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
         </template>
 
         <template #no-data>
-          <v-alert type="info" class="ma-4"> Keine Reparaturen gefunden. </v-alert>
+          <v-empty-state icon="mdi-clipboard-search-outline" title="Keine Reparaturen gefunden" size="56" />
         </template>
       </v-data-table>
     </v-card>
@@ -255,6 +305,9 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
 </template>
 
 <script setup lang="ts">
+import RepairNumber from '@/components/ui/RepairNumber.vue'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
+import { useDisplay } from 'vuetify'
 import { personName } from '@/utils/person'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
@@ -284,6 +337,7 @@ type RepairEditForm = Partial<Omit<Repair, 'status' | 'user_id'>> & {
 }
 
 const router = useRouter()
+const { smAndDown } = useDisplay()
 const route = useRoute()
 const userStore = useUserStore()
 const authStore = useAuthStore()
@@ -532,3 +586,13 @@ onMounted(() => {
     .catch(() => { })
 })
 </script>
+
+<style scoped>
+.mobile-row {
+  cursor: pointer;
+}
+
+.mobile-row__body {
+  min-width: 0;
+}
+</style>

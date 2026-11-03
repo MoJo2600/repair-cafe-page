@@ -28,7 +28,56 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
         <v-card>
             <v-data-table
 :headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
+                :mobile="false" :hide-default-header="smAndDown"
                 hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
+                <!-- Small screens: one compact entry per customer -->
+                <template v-if="smAndDown" #item="{ item }">
+                    <tr class="mobile-row" @click="openEditDialog(item)">
+                        <td :colspan="headers.length" class="py-3">
+                            <div class="d-flex align-start ga-2">
+                                <div class="flex-grow-1 mobile-row__body d-flex flex-column ga-1">
+                                    <PersonLabel :person="item" role="customer" class="text-title-medium" />
+                                    <a v-if="item.telefon" :href="`tel:${item.telefon}`" class="text-body-medium" @click.stop>
+                                        <v-icon icon="mdi-phone" size="small" class="mr-1" />{{ item.telefon }}
+                                    </a>
+                                    <a v-if="item.email" :href="`mailto:${item.email}`" class="text-body-medium" @click.stop>
+                                        <v-icon icon="mdi-email" size="small" class="mr-1" />{{ item.email }}
+                                    </a>
+                                    <div class="text-body-small text-medium-emphasis">
+                                        Kunde seit {{ formatDate(item.created_at) }}
+                                    </div>
+                                </div>
+                                <v-btn
+                                    v-if="item.repair_count"
+                                    variant="tonal"
+                                    prepend-icon="mdi-wrench"
+                                    @click.stop="goToRepairs(item)"
+                                >
+                                    {{ item.repair_count }}
+                                </v-btn>
+                                <v-menu v-if="authStore.isAdmin" location="bottom end">
+                                    <template #activator="{ props: menuProps }">
+                                        <v-btn
+                                            v-bind="menuProps"
+                                            icon="mdi-dots-vertical"
+                                            variant="text"
+                                            aria-label="Weitere Aktionen"
+                                            @click.stop
+                                        />
+                                    </template>
+                                    <v-list>
+                                        <v-list-item
+                                            prepend-icon="mdi-delete"
+                                            title="Löschen"
+                                            base-color="error"
+                                            @click="openDeleteDialog(item.id)"
+                                        />
+                                    </v-list>
+                                </v-menu>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
                 <template #item.repair_count="{ item }">
                     <v-btn
                         v-if="item.repair_count"
@@ -72,9 +121,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
                 </template>
 
                 <template #no-data>
-                    <v-alert type="info" class="ma-4">
-                        Noch keine Kunden vorhanden.
-                    </v-alert>
+                    <v-empty-state icon="mdi-account-search-outline" title="Noch keine Kunden" size="56" />
                 </template>
             </v-data-table>
         </v-card>
@@ -145,6 +192,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 </template>
 
 <script setup lang="ts">
+import { useDisplay } from 'vuetify'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
 import { personName } from '@/utils/person'
@@ -161,6 +209,7 @@ const toast = useToast()
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { smAndDown } = useDisplay()
 
 const customers = ref<CustomerResponse[]>([])
 const loading = ref(false)
@@ -282,3 +331,13 @@ async function confirmDelete() {
 
 onMounted(loadCustomers)
 </script>
+
+<style scoped>
+.mobile-row {
+  cursor: pointer;
+}
+
+.mobile-row__body {
+  min-width: 0;
+}
+</style>
