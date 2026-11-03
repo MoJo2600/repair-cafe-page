@@ -1,10 +1,6 @@
 <template>
   <v-container fluid class="pa-4">
-    <v-row class="mb-4 align-center">
-      <v-col>
-        <h1 class="text-headline-small font-weight-bold">Einstellungen</h1>
-      </v-col>
-    </v-row>
+    <PageHeader title="Einstellungen" />
 
     <!-- Organisation -->
     <v-card class="mb-6">
@@ -39,7 +35,7 @@ v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
       </v-card-text>
       <v-card-actions class="px-4 pb-4">
         <v-spacer />
-        <v-btn color="primary" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
+        <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
       </v-card-actions>
     </v-card>
 
@@ -58,7 +54,7 @@ v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
         <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
-color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
+color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
@@ -70,7 +66,7 @@ v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,applica
               @update:model-value="disclaimerError = ''" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
+            <v-btn color="primary" variant="flat" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
               Hochladen
             </v-btn>
           </v-col>
@@ -96,7 +92,7 @@ v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,applica
         <v-row class="ga-4 align-center">
           <v-col cols="12" sm="auto">
             <v-btn
-color="primary" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
+color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
               target="_blank">
               Aktuelle Vorlage anzeigen
             </v-btn>
@@ -108,7 +104,7 @@ v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,appli
               @update:model-value="cancellationError = ''" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
+            <v-btn color="primary" variant="flat" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
               Hochladen
             </v-btn>
           </v-col>
@@ -138,7 +134,7 @@ v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.pn
               @update:model-value="onLogoFileChange" />
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn color="primary" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
+            <v-btn color="primary" variant="flat" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
               Hochladen
             </v-btn>
           </v-col>
@@ -161,9 +157,8 @@ size="small" color="primary" prepend-icon="mdi-plus"
 :headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
-          <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-            {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
-          </v-chip>
+          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
@@ -186,9 +181,8 @@ size="small" color="primary" prepend-icon="mdi-plus"
 :headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
         density="comfortable">
         <template #item.is_active="{ item }">
-          <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-            {{ item.is_active ? 'Aktiv' : 'Inaktiv' }}
-          </v-chip>
+          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
         </template>
         <template #item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
@@ -218,7 +212,7 @@ v-model="form.name" label="Name *"
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="closeDialog">Abbrechen</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveItem">Speichern</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveItem">Speichern</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -251,6 +245,8 @@ v-model="form.name" label="Name *"
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
 import { api } from '@/api/client'
 import { errorMessage } from '@/utils/errors'
 import { onMounted, ref } from 'vue'

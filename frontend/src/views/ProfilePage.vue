@@ -1,6 +1,6 @@
 <template>
   <div class="profile-page pa-4">
-    <h1 class="text-headline-small font-weight-bold mb-6">Mein Profil</h1>
+    <PageHeader title="Mein Profil" />
 
     <dl class="profile-details mb-8">
       <div>
@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'

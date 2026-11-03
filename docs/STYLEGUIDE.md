@@ -38,10 +38,11 @@ Chips are only for **short values from a fixed set** that the user scans for.
 
 | Value | Component | Look |
 |---|---|---|
-| Repair status | `StatusChip` | tonal, status color, status icon |
+| Repair status | `StatusChip` | tonal, status color, status icon, square corners (`label`) |
 | Category (repair type) | `TagChip` | tonal, neutral, `mdi-tag-outline` |
 | Count (tabs, section headers) | `CountBadge` | x-small, neutral |
 | Active / inactive (users, settings) | `StatusChip` (generic variant) | tonal, success / neutral |
+| Active filter (e.g. customer in the repair list) | `v-chip closable` | tonal, removable |
 
 **Not chips:** people, dates, durations, free text, IDs, anything clickable that is
 really a button.
@@ -104,6 +105,9 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 | Secondary actions | `variant="tonal"` or `text` |
 | Destructive (delete, deactivate) | `color="error"`, `variant="text"`, always with confirmation |
 | Icon-only buttons | always with `aria-label` |
+
+Always set `variant` explicitly: Vuetify picks different defaults by context (e.g.
+`text` inside `v-card-actions`), so the same action would look different on every page.
 
 ## Wording
 

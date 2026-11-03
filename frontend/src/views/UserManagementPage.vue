@@ -1,15 +1,12 @@
 <template>
     <v-container fluid class="pa-4">
-        <v-row class="mb-4 align-center">
-            <v-col>
-                <h1 class="text-headline-small font-weight-bold">Benutzerverwaltung</h1>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn color="primary" prepend-icon="mdi-account-plus" @click="openCreateDialog">
+        <PageHeader title="Benutzerverwaltung">
+            <template #actions>
+                <v-btn color="primary" variant="flat" prepend-icon="mdi-account-plus" @click="openCreateDialog">
                     Neuer Benutzer
                 </v-btn>
-            </v-col>
-        </v-row>
+            </template>
+        </PageHeader>
 
         <!-- Filter bar -->
         <v-row class="mb-2">
@@ -32,22 +29,19 @@ v-model="filterActive" :items="activeFilterOptions" label="Status" density="comp
                 @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <!-- Active chip -->
                 <template #item.is_active="{ item }">
-                    <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
-                        {{ item.is_active ? 'Aktiv' : 'Deaktiviert' }}
-                    </v-chip>
+                    <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+                    <StatusChip v-else label="Deaktiviert" icon="mdi-cancel" />
                 </template>
 
                 <!-- Admin chip -->
                 <template #item.is_admin="{ item }">
-                    <v-chip v-if="item.is_admin" color="primary" size="small" variant="tonal">
-                        Admin
-                    </v-chip>
-                    <span v-else class="text-medium-emphasis">—</span>
+                    <StatusChip v-if="item.is_admin" label="Admin" icon="mdi-shield-account" />
+                    <span v-else class="text-medium-emphasis">–</span>
                 </template>
 
                 <!-- Full name -->
                 <template #item.name="{ item }">
-                    {{ item.vorname }} {{ item.nachname }}
+                    {{ personName(item) }}
                 </template>
 
                 <!-- Actions -->
@@ -57,7 +51,7 @@ icon="mdi-pencil" size="small" variant="text" density="compact"
                         @click.stop="openEditDialog(item)" />
                     <v-btn
 v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
-                        color="warning" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
+                        color="error" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
                         @click.stop="confirmDeactivate(item)" />
                     <v-btn
 v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
@@ -144,6 +138,9 @@ v-model="form.is_admin" label="Administrator" hide-details
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/ui/PageHeader.vue";
+import StatusChip from "@/components/ui/StatusChip.vue";
+import { personName } from "@/utils/person";
 import { computed, onMounted, ref } from "vue";
 import type { VForm } from "vuetify/components";
 import { api } from "@/api/client";

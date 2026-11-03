@@ -1,19 +1,15 @@
 <template>
     <v-container fluid class="pa-4">
-        <!-- Header -->
-        <v-row class="mb-4 align-center">
-            <v-col>
-                <h1 class="text-headline-small font-weight-bold">Kunden</h1>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn color="success" prepend-icon="mdi-account-plus" class="mr-2" @click="openCreateDialog">
-                    Neuer Kunde
-                </v-btn>
-                <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="loadCustomers">
+        <PageHeader title="Kunden">
+            <template #actions>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="loadCustomers">
                     Aktualisieren
                 </v-btn>
-            </v-col>
-        </v-row>
+                <v-btn color="primary" variant="flat" prepend-icon="mdi-account-plus" @click="openCreateDialog">
+                    Neuer Kunde
+                </v-btn>
+            </template>
+        </PageHeader>
 
         <!-- Filter row -->
         <v-row class="mb-2 align-center">
@@ -34,11 +30,28 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
 :headers="headers" :items="customers" :loading="loading" :search="search" :items-per-page="15"
                 hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <template #item.repair_count="{ item }">
-                    <v-chip
-:color="item.repair_count ? 'primary' : 'grey'" size="small" variant="tonal"
-                        style="cursor: pointer" @click.stop="goToRepairs(item)">
-                        {{ item.repair_count ?? 0 }}
-                    </v-chip>
+                    <v-btn
+                        v-if="item.repair_count"
+                        variant="text"
+                        size="small"
+                        prepend-icon="mdi-wrench"
+                        @click.stop="goToRepairs(item)"
+                    >
+                        {{ item.repair_count }}
+                    </v-btn>
+                    <span v-else class="text-medium-emphasis">0</span>
+                </template>
+
+                <template #item.name="{ item }">
+                    <PersonLabel :person="item" role="customer" />
+                </template>
+
+                <template #item.telefon="{ item }">
+                    <a v-if="item.telefon" :href="`tel:${item.telefon}`" @click.stop>{{ item.telefon }}</a>
+                </template>
+
+                <template #item.email="{ item }">
+                    <a v-if="item.email" :href="`mailto:${item.email}`" @click.stop>{{ item.email }}</a>
                 </template>
 
                 <template #item.created_at="{ item }">
@@ -132,6 +145,8 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import PersonLabel from '@/components/ui/PersonLabel.vue'
 import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import type { CustomerWithRepairCountResponse as CustomerResponse } from '@/api/types'
@@ -154,8 +169,7 @@ const search = ref('')
 
 const headers = [
     { title: 'ID', key: 'id', sortable: true },
-    { title: 'Vorname', key: 'vorname', sortable: true },
-    { title: 'Nachname', key: 'nachname', sortable: true },
+    { title: 'Name', key: 'name', value: (c: CustomerResponse) => personName(c), sortable: true },
     { title: 'Telefon', key: 'telefon', sortable: false },
     { title: 'E-Mail', key: 'email', sortable: false },
     { title: 'Reparaturen', key: 'repair_count', sortable: true },
