@@ -33,18 +33,19 @@ export function normalizeRepairStatus(status?: string): RepairStatus {
   return "Offen";
 }
 
+/** Theme color of a status (see docs/STYLEGUIDE.md: status colors are their own tokens). */
 export function getRepairStatusColor(status?: string): string {
   switch (normalizeRepairStatus(status)) {
     case "Offen":
-      return "warning";
+      return "status-open";
     case "In Bearbeitung":
-      return "info";
+      return "status-in-progress";
     case "Repariert":
-      return "success";
+      return "status-repaired";
     case "Nicht Repariert":
-      return "error";
+      return "status-not-repaired";
     default:
-      return "grey";
+      return "status-open";
   }
 }
 

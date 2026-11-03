@@ -35,6 +35,7 @@ const mainItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { title: 'Benutzer', icon: 'mdi-account-cog', to: '/users' },
   { title: 'Einstellungen', icon: 'mdi-cog', to: '/settings' },
+  { title: 'Styleguide', icon: 'mdi-palette-outline', to: '/styleguide' },
 ]
 // Detail pages (e.g. a repair) have their own back button and bottom action bar;
 // the bottom navigation would only take their space

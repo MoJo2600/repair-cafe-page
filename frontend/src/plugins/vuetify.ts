@@ -65,6 +65,12 @@ export default createVuetify({
           info: '#2196F3',
           success: '#4CAF50',
           warning: '#FB8C00',
+          // Repair statuses (docs/STYLEGUIDE.md): only for status chips, avatars and
+          // status buttons; never for messages
+          'status-open': '#EF8A00',
+          'status-in-progress': '#1E88E5',
+          'status-repaired': '#2E9D4F',
+          'status-not-repaired': '#D93A35',
         },
       },
       dark: {
@@ -76,6 +82,10 @@ export default createVuetify({
           info: '#2196F3',
           success: '#4CAF50',
           warning: '#FB8C00',
+          'status-open': '#FFA726',
+          'status-in-progress': '#64B5F6',
+          'status-repaired': '#66BB6A',
+          'status-not-repaired': '#EF5350',
         },
       },
     },

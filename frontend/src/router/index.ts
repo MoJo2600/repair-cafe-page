@@ -55,6 +55,12 @@ const routes: RouteRecordRaw[] = [
     meta: { adminOnly: true },
   },
   {
+    path: '/styleguide',
+    name: 'Styleguide',
+    component: () => import('../views/StyleguidePage.vue'),
+    meta: { adminOnly: true },
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/SettingsPage.vue'),
