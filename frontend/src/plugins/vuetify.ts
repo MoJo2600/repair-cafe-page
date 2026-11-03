@@ -26,6 +26,8 @@ export default createVuetify({
     },
     VFileUpload: {
       rounded: 'lg',
+      // The default dropzone is very tall; compact keeps forms and dialogs usable on tablets
+      density: 'compact',
     },
     VSelect: {
       variant: 'outlined',

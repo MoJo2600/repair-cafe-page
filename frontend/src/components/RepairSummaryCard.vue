@@ -8,7 +8,7 @@
       </template>
       <v-card-title class="text-headline-small text-wrap">{{ repairData.geraet_art }}</v-card-title>
       <v-card-subtitle>{{ subtitle }}</v-card-subtitle>
-      <template #append>
+      <template v-if="mdAndUp" #append>
         <div class="d-flex align-center ga-1">
           <v-chip :color="statusColor" variant="tonal" :prepend-icon="statusIcon">
             {{ repairData.status }}
@@ -25,6 +25,21 @@
     </v-card-item>
 
     <v-card-text>
+      <!-- Small screens: status and edit get their own row, the title keeps the full width -->
+      <div v-if="!mdAndUp" class="d-flex align-center justify-space-between mb-4">
+        <v-chip :color="statusColor" variant="tonal" :prepend-icon="statusIcon">
+          {{ repairData.status }}
+        </v-chip>
+        <v-btn
+          v-if="repairData.id"
+          variant="text"
+          prepend-icon="mdi-pencil"
+          @click="openEditDialog"
+        >
+          Bearbeiten
+        </v-btn>
+      </div>
+
       <div class="text-title-small text-medium-emphasis">Beschreibung des Defekts</div>
       <p class="text-body-large mb-4">{{ repairData.defekt_besch || '–' }}</p>
 
@@ -130,6 +145,7 @@ v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api } from '@/api/client'
 import { ref, computed } from 'vue'
+import { useDisplay } from 'vuetify'
 import type { Repair, VdeTestResponse } from '@/api/types'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
@@ -162,6 +178,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { mdAndUp } = useDisplay()
 
 const statusColor = computed(() => getRepairStatusColor(props.repairData.status ?? ''))
 const statusIcon = computed(() => getRepairStatusIcon(props.repairData.status ?? ''))
