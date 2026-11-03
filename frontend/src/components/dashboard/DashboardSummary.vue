@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { useTheme } from 'vuetify'
-import confetti from 'canvas-confetti'
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -13,6 +12,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { api } from '@/api/client'
+import { useCelebration } from '@/composables/useCelebration'
 import type { PinDashboardSummaryResponse, RepairsTimelinePoint } from '@/api/types'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
 import CountBadge from '@/components/ui/CountBadge.vue'
@@ -23,8 +23,11 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 
 /**
  * Non-identifying repair figures; shown on the dashboard and on the lock screen
- * (also projected on the wall, so no customer data here). Refreshes every 15 s.
+ * (also projected on the wall, so no customer data here). Refreshes every 5 s and
+ * celebrates every newly repaired device with confetti and a fanfare.
  */
+const REFRESH_MS = 5_000
+
 const theme = useTheme()
 
 const summary = ref<PinDashboardSummaryResponse | null>(null)
@@ -50,23 +53,29 @@ async function load() {
   }
 }
 
+// Catch up right away when the tab comes back (background tabs throttle timers)
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') void load()
+}
+
 onMounted(() => {
   void load()
-  refreshTimer = window.setInterval(() => void load(), 15_000)
+  refreshTimer = window.setInterval(() => void load(), REFRESH_MS)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 onUnmounted(() => {
   if (refreshTimer !== null) window.clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
-// A little celebration for everyone watching when a repair succeeds
-let previousRepaired = -1
+// Celebrate for everyone watching when a repair succeeds (not on the first load)
+const { soundEnabled, soundUnlocked, celebrate, setSoundEnabled, testSound } = useCelebration()
+let previousRepaired: number | null = null
 watch(
   () => summary.value?.repaired_repairs,
   (count) => {
     if (count == null) return
-    if (previousRepaired >= 0 && count > previousRepaired) {
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
-    }
+    if (previousRepaired !== null && count > previousRepaired) celebrate()
     previousRepaired = count
   }
 )
@@ -127,6 +136,28 @@ const chartOptions = {
 
 <template>
   <div>
+    <!-- Sound for the celebration; browsers need one interaction before playing audio -->
+    <div class="d-flex justify-end mb-2">
+      <v-btn
+        v-if="soundEnabled && !soundUnlocked"
+        color="primary"
+        variant="tonal"
+        prepend-icon="mdi-volume-high"
+        @click="testSound"
+      >
+        Ton aktivieren
+      </v-btn>
+      <v-btn
+        v-else
+        variant="text"
+        :prepend-icon="soundEnabled ? 'mdi-volume-high' : 'mdi-volume-off'"
+        :aria-label="soundEnabled ? 'Jubelton ausschalten' : 'Jubelton einschalten'"
+        @click="setSoundEnabled(!soundEnabled)"
+      >
+        {{ soundEnabled ? 'Ton an' : 'Ton aus' }}
+      </v-btn>
+    </div>
+
     <v-alert v-if="failed" type="warning" variant="tonal" class="mb-4">
       <div class="d-flex align-center justify-space-between ga-4">
         <span>Übersicht derzeit nicht verfügbar</span>
