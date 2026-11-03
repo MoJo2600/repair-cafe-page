@@ -1,0 +1,17 @@
+/*
+ * App-wide style adjustments. Component styles stay scoped in their SFCs.
+ * Unlayered rules here take precedence over Vuetify 4's cascade layers.
+ */
+
+/* Compact file upload: the default 1.5rem title and large icon dominate small screens */
+.v-file-upload-dropzone--density-compact .v-file-upload-title {
+  font-size: 1rem;
+}
+
+.v-file-upload-dropzone--density-compact .v-file-upload-icon {
+  font-size: 1.5rem;
+}
+
+.v-file-upload-dropzone--density-compact {
+  padding-block: 12px;
+}
