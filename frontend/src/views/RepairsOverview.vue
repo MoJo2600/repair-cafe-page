@@ -149,7 +149,7 @@ async function confirmStartRepair(userId: number) {
           <v-chip size="small">{{ section.repairs.length }}</v-chip>
         </h2>
 
-        <v-row v-if="initialLoading" dense>
+        <v-row v-if="initialLoading" density="compact">
           <v-col v-for="n in 2" :key="n" cols="12">
             <v-skeleton-loader type="list-item-avatar-two-line, actions" />
           </v-col>

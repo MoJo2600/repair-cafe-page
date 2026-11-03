@@ -43,7 +43,7 @@
       <div class="text-title-small text-medium-emphasis">Beschreibung des Defekts</div>
       <p class="text-body-large mb-4">{{ repairData.defekt_besch || '–' }}</p>
 
-      <v-row dense>
+      <v-row density="compact">
         <v-col cols="12" sm="6">
           <v-list density="compact" class="py-0" bg-color="transparent">
             <v-list-item prepend-icon="mdi-account" :title="customerName || '–'" subtitle="Kunde" />
