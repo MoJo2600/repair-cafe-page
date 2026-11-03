@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" max-width="800px" persistent scrollable>
+    <ResponsiveDialog v-model="open" max-width="800px" persistent>
         <v-card>
             <v-card-title class="text-headline-small">
                 <v-icon start>mdi-flash</v-icon>
@@ -222,10 +222,11 @@ v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
                 </v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { computed, ref, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
 import type { UserResponse, PruefgeraetResponse } from '@/api/types'

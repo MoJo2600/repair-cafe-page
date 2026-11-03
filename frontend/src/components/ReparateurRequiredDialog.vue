@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" max-width="600px">
+    <ResponsiveDialog v-model="open" max-width="600px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-account</v-icon>
@@ -44,10 +44,11 @@
                 <v-btn color="primary" :loading="loading" @click="confirmDialog">{{ confirmText }}</v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { useUserStore } from '@/stores/userStore'

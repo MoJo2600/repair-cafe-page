@@ -1,100 +1,103 @@
 <template>
   <v-card class="mb-4">
-    <v-card-title class="text-headline-small">
-      <div class="d-flex justify-space-between align-center">
-        <span>{{ repairData.geraet_art }} ({{ repairData.id }})</span>
-        <div class="d-flex align-center gap-2">
-          <v-btn v-if="repairData.id" icon="mdi-pencil" size="small" variant="text" @click="openEditDialog"></v-btn>
-          <v-chip
-:color="getStatusColor(repairData.status ?? '')" variant="tonal"
-            :prepend-icon="getStatusIcon(repairData.status ?? '')">
+    <v-card-item>
+      <template #prepend>
+        <v-avatar :color="statusColor" size="48">
+          <span class="text-title-medium font-weight-bold">{{ repairData.id }}</span>
+        </v-avatar>
+      </template>
+      <v-card-title class="text-headline-small text-wrap">{{ repairData.geraet_art }}</v-card-title>
+      <v-card-subtitle>{{ subtitle }}</v-card-subtitle>
+      <template #append>
+        <div class="d-flex align-center ga-1">
+          <v-chip :color="statusColor" variant="tonal" :prepend-icon="statusIcon">
             {{ repairData.status }}
           </v-chip>
+          <v-btn
+            v-if="repairData.id"
+            icon="mdi-pencil"
+            variant="text"
+            aria-label="Reparatur bearbeiten"
+            @click="openEditDialog"
+          ></v-btn>
         </div>
-      </div>
-    </v-card-title>
-    <v-card-text>
-      <v-row>
-        <v-col cols="12">
-          <div class="text-title-small text-grey-darken-1">Beschreibung des Defekts</div>
-          <div>{{ repairData.defekt_besch }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Kategorie</div>
-          <div>{{ repairData.repair_type?.name }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Geräte Art / Bezeichnung</div>
-          <div>{{ repairData.geraet_art }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Datum</div>
-          <div>{{ formatDate(repairData.datum) }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Name</div>
-          <div>{{ repairData.customer?.vorname }} {{ repairData.customer?.nachname }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Telefon</div>
-          <div>{{ repairData.customer?.telefon || '-' }}</div>
-        </v-col>
-        <v-col cols="6">
-          <div class="text-title-small text-grey-darken-1">Email</div>
-          <div>{{ repairData.customer?.email || '-' }}</div>
-        </v-col>
-        <v-col v-if="repairData.reparatur_dauer" cols="6">
-          <div class="text-title-small text-grey-darken-1">Reparaturdauer</div>
-          <div>{{ repairData.reparatur_dauer }} Min.</div>
-        </v-col>
-        <v-col v-else-if="loggedDuration > 0" cols="6">
-          <div class="text-title-small text-grey-darken-1">Protokollierte Zeit</div>
-          <div>{{ loggedDuration }} Min.</div>
-        </v-col>
-        <template v-if="repairData.status === 'Repariert' || repairData.status === 'Nicht Repariert'">
-          <v-col cols="12">
-            <v-divider class="my-3"></v-divider>
-          </v-col>
-          <v-col v-if="repairData.reparatur_besch" cols="6">
-            <div class="text-title-small text-grey-darken-1">
-              {{ repairData.status === 'Repariert' ? 'Reparaturergebnis' : 'Begründung' }}
-            </div>
-            <div>{{ repairData.reparatur_besch }}</div>
-          </v-col>
-          <v-col v-if="repairData.status_detail" cols="6">
-            <div class="text-title-small text-grey-darken-1">Abschlussgrund</div>
-            <div>{{ repairData.status_detail }}</div>
-          </v-col>
+      </template>
+    </v-card-item>
 
-        </template>
-        <v-col v-if="vdeTests && vdeTests.length > 0" cols="12">
-          <v-divider class="my-3"></v-divider>
-          <div class="text-title-small text-grey-darken-1 mb-2">Letztes Test Ergebnis nach VDE</div>
-          <v-alert
-v-for="test in vdeTests" :key="test.id" :type="test.gesamtergebnis === true ? 'success' : 'error'"
-            variant="tonal" density="compact" class="mb-2">
-            <div class="d-flex align-center">
-              <div class="flex-grow-1">
-                <strong>{{
-                  test.gesamtergebnis === true ? '✓ Bestanden' : '⚠ Nicht bestanden'
-                }}</strong>
-                <span class="ml-2 text-body-small">{{ formatDateTime(test.created_at) }}</span>
-                <div class="text-body-small mt-1">
-                  Prüfer: {{ test.prufer }} | Gerät: {{ test.pruefgeraet_name || '-' }}
-                </div>
-                <div v-if="test.bemerkungen" class="text-body-small mt-1">
-                  {{ test.bemerkungen }}
-                </div>
-              </div>
-            </div>
-          </v-alert>
+    <v-card-text>
+      <div class="text-title-small text-medium-emphasis">Beschreibung des Defekts</div>
+      <p class="text-body-large mb-4">{{ repairData.defekt_besch || '–' }}</p>
+
+      <v-row dense>
+        <v-col cols="12" sm="6">
+          <v-list density="compact" class="py-0" bg-color="transparent">
+            <v-list-item prepend-icon="mdi-account" :title="customerName || '–'" subtitle="Kunde" />
+            <v-list-item
+              v-if="repairData.customer?.telefon"
+              prepend-icon="mdi-phone"
+              :href="`tel:${repairData.customer.telefon}`"
+              :title="repairData.customer.telefon"
+              subtitle="Telefon"
+            />
+            <v-list-item
+              v-if="repairData.customer?.email"
+              prepend-icon="mdi-email"
+              :href="`mailto:${repairData.customer.email}`"
+              :title="repairData.customer.email"
+              subtitle="E-Mail"
+            />
+          </v-list>
+        </v-col>
+        <v-col cols="12" sm="6">
+          <v-list density="compact" class="py-0" bg-color="transparent">
+            <v-list-item
+              v-if="durationLabel"
+              prepend-icon="mdi-timer-outline"
+              :title="durationLabel.value"
+              :subtitle="durationLabel.label"
+            />
+            <v-list-item
+              v-if="repairData.status_detail"
+              prepend-icon="mdi-flag-outline"
+              :title="repairData.status_detail"
+              subtitle="Abschlussgrund"
+            />
+          </v-list>
         </v-col>
       </v-row>
+
+      <v-alert
+        v-if="isClosed && repairData.reparatur_besch"
+        :type="repairData.status === 'Repariert' ? 'success' : 'warning'"
+        variant="tonal"
+        :title="repairData.status === 'Repariert' ? 'Reparaturergebnis' : 'Begründung'"
+        :text="repairData.reparatur_besch"
+        class="mt-3"
+      />
+
+      <template v-if="vdeTests && vdeTests.length > 0">
+        <div class="text-title-small text-medium-emphasis mt-4 mb-2">Letzter VDE-Test</div>
+        <v-alert
+          v-for="test in vdeTests"
+          :key="test.id"
+          :type="test.gesamtergebnis === true ? 'success' : 'error'"
+          variant="tonal"
+          density="compact"
+          class="mb-2"
+        >
+          <strong>{{ test.gesamtergebnis === true ? 'Bestanden' : 'Nicht bestanden' }}</strong>
+          <span class="ml-2 text-body-small">{{ formatDateTime(test.created_at) }}</span>
+          <div class="text-body-small mt-1">
+            Prüfer: {{ test.prufer }} · Gerät: {{ test.pruefgeraet_name || '–' }}
+          </div>
+          <div v-if="test.bemerkungen" class="text-body-small mt-1">{{ test.bemerkungen }}</div>
+        </v-alert>
+      </template>
     </v-card-text>
   </v-card>
 
   <!-- Edit basic fields dialog -->
-  <v-dialog v-model="editDialog" max-width="500" persistent>
+  <ResponsiveDialog v-model="editDialog" max-width="500" persistent>
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-pencil</v-icon>
@@ -120,15 +123,18 @@ v-model="editForm.defekt_besch" label="Beschreibung des Defekts" rows="3"
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api } from '@/api/client'
 import { ref, computed } from 'vue'
 import type { Repair, VdeTestResponse } from '@/api/types'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
+import { useToast } from '@/composables/useToast'
+import { errorMessage } from '@/utils/errors'
 
 // A repair being created: no ids yet, and unselected fields are null.
 type RepairDraft = Omit<Partial<Repair>, 'customer' | 'repair_type_id' | 'repair_type'> & {
@@ -146,14 +152,44 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updated: [
-    fields: { datum: string; repair_type_id: number | undefined; geraet_art: string; defekt_besch: string }
+    fields: {
+      datum: string
+      repair_type_id: number | undefined
+      geraet_art: string
+      defekt_besch: string
+    },
   ]
 }>()
 
-const getStatusColor = getRepairStatusColor
-const getStatusIcon = getRepairStatusIcon
+const toast = useToast()
 
-const loggedDuration = computed(() => props.loggedDuration ?? 0)
+const statusColor = computed(() => getRepairStatusColor(props.repairData.status ?? ''))
+const statusIcon = computed(() => getRepairStatusIcon(props.repairData.status ?? ''))
+const isClosed = computed(
+  () => props.repairData.status === 'Repariert' || props.repairData.status === 'Nicht Repariert'
+)
+const customerName = computed(() =>
+  [props.repairData.customer?.vorname, props.repairData.customer?.nachname]
+    .filter(Boolean)
+    .join(' ')
+)
+const subtitle = computed(() =>
+  [
+    props.repairData.repair_type?.name,
+    props.repairData.datum ? formatDate(props.repairData.datum) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+)
+const durationLabel = computed(() => {
+  if (props.repairData.reparatur_dauer) {
+    return { label: 'Reparaturdauer', value: `${props.repairData.reparatur_dauer} Min.` }
+  }
+  if (props.loggedDuration) {
+    return { label: 'Protokollierte Zeit', value: `${props.loggedDuration} Min.` }
+  }
+  return null
+})
 
 // ── Edit dialog ───────────────────────────────────────────────────────
 const editDialog = ref(false)
@@ -193,6 +229,8 @@ async function saveEdit() {
       repair_type_id: editForm.value.repair_type_id ?? undefined,
     })
     editDialog.value = false
+  } catch (err) {
+    toast.error('Fehler beim Speichern: ' + errorMessage(err, 'Unbekannter Fehler'))
   } finally {
     saving.value = false
   }

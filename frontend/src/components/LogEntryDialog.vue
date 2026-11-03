@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api, asFormData } from '@/api/client'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
@@ -112,7 +113,7 @@ async function save() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="600px">
+  <ResponsiveDialog v-model="open" max-width="600px">
     <v-card>
       <v-card-title class="text-headline-small">Neue Notiz</v-card-title>
 
@@ -199,7 +200,7 @@ async function save() {
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </ResponsiveDialog>
 </template>
 
 <style scoped>

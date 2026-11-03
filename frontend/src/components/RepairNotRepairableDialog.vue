@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" max-width="640px">
+    <ResponsiveDialog v-model="open" max-width="640px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" color="error">mdi-close-circle</v-icon>
@@ -37,10 +37,11 @@ v-model.number="localDuration" label="Gesamtdauer in Minuten" type="number" requ
                     }}</v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { REPAIR_STATUS_DETAIL_OPTIONS } from '@/domain/repairStatus'

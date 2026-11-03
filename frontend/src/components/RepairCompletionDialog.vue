@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" max-width="720px">
+    <ResponsiveDialog v-model="open" max-width="720px">
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-check-circle</v-icon>
@@ -48,10 +48,11 @@ v-model="needsVdeTest" class="mt-4" color="primary" :label="vdeSwitchLabel"
                 <v-btn color="primary" :loading="loading" @click="confirmDialog">{{ confirmText }}</v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch, computed } from 'vue'
 import type { VForm } from 'vuetify/components'
 

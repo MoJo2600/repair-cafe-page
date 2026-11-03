@@ -3,6 +3,7 @@ import { api } from '@/api/client'
 import type { VdeTestCreate } from '@/api/types'
 import { onMounted, ref, shallowRef, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import type { PruefgeraetResponse, Repair } from '@/api/types'
 import {
   getRepairStatusColor,
@@ -31,6 +32,9 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const toast = useToast()
+// Side panel from md up; tabs and a bottom action bar on phones and portrait tablets
+const { mdAndUp } = useDisplay()
+const contentTab = shallowRef<'activity' | 'attachments'>('activity')
 
 // ── Repair data ───────────────────────────────────────────────────────────────
 const selectedRepairStatus = ref('')
@@ -139,7 +143,6 @@ const {
   completionData,
   notRepairableDialog,
   abbruchSignatureDialog,
-  availableNextStatuses,
   bestNextStatus,
   otherNextStatuses,
   handleCloseRepair,
@@ -166,6 +169,8 @@ const {
 // ── Child component events ────────────────────────────────────────────────────
 function onRepairFieldsUpdated(fields: Partial<Repair>) {
   if (repair.value) repair.value = { ...repair.value, ...fields }
+  // Reload for derived data the form doesn't have (e.g. the category name)
+  void reloadRepair()
 }
 
 function onAssigned(userId: number | null) {
@@ -195,6 +200,38 @@ async function printLabel() {
     printingLabel.value = false
   }
 }
+
+const quickActions = computed(() => [
+  {
+    key: 'log',
+    title: 'Neuer Logeintrag',
+    icon: 'mdi-note-plus',
+    loading: false,
+    run: () => {
+      logDialog.value = true
+    },
+  },
+  { key: 'vde', title: 'VDE-Test protokollieren', icon: 'mdi-flash', loading: false, run: openVdeDialog },
+  ...(labelPrinterEnabled.value
+    ? [
+        {
+          key: 'label',
+          title: 'Label drucken',
+          icon: 'mdi-printer',
+          loading: printingLabel.value,
+          run: () => void printLabel(),
+        },
+      ]
+    : []),
+])
+
+const attachmentsPanelProps = computed(() => ({
+  repairId: repair.value!.id,
+  attachments: attachments.value,
+  disclaimerExists: disclaimerExists.value,
+  cancellationExists: cancellationExists.value,
+  showCancellation: repair.value!.status_detail === 'Abbruch',
+}))
 
 async function downloadVdePdf(testId: number) {
   if (!repair.value) return
@@ -271,125 +308,179 @@ async function handleVdeSubmit(payload: VdeFormData) {
 </script>
 
 <template>
-  <v-container class="d-flex justify-center align-center page">
-    <v-card max-width="1200px" width="100%">
-      <v-card-text v-if="loading">
-        <v-progress-circular indeterminate color="primary"></v-progress-circular>
-        <span class="ml-3">Lade Reparaturdaten...</span>
-      </v-card-text>
+  <v-container class="page pb-16">
+    <div v-if="loading" class="d-flex align-center ga-3 pa-4">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+      <span>Lade Reparaturdaten...</span>
+    </div>
 
-      <v-card-text v-else-if="error">
-        <v-alert type="error">{{ error }}</v-alert>
-      </v-card-text>
+    <v-alert v-else-if="error" type="error" class="ma-4">{{ error }}</v-alert>
 
-      <v-card-text v-else-if="repair">
-        <v-row class="align-start">
-          <!-- Left column: summary, activity, attachments -->
-          <v-col cols="12" md="8">
-            <RepairSummaryCard
-              :repair-data="repair"
-              :vde-tests="latestVdeTests"
-              :logged-duration="loggedDuration"
-              @updated="onRepairFieldsUpdated"
-            />
+    <template v-else-if="repair">
+      <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.back()">
+        Zurück
+      </v-btn>
 
+      <v-row class="align-start">
+        <!-- Main column: summary, activity, attachments -->
+        <v-col cols="12" md="8">
+          <RepairSummaryCard
+            :repair-data="repair"
+            :vde-tests="latestVdeTests"
+            :logged-duration="loggedDuration"
+            @updated="onRepairFieldsUpdated"
+          />
+
+          <!-- Small screens: the side panel's assignee moves here -->
+          <v-card v-if="!mdAndUp" class="mb-4">
+            <v-card-text>
+              <RepairAssigneeSelect
+                :repair-id="repair.id"
+                :assignee-id="repair.user_id ?? null"
+                @assigned="onAssigned"
+              />
+            </v-card-text>
+          </v-card>
+
+          <template v-if="mdAndUp">
             <RepairActivityTimeline
               :entries="threadEntries"
               :attachment-counts="attachmentCounts"
               @edit-log="openEditLogDialog"
               @download-vde="downloadVdePdf"
             />
+            <RepairAttachmentsPanel v-bind="attachmentsPanelProps" class="mt-6" @changed="reloadAttachments" />
+          </template>
 
-            <RepairAttachmentsPanel
-              class="mt-6"
-              :repair-id="repair.id"
-              :attachments="attachments"
-              :disclaimer-exists="disclaimerExists"
-              :cancellation-exists="cancellationExists"
-              :show-cancellation="repair.status_detail === 'Abbruch'"
-              @changed="reloadAttachments"
+          <!-- Small screens: one section at a time -->
+          <template v-else>
+            <v-tabs v-model="contentTab" grow class="mb-4">
+              <v-tab value="activity" prepend-icon="mdi-history">Verlauf</v-tab>
+              <v-tab value="attachments" prepend-icon="mdi-paperclip">
+                Anhänge
+                <v-chip v-if="attachments.length" size="x-small" class="ml-2">
+                  {{ attachments.length }}
+                </v-chip>
+              </v-tab>
+            </v-tabs>
+            <RepairActivityTimeline
+              v-if="contentTab === 'activity'"
+              :entries="threadEntries"
+              :attachment-counts="attachmentCounts"
+              @edit-log="openEditLogDialog"
+              @download-vde="downloadVdePdf"
             />
-          </v-col>
+            <RepairAttachmentsPanel v-else v-bind="attachmentsPanelProps" @changed="reloadAttachments" />
+          </template>
+        </v-col>
 
-          <!-- Right column: status, assignee, quick actions -->
-          <v-col cols="12" md="4">
-            <div class="d-flex align-center ga-3 flex-wrap mb-6">
-              <v-btn-group v-if="availableNextStatuses.length > 0" divided>
-                <v-btn
-                  :color="getRepairStatusColor(bestNextStatus ?? '')"
-                  :prepend-icon="getRepairStatusIcon(bestNextStatus ?? '')"
-                  :loading="savingStatus"
-                  @click="bestNextStatus && handleCloseRepair(bestNextStatus)"
-                >
-                  {{ bestNextStatus }}
-                </v-btn>
-                <v-menu v-if="otherNextStatuses.length > 0">
-                  <template #activator="{ props: menuProps }">
-                    <v-btn
-                      v-bind="menuProps"
-                      :color="getRepairStatusColor(bestNextStatus ?? '')"
-                      icon="mdi-chevron-down"
-                    ></v-btn>
-                  </template>
-                  <v-list density="compact">
-                    <v-list-item
-                      v-for="status in otherNextStatuses"
-                      :key="status"
-                      :prepend-icon="getRepairStatusIcon(status)"
-                      :title="status"
-                      @click="handleCloseRepair(status)"
-                    ></v-list-item>
-                  </v-list>
-                </v-menu>
-              </v-btn-group>
-            </div>
+        <!-- Side panel (md+): stays in view while scrolling -->
+        <v-col v-if="mdAndUp" cols="12" md="4" class="side-panel">
+          <v-card>
+            <v-card-item title="Status" prepend-icon="mdi-swap-horizontal" />
+            <v-card-text class="d-flex flex-column ga-2">
+              <v-btn
+                v-if="bestNextStatus"
+                :color="getRepairStatusColor(bestNextStatus)"
+                :prepend-icon="getRepairStatusIcon(bestNextStatus)"
+                :loading="savingStatus"
+                size="large"
+                variant="flat"
+                block
+                @click="handleCloseRepair(bestNextStatus)"
+              >
+                {{ bestNextStatus }}
+              </v-btn>
+              <v-btn
+                v-for="status in otherNextStatuses"
+                :key="status"
+                :color="getRepairStatusColor(status)"
+                :prepend-icon="getRepairStatusIcon(status)"
+                :disabled="savingStatus"
+                variant="tonal"
+                block
+                @click="handleCloseRepair(status)"
+              >
+                {{ status }}
+              </v-btn>
+            </v-card-text>
 
-            <RepairAssigneeSelect
-              :repair-id="repair.id"
-              :assignee-id="repair.user_id ?? null"
-              @assigned="onAssigned"
+            <v-divider />
+            <v-card-text>
+              <RepairAssigneeSelect
+                :repair-id="repair.id"
+                :assignee-id="repair.user_id ?? null"
+                @assigned="onAssigned"
+              />
+            </v-card-text>
+
+            <v-divider />
+            <v-card-text class="d-flex flex-column ga-2">
+              <v-btn
+                v-for="action in quickActions"
+                :key="action.key"
+                :prepend-icon="action.icon"
+                :loading="action.loading"
+                variant="tonal"
+                color="primary"
+                size="large"
+                block
+                @click="action.run"
+              >
+                {{ action.title }}
+              </v-btn>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Small screens: actions within thumb reach -->
+      <div v-if="!mdAndUp" class="action-bar d-flex align-center ga-2 pa-3">
+        <v-btn
+          v-if="bestNextStatus"
+          :color="getRepairStatusColor(bestNextStatus)"
+          :prepend-icon="getRepairStatusIcon(bestNextStatus)"
+          :loading="savingStatus"
+          size="large"
+          variant="flat"
+          class="flex-grow-1"
+          @click="handleCloseRepair(bestNextStatus)"
+        >
+          {{ bestNextStatus }}
+        </v-btn>
+        <v-btn
+          icon="mdi-note-plus"
+          size="large"
+          variant="tonal"
+          color="primary"
+          aria-label="Neuer Logeintrag"
+          @click="logDialog = true"
+        />
+        <v-menu location="top end">
+          <template #activator="{ props: menuProps }">
+            <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="large" variant="tonal" aria-label="Weitere Aktionen" />
+          </template>
+          <v-list>
+            <v-list-subheader v-if="otherNextStatuses.length">Status ändern</v-list-subheader>
+            <v-list-item
+              v-for="status in otherNextStatuses"
+              :key="status"
+              :prepend-icon="getRepairStatusIcon(status)"
+              :title="status"
+              @click="handleCloseRepair(status)"
             />
-
-            <div class="d-flex flex-column ga-2 mt-6">
-              <span class="text-body-large text-grey-darken-1">Quick Actions</span>
-              <v-btn
-                variant="tonal"
-                color="primary"
-                prepend-icon="mdi-plus"
-                block
-                @click="logDialog = true"
-              >
-                Neuer Logeintrag
-              </v-btn>
-              <v-btn
-                variant="tonal"
-                color="primary"
-                prepend-icon="mdi-flash"
-                block
-                @click="openVdeDialog"
-              >
-                VDE Test protokollieren
-              </v-btn>
-              <v-btn
-                v-if="labelPrinterEnabled"
-                variant="tonal"
-                color="primary"
-                prepend-icon="mdi-printer"
-                :loading="printingLabel"
-                block
-                @click="printLabel"
-              >
-                Label drucken
-              </v-btn>
-            </div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-card-actions v-if="!loading && !error" class="flex-wrap ga-2">
-        <v-btn prepend-icon="mdi-arrow-left" @click="router.back()">Zurück</v-btn>
-      </v-card-actions>
-    </v-card>
+            <v-divider v-if="otherNextStatuses.length" />
+            <v-list-item
+              v-for="action in quickActions.filter((a) => a.key !== 'log')"
+              :key="action.key"
+              :prepend-icon="action.icon"
+              :title="action.title"
+              @click="action.run"
+            />
+          </v-list>
+        </v-menu>
+      </div>
+    </template>
 
     <template v-if="repair">
       <LogEntryDialog v-model="logDialog" :repair-id="repair.id" @saved="onLogsChanged" />
@@ -456,6 +547,21 @@ async function handleVdeSubmit(payload: VdeFormData) {
 
 <style scoped>
 .page {
-  min-height: 80vh;
+  max-width: 1200px;
+}
+
+.side-panel {
+  position: sticky;
+  top: calc(var(--v-layout-top, 0px) + 16px);
+}
+
+/* Sits above the app footer (Vuetify sets --v-layout-bottom on v-main) */
+.action-bar {
+  position: sticky;
+  bottom: var(--v-layout-bottom, 0px);
+  z-index: 2;
+  margin: 0 -16px;
+  background: rgb(var(--v-theme-surface));
+  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>

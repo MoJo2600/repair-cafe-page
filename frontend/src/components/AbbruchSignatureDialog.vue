@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" max-width="680px" persistent>
+    <ResponsiveDialog v-model="open" max-width="680px" persistent>
         <v-card>
             <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" color="error">mdi-alert-octagon</v-icon>
@@ -31,10 +31,11 @@
                 </v-btn>
             </v-card-actions>
         </v-card>
-    </v-dialog>
+    </ResponsiveDialog>
 </template>
 
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch } from 'vue'
 import SignaturePad from '@/components/SignaturePad.vue'
 

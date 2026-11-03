@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api } from '@/api/client'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
@@ -111,7 +112,7 @@ async function remove() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="600px">
+  <ResponsiveDialog v-model="open" max-width="600px">
     <v-card>
       <v-card-title class="text-headline-small">Logeintrag bearbeiten</v-card-title>
       <v-card-text>
@@ -199,5 +200,5 @@ async function remove() {
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-dialog>
+  </ResponsiveDialog>
 </template>
