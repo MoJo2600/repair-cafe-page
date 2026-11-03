@@ -93,7 +93,7 @@ async function confirmStartRepair(userId: number) {
 </script>
 
 <template>
-  <v-container class="pb-16">
+  <v-container fluid class="overview pb-16">
     <!-- Next repair to start -->
     <v-card color="primary" class="mb-6">
       <v-card-item prepend-icon="mdi-tools" title="Nächste Reparatur" />
@@ -210,3 +210,10 @@ async function confirmStartRepair(userId: number) {
     </ReparateurRequiredDialog>
   </v-container>
 </template>
+
+<style scoped>
+/* Vuetify 4 caps v-container at 700px on md; tablets in landscape need the width */
+.overview {
+  max-width: 1400px;
+}
+</style>

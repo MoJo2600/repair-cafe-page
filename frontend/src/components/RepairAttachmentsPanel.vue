@@ -9,15 +9,23 @@ import { fileIcon, formatFileSize, isImage } from '@/utils/files'
 import { errorMessage } from '@/utils/errors'
 
 /** Generated PDFs plus uploaded files of a repair; uploads and deletes files itself. */
-const { repairId, attachments, disclaimerExists, cancellationExists, showCancellation } =
-  defineProps<{
-    repairId: number
-    attachments: RepairAttachment[]
-    disclaimerExists: boolean
-    cancellationExists: boolean
-    /** Show the cancellation row even before its PDF exists (status detail "Abbruch"). */
-    showCancellation: boolean
-  }>()
+const {
+  repairId,
+  attachments,
+  disclaimerExists,
+  cancellationExists,
+  showCancellation,
+  showTitle = true,
+} = defineProps<{
+  repairId: number
+  attachments: RepairAttachment[]
+  disclaimerExists: boolean
+  cancellationExists: boolean
+  /** Show the cancellation row even before its PDF exists (status detail "Abbruch"). */
+  showCancellation: boolean
+  /** Off when a surrounding tab already names the section. */
+  showTitle?: boolean
+}>()
 
 const emit = defineEmits<{
   /** Files were uploaded or deleted; the owner should reload the list. */
@@ -102,7 +110,7 @@ async function remove(attachmentId: number) {
 
 <template>
   <div>
-    <h3 class="text-title-large mb-3">Anhänge</h3>
+    <h3 v-if="showTitle" class="text-title-large mb-3">Anhänge</h3>
 
     <!-- Generated PDFs (read-only) -->
     <v-card class="mb-3">

@@ -365,12 +365,18 @@ async function handleVdeSubmit(payload: VdeFormData) {
             </v-tabs>
             <RepairActivityTimeline
               v-if="contentTab === 'activity'"
+              :show-title="false"
               :entries="threadEntries"
               :attachment-counts="attachmentCounts"
               @edit-log="openEditLogDialog"
               @download-vde="downloadVdePdf"
             />
-            <RepairAttachmentsPanel v-else v-bind="attachmentsPanelProps" @changed="reloadAttachments" />
+            <RepairAttachmentsPanel
+              v-else
+              v-bind="attachmentsPanelProps"
+              :show-title="false"
+              @changed="reloadAttachments"
+            />
           </template>
         </v-col>
 

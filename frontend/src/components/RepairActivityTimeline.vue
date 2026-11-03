@@ -5,10 +5,16 @@ import { getRepairStatusColor } from '@/domain/repairStatus'
 import { formatDate, formatDateTime } from '@/utils/date'
 
 /** Chronological activity of a repair: work logs, status/assignee changes, VDE tests. */
-const { entries, attachmentCounts } = defineProps<{
+const {
+  entries,
+  attachmentCounts,
+  showTitle = true,
+} = defineProps<{
   entries: RepairThreadEntry[]
   /** Number of attachments per work-log id. */
   attachmentCounts: Record<number, number>
+  /** Off when a surrounding tab already names the section. */
+  showTitle?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,7 +52,7 @@ function onEntryClick(entry: RepairThreadEntry) {
 
 <template>
   <div>
-    <h3 class="text-title-large mb-4">Reparatur Logeinträge</h3>
+    <h3 v-if="showTitle" class="text-title-large mb-4">Reparatur Logeinträge</h3>
 
     <v-timeline v-if="items.length > 0" density="compact" side="end" class="mb-4">
       <v-timeline-item
