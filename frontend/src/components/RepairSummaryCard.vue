@@ -104,7 +104,7 @@
         Reparatur bearbeiten
       </v-card-title>
       <v-card-text>
-        <v-text-field v-model="editForm.datum" label="Datum" type="date"></v-text-field>
+        <DateField v-model="editForm.datum" label="Angenommen am" />
         <v-select
 v-model="editForm.repair_type_id" :items="repairTypes" item-value="id" item-title="name"
           label="Kategorie" class="mt-3"></v-select>
@@ -132,6 +132,7 @@ import { api } from '@/api/client'
 import { ref, computed } from 'vue'
 import type { Repair, VdeTestResponse } from '@/api/types'
 import { personName } from '@/utils/person'
+import DateField from '@/components/ui/DateField.vue'
 import RepairNumber from '@/components/ui/RepairNumber.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
 import TagChip from '@/components/ui/TagChip.vue'

@@ -22,6 +22,11 @@ export default createVuetify({
       density: 'comfortable',
       rounded: 'lg',
     },
+    VDateInput: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
     VFileInput: {
       variant: 'outlined',
       density: 'comfortable',

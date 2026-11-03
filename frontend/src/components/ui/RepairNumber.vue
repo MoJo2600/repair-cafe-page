@@ -11,8 +11,14 @@ const { id, status = null, size = 48 } = defineProps<{
 
 <template>
   <v-avatar :color="getRepairStatusColor(status ?? undefined)" :size="size">
-    <span class="font-weight-bold" :class="size >= 48 ? 'text-title-medium' : 'text-label-large'">
+    <span
+      v-if="id !== undefined && id !== null"
+      class="font-weight-bold"
+      :class="size >= 48 ? 'text-title-medium' : 'text-label-large'"
+    >
       {{ id }}
     </span>
+    <!-- Not saved yet: no number -->
+    <v-icon v-else icon="mdi-clipboard-plus-outline" />
   </v-avatar>
 </template>
