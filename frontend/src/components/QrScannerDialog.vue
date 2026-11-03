@@ -2,6 +2,7 @@
 import { ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import jsQR from 'jsqr'
+import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { useCameraStream } from '@/composables/useCameraStream'
 import { useToast } from '@/composables/useToast'
 
@@ -34,7 +35,7 @@ async function start() {
     scanning.value = true
     scanFrame()
   } else if (camera.permissionDenied.value) {
-    toast.error('Could not access camera. Please check permissions.')
+    toast.error('Kein Zugriff auf die Kamera. Bitte Berechtigung im Browser erlauben.')
   }
 }
 
@@ -82,21 +83,21 @@ function handleDetected(data: string) {
   const token = data.match(REPAIR_URL_PATTERN)?.[1]
   if (token) {
     void router.push(`/edit/${token}`)
-    toast.success('QR Code scanned successfully!')
+    toast.success('Reparatur geöffnet')
   } else {
-    toast.info(`Scanned: ${data}`, 6000)
+    toast.warning(`Kein Reparatur-QR-Code: ${data}`, 6000)
   }
 }
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="600px">
+  <ResponsiveDialog v-model="open" max-width="600px">
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon icon="mdi-qrcode-scan" class="mr-2"></v-icon>
-        <span>Scan QR Code</span>
+        <span>QR-Code scannen</span>
         <v-spacer></v-spacer>
-        <v-btn icon="mdi-close" variant="text" @click="close"></v-btn>
+        <v-btn icon="mdi-close" variant="text" aria-label="Schließen" @click="close"></v-btn>
       </v-card-title>
       <v-card-text>
         <div v-if="!camera.permissionDenied.value">
@@ -104,19 +105,19 @@ function handleDetected(data: string) {
           <canvas ref="canvasElement" class="d-none"></canvas>
           <div v-if="scanning" class="text-center mt-3">
             <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            <p class="mt-2">Scanning for QR codes...</p>
+            <p class="mt-2">Suche nach QR-Code …</p>
           </div>
         </div>
         <v-alert v-else type="error" class="mt-3">
-          Camera permission denied. Please allow camera access in your browser settings.
+          Kein Kamerazugriff. Bitte den Zugriff in den Browser-Einstellungen erlauben.
         </v-alert>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="grey" variant="text" @click="close"> Cancel </v-btn>
+        <v-btn variant="text" @click="close">Abbrechen</v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </ResponsiveDialog>
 </template>
 
 <style scoped>
