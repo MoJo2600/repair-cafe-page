@@ -1,3 +1,4 @@
+import { personName } from '@/utils/person'
 import { computed, type ComputedRef } from 'vue'
 import type { RepairLog, VdeTestResponse, Repair } from '@/api/types'
 
@@ -47,11 +48,7 @@ export function useRepairThread(
       type: log.log_type === 'status_change' ? 'status_change' : log.log_type === 'assignee_change' ? 'assignee_change' : 'repair',
       id: log.id,
       created_at: log.created_at,
-      person: log.user
-        ? `${log.user.vorname} ${log.user.nachname}`
-        : log.user_id
-          ? String(log.user_id)
-          : '?',
+      person: log.user ? personName(log.user) : '',
       duration: log.reparatur_dauer ?? 0,
       description: log.reparatur_besch ?? '',
       status_from: log.status_from ?? undefined,
@@ -77,9 +74,7 @@ export function useRepairThread(
             id: repairRecord.value.id,
             created_at: repairRecord.value.datum,
             dateOnly: true,
-            person: repairRecord.value.created_by
-              ? `${repairRecord.value.created_by.vorname} ${repairRecord.value.created_by.nachname}`
-              : '',
+            person: repairRecord.value.created_by ? personName(repairRecord.value.created_by) : '',
             duration: 0,
             description: '',
           },

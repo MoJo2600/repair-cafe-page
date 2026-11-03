@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { personName } from '@/utils/person'
 import { computed, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
@@ -45,10 +46,7 @@ const showBottomNav = computed(
 
 const items = computed(() => (authStore.isAdmin ? [...mainItems, ...adminItems] : mainItems))
 
-const currentUserName = computed(() => {
-  const user = authStore.currentUser
-  return [user?.vorname, user?.nachname].filter(Boolean).join(' ') || user?.username || ''
-})
+const currentUserName = computed(() => personName(authStore.currentUser))
 
 // The overlay drawer is only used on small screens; larger ones show a permanent one
 const drawerOpen = computed({

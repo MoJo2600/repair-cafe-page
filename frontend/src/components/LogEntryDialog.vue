@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { api, asFormData } from '@/api/client'
-import { computed, ref, shallowRef, watch } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserStore } from '@/stores/userStore'
@@ -24,9 +24,6 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const toast = useToast()
 
-const userItems = computed(() =>
-  userStore.users.map((u) => ({ value: u.id, title: `${u.vorname} ${u.nachname}` }))
-)
 
 const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = shallowRef(false)
@@ -121,7 +118,7 @@ async function save() {
         <v-form ref="formRef" v-model="formValid">
           <v-autocomplete
             v-model="userId"
-            :items="userItems"
+            :items="userStore.userOptions"
             item-value="value"
             item-title="title"
             label="Reparateur"

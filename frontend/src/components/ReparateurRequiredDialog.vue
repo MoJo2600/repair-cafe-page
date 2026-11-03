@@ -16,25 +16,13 @@
                 <v-form ref="formRef" v-model="formValid">
                     <v-autocomplete
                         v-model="userId"
-                        :items="userStore.users"
-                        :item-title="getUserTitle"
-                        item-value="id"
+                        :items="userStore.userOptions"
                         label="Reparateur"
-                        prepend-icon="mdi-account"
+                        prepend-inner-icon="mdi-account-wrench"
                         required
                         :loading="userStore.loading"
                         :rules="[v => !!v || 'Name des Reparateurs ist erforderlich']"
-                    >
-                        <template #item="{ props: itemProps, item }">
-                            <v-list-item
-                                v-bind="itemProps"
-                                :title="`${item.vorname} ${item.nachname}`"
-                                :subtitle="item.email"></v-list-item>
-                        </template>
-                        <template #selection="{ item }">
-                            {{ item.vorname }} {{ item.nachname }}
-                        </template>
-                    </v-autocomplete>
+                    />
                 </v-form>
             </v-card-text>
 
@@ -52,7 +40,6 @@ import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { ref, watch, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { useUserStore } from '@/stores/userStore'
-import type { UserResponse } from '@/api/types'
 
 const userStore = useUserStore()
 
@@ -80,9 +67,6 @@ const emit = defineEmits<{
 const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = ref(false)
 
-function getUserTitle(user: UserResponse): string {
-    return [user.vorname, user.nachname].filter(Boolean).join(' ') || `User #${user.id}`
-}
 
 onMounted(() => {
     if (!userStore.loaded) userStore.fetchUsers()

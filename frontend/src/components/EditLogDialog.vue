@@ -29,9 +29,6 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const toast = useToast()
 
-const userItems = computed(() =>
-  userStore.users.map((u) => ({ value: u.id, title: `${u.vorname} ${u.nachname}` }))
-)
 const canDelete = computed(() => authStore.canDeleteOwnedBy(log?.user_id))
 const attachmentItems = computed(() =>
   attachments.map((att) => {
@@ -119,7 +116,7 @@ async function remove() {
         <v-form ref="formRef" v-model="formValid">
           <v-autocomplete
             v-model="userId"
-            :items="userItems"
+            :items="userStore.userOptions"
             item-value="value"
             item-title="title"
             label="Reparateur"

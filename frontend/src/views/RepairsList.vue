@@ -218,9 +218,7 @@ v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="
               <v-col cols="12" sm="6">
                 <v-autocomplete
                   v-model="editedItem.user_id"
-                  :items="userStore.users"
-                  item-value="id"
-                  :item-title="(u: any) => `${u.vorname} ${u.nachname}`"
+                  :items="userStore.userOptions"
                   label="Reparateur"
                   clearable
                   :loading="userStore.loading"
@@ -253,6 +251,7 @@ v-model="editedItem.din_pruef" label="DIN-Prüfung" color="primary" :true-value=
 </template>
 
 <script setup lang="ts">
+import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -357,7 +356,7 @@ function customerNameFilter(value: unknown, query: string, item?: { raw: Repair 
   if (!query) return true
   const q = query.toLowerCase()
   if (item?.raw?.customer) {
-    const fullName = `${item.raw.customer.vorname} ${item.raw.customer.nachname}`.toLowerCase()
+    const fullName = personName(item.raw.customer).toLowerCase()
     if (fullName.includes(q)) return true
   }
   if (value == null) return false

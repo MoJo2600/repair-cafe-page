@@ -132,6 +132,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 </template>
 
 <script setup lang="ts">
+import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import type { CustomerWithRepairCountResponse as CustomerResponse } from '@/api/types'
 import { ref, onMounted } from 'vue'
@@ -190,7 +191,7 @@ async function loadCustomers() {
 }
 
 function goToRepairs(customer: CustomerResponse) {
-    router.push({ path: '/repairs', query: { customer_id: customer.id, customer_name: `${customer.vorname} ${customer.nachname}`, status: 'all' } })
+    router.push({ path: '/repairs', query: { customer_id: customer.id, customer_name: personName(customer), status: 'all' } })
 }
 
 function openCreateDialog() {

@@ -124,16 +124,14 @@
 </template>
 
 <script setup lang="ts">
+import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PinStatusResponse } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 
 const authStore = useAuthStore()
-const fullName = computed(() => {
-  const user = authStore.currentUser
-  return [user?.vorname, user?.nachname].filter(Boolean).join(' ') || user?.username
-})
+const fullName = computed(() => personName(authStore.currentUser))
 const status = ref<PinStatusResponse | null>(null)
 const loading = ref(true)
 const generating = ref(false)

@@ -31,9 +31,6 @@ watch(
   }
 )
 
-const userItems = computed(() =>
-  userStore.users.map((u) => ({ value: u.id, title: `${u.vorname} ${u.nachname}` }))
-)
 const canAssignToMe = computed(
   () => !!authStore.currentUser && selected.value !== authStore.currentUser.id
 )
@@ -76,7 +73,7 @@ function assignToMe() {
     </div>
     <v-autocomplete
       :model-value="selected"
-      :items="userItems"
+      :items="userStore.userOptions"
       item-value="value"
       item-title="title"
       :loading="saving"

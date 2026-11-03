@@ -226,6 +226,7 @@ v-model="form.gesamtergebnis" inline density="compact" hide-details="auto"
 </template>
 
 <script setup lang="ts">
+import { personName } from '@/utils/person'
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue'
 import { computed, ref, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
@@ -282,7 +283,7 @@ const selectedPruefgeraet = ref<string>('')
 const userItems = computed(() =>
     props.users.map((u) => ({
         id: u.id,
-        label: [u.vorname, u.nachname].filter(Boolean).join(' ') || `User #${u.id}`
+        label: personName(u),
     }))
 )
 
