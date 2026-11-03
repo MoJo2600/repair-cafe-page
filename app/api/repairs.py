@@ -14,7 +14,7 @@ from sqlalchemy.orm import joinedload
 from app.api.attachments import cleanup_repair_attachments
 from app.auth.decorators import admin_required
 from app.extensions import db
-from app.models import Customer, Repair, RepairLog, Setting, User
+from app.models import Customer, Repair, RepairAttachment, RepairLog, Setting, User
 from app.schemas import (
     RepairCreate,
     RepairCreateResponse,
@@ -46,6 +46,23 @@ def _latest_logs_by_repair(repair_ids: list[int]) -> dict[int, RepairLogResponse
         .all()
     )
     return {log.repair_id: RepairLogResponse.model_validate(log) for log in logs}
+
+
+def _device_photo_ids_by_repair(repair_ids: list[int]) -> dict[int, int]:
+    """Newest device photo (attachment ID) per repair, in one query."""
+    if not repair_ids:
+        return {}
+    rows = (
+        db.session.query(RepairAttachment.repair_id, func.max(RepairAttachment.id))
+        .filter(
+            RepairAttachment.repair_id.in_(repair_ids),
+            RepairAttachment.attachment_type == "device_photo",
+            RepairAttachment.content_type.like("image/%"),
+        )
+        .group_by(RepairAttachment.repair_id)
+        .all()
+    )
+    return {repair_id: attachment_id for repair_id, attachment_id in rows}
 
 
 def _log_repair_change(repair: Repair, old_status: str, old_user_id: int | None) -> None:
@@ -116,13 +133,16 @@ def api_list_repairs():
         if customer_id is not None:
             query = query.filter(Repair.customer_id == customer_id)
         repairs = query.all()
-        latest_logs = _latest_logs_by_repair([repair.id for repair in repairs])
+        repair_ids = [repair.id for repair in repairs]
+        latest_logs = _latest_logs_by_repair(repair_ids)
+        device_photos = _device_photo_ids_by_repair(repair_ids)
         # Serialize using Pydantic (omit raw base64 signature payload from list polling)
         repairs_list = [
             RepairListItem.model_validate(
                 {
                     **RepairResponse.model_validate(repair).model_dump(exclude={"unterschrift"}),
                     "latest_log": latest_logs.get(repair.id),
+                    "device_photo_id": device_photos.get(repair.id),
                 }
             ).model_dump(mode="json")
             for repair in repairs

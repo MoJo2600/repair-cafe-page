@@ -392,6 +392,9 @@ class RepairListItem(RepairResponse):
     latest_log: Optional["RepairLogResponse"] = Field(
         None, description="Most recent log entry of any type, if any"
     )
+    device_photo_id: Optional[int] = Field(
+        None, description="Attachment ID of the newest device photo, if any"
+    )
 
 
 class RepairListResponse(BaseModel):

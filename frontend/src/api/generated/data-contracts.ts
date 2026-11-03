@@ -401,6 +401,11 @@ export interface RepairListItem {
    */
   defekt_besch?: string | null;
   /**
+   * Attachment ID of the newest device photo, if any
+   * @default null
+   */
+  device_photo_id?: number | null;
+  /**
    * DIN test performed
    * @default null
    */
@@ -1370,7 +1375,7 @@ export interface ListRepairAttachmentsParams {
 export interface UploadRepairAttachmentsPayload {
   /** One or more files to upload */
   files: File[];
-  /** Attachment type: log_entry, device_photo, disclaimer, misc (default: misc) */
+  /** Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo. */
   attachment_type?: string;
   /** Link to a repair log entry */
   log_id?: number;

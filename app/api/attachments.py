@@ -200,7 +200,7 @@ def api_upload_repair_attachments(repair_id):
         in: formData
         type: string
         required: false
-        description: "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc)"
+        description: "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo."
       - name: log_id
         in: formData
         type: integer
@@ -289,6 +289,23 @@ def api_upload_repair_attachments(repair_id):
                 )
             uploads.append((f, ct))
 
+        # A device has exactly one photo; more photos belong to log entries
+        if attachment_type == "device_photo" and (
+            len(uploads) != 1 or not uploads[0][1].startswith("image/")
+        ):
+            return Response(
+                json.dumps({"reply": "error", "error": "Exactly one image is allowed as device photo"}),
+                status=400,
+                mimetype="application/json",
+            )
+        replaced = (
+            RepairAttachment.query.filter_by(repair_id=repair_id, attachment_type="device_photo").all()
+            if attachment_type == "device_photo"
+            else []
+        )
+        for old in replaced:
+            db.session.delete(old)
+
         created = []
         saved_paths = []
         for f, ct in uploads:
@@ -324,6 +341,9 @@ def api_upload_repair_attachments(repair_id):
             created.append(attachment)
 
         db.session.commit()
+        # Remove replaced files only once the database change is committed
+        for old in replaced:
+            (dest_dir / old.stored_filename).unlink(missing_ok=True)
 
         data = [
             RepairAttachmentResponse.model_validate(a).model_dump(mode="json")

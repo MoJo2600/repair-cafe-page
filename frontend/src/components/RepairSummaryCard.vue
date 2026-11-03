@@ -1,70 +1,83 @@
 <template>
-  <v-card class="mb-4">
-    <v-card-item>
-      <template #prepend>
-        <RepairNumber :id="repairData.id" :status="repairData.status" />
-      </template>
-      <v-card-title class="text-headline-small text-wrap">{{ repairData.geraet_art }}</v-card-title>
-      <v-card-subtitle v-if="repairData.datum">
-        Angenommen am {{ formatDate(repairData.datum) }}
-      </v-card-subtitle>
-    </v-card-item>
-
-    <v-card-text>
-      <div class="d-flex flex-wrap align-center ga-2 mb-4">
-        <StatusChip :status="repairData.status" size="default" />
-        <TagChip v-if="repairData.repair_type?.name" :label="repairData.repair_type.name" />
-        <v-spacer />
+  <v-card class="mb-4 summary">
+    <div class="summary-layout">
+      <div class="summary-photo">
+        <DevicePhoto :src="photoUrl" :category="repairData.repair_type?.name" height="100%" />
         <v-btn
           v-if="repairData.id"
-          variant="text"
-          prepend-icon="mdi-pencil"
-          @click="openEditDialog"
+          class="photo-action"
+          variant="flat"
+          size="small"
+          prepend-icon="mdi-camera"
+          @click="openPhotoDialog"
         >
-          Bearbeiten
+          {{ photoUrl ? 'Foto ändern' : 'Foto hinzufügen' }}
         </v-btn>
       </div>
 
-      <div class="text-title-small text-medium-emphasis">Beschreibung des Defekts</div>
-      <p class="text-body-large mb-4">{{ repairData.defekt_besch || '–' }}</p>
+      <div class="summary-body">
+        <v-card-item>
+          <template #prepend>
+            <RepairNumber :id="repairData.id" :status="repairData.status" />
+          </template>
+          <v-card-title class="text-headline-small text-wrap">{{ repairData.geraet_art }}</v-card-title>
+          <v-card-subtitle v-if="repairData.datum">
+            Angenommen am {{ formatDate(repairData.datum) }}
+          </v-card-subtitle>
+          <template v-if="repairData.id" #append>
+            <v-btn icon="mdi-pencil" variant="text" aria-label="Reparatur bearbeiten" @click="openEditDialog" />
+          </template>
+        </v-card-item>
 
-      <v-row density="compact">
-        <v-col cols="12" sm="6">
-          <v-list density="compact" class="py-0" bg-color="transparent">
-            <v-list-item prepend-icon="mdi-account" :title="personName(repairData.customer)" subtitle="Kunde" />
-            <v-list-item
-              v-if="repairData.customer?.telefon"
-              prepend-icon="mdi-phone"
-              :href="`tel:${repairData.customer.telefon}`"
-              :title="repairData.customer.telefon"
-              subtitle="Telefon"
-            />
-            <v-list-item
-              v-if="repairData.customer?.email"
-              prepend-icon="mdi-email"
-              :href="`mailto:${repairData.customer.email}`"
-              :title="repairData.customer.email"
-              subtitle="E-Mail"
-            />
-          </v-list>
-        </v-col>
-        <v-col cols="12" sm="6">
-          <v-list density="compact" class="py-0" bg-color="transparent">
-            <v-list-item
-              v-if="durationLabel"
-              prepend-icon="mdi-timer-outline"
-              :title="durationLabel.value"
-              :subtitle="durationLabel.label"
-            />
-            <v-list-item
-              v-if="repairData.status_detail"
-              prepend-icon="mdi-flag-outline"
-              :title="repairData.status_detail"
-              subtitle="Abschlussgrund"
-            />
-          </v-list>
-        </v-col>
-      </v-row>
+        <v-card-text>
+          <RepairMeta :status="repairData.status" :category="repairData.repair_type?.name" class="mb-4" />
+
+          <div class="text-title-small text-medium-emphasis">Beschreibung des Defekts</div>
+          <p class="text-body-large mb-4">{{ repairData.defekt_besch || '–' }}</p>
+
+          <v-row density="compact">
+            <v-col cols="12" sm="6">
+              <v-list density="compact" class="py-0" bg-color="transparent">
+                <v-list-item prepend-icon="mdi-account" :title="personName(repairData.customer)" subtitle="Kunde" />
+                <v-list-item
+                  v-if="repairData.customer?.telefon"
+                  prepend-icon="mdi-phone"
+                  :href="`tel:${repairData.customer.telefon}`"
+                  :title="repairData.customer.telefon"
+                  subtitle="Telefon"
+                />
+                <v-list-item
+                  v-if="repairData.customer?.email"
+                  prepend-icon="mdi-email"
+                  :href="`mailto:${repairData.customer.email}`"
+                  :title="repairData.customer.email"
+                  subtitle="E-Mail"
+                />
+              </v-list>
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-list density="compact" class="py-0" bg-color="transparent">
+                <v-list-item
+                  v-if="repairData.user"
+                  prepend-icon="mdi-account-wrench"
+                  :title="personName(repairData.user)"
+                  subtitle="Reparateur"
+                />
+                <v-list-item
+                  v-if="durationLabel"
+                  prepend-icon="mdi-timer-outline"
+                  :title="durationLabel.value"
+                  :subtitle="durationLabel.label"
+                />
+                <v-list-item
+                  v-if="repairData.status_detail"
+                  prepend-icon="mdi-flag-outline"
+                  :title="repairData.status_detail"
+                  subtitle="Abschlussgrund"
+                />
+              </v-list>
+            </v-col>
+          </v-row>
 
       <v-alert
         v-if="isClosed && repairData.reparatur_besch"
@@ -93,8 +106,36 @@
           <div v-if="test.bemerkungen" class="text-body-small mt-1">{{ test.bemerkungen }}</div>
         </v-alert>
       </template>
-    </v-card-text>
+        </v-card-text>
+      </div>
+    </div>
   </v-card>
+
+  <!-- Device photo (exactly one; it replaces the previous one) -->
+  <ResponsiveDialog v-model="photoDialog" max-width="560" persistent>
+    <v-card title="Foto des Geräts">
+      <v-card-text>
+        <DevicePhotoCapture
+          v-model="newPhoto"
+          :active="photoDialog"
+          :category="repairData.repair_type?.name"
+        />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" :disabled="savingPhoto" @click="photoDialog = false">Abbrechen</v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          :disabled="!newPhoto"
+          :loading="savingPhoto"
+          @click="savePhoto"
+        >
+          Speichern
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </ResponsiveDialog>
 
   <!-- Edit basic fields dialog -->
   <ResponsiveDialog v-model="editDialog" max-width="500" persistent>
@@ -134,8 +175,10 @@ import type { Repair, VdeTestResponse } from '@/api/types'
 import { personName } from '@/utils/person'
 import DateField from '@/components/ui/DateField.vue'
 import RepairNumber from '@/components/ui/RepairNumber.vue'
-import StatusChip from '@/components/ui/StatusChip.vue'
-import TagChip from '@/components/ui/TagChip.vue'
+import DevicePhoto from '@/components/ui/DevicePhoto.vue'
+import DevicePhotoCapture from '@/components/DevicePhotoCapture.vue'
+import { asFormData } from '@/api/client'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { useToast } from '@/composables/useToast'
 import { errorMessage } from '@/utils/errors'
@@ -151,10 +194,14 @@ interface Props {
   repairData: RepairDraft
   vdeTests?: VdeTestResponse[]
   loggedDuration?: number
+  /** Device photo; without one the category placeholder is shown. */
+  photoUrl?: string | null
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
+  /** A new device photo was saved; the owner should reload the attachments. */
+  photoChanged: []
   updated: [
     fields: {
       datum: string
@@ -179,6 +226,34 @@ const durationLabel = computed(() => {
   }
   return null
 })
+
+// ── Device photo dialog ─────────────────────────────────────────────
+const photoDialog = ref(false)
+const newPhoto = ref<File | null>(null)
+const savingPhoto = ref(false)
+
+function openPhotoDialog() {
+  newPhoto.value = null
+  photoDialog.value = true
+}
+
+async function savePhoto() {
+  if (!props.repairData.id || !newPhoto.value) return
+  savingPhoto.value = true
+  try {
+    await api.uploadRepairAttachments(
+      { repairId: props.repairData.id },
+      asFormData({ files: [newPhoto.value], attachment_type: 'device_photo' })
+    )
+    photoDialog.value = false
+    toast.success('Foto gespeichert')
+    emit('photoChanged')
+  } catch (err) {
+    toast.error('Fehler beim Speichern des Fotos: ' + errorMessage(err, 'Unbekannter Fehler'))
+  } finally {
+    savingPhoto.value = false
+  }
+}
 
 // ── Edit dialog ───────────────────────────────────────────────────────
 const editDialog = ref(false)
@@ -225,3 +300,44 @@ async function saveEdit() {
   }
 }
 </script>
+
+<style scoped>
+/* Photo beside the details when the card is wide enough, above them otherwise */
+.summary {
+  container-type: inline-size;
+}
+
+.summary-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.summary-photo {
+  position: relative;
+  height: 180px;
+  padding: 16px 16px 0;
+}
+
+.photo-action {
+  position: absolute;
+  right: 24px;
+  bottom: 8px;
+}
+
+@container (min-width: 640px) {
+  .summary-layout {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .summary-photo {
+    height: auto;
+    min-height: 220px;
+    padding: 16px 0 16px 16px;
+  }
+
+  .photo-action {
+    right: 8px;
+    bottom: 24px;
+  }
+}
+</style>

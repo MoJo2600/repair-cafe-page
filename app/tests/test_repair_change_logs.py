@@ -131,3 +131,91 @@ def test_list_latest_log_is_null_without_logs(helper_client):
     [item] = helper_client.get("/api/list").get_json()["data"]
 
     assert item["latest_log"] is None
+
+
+def _upload_png(client, repair_id: int, attachment_type: str) -> int:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (16, 16), "blue").save(buf, format="PNG")
+    buf.seek(0)
+    resp = client.post(
+        f"/api/repairs/{repair_id}/attachments",
+        data={"files": (buf, "photo.png", "image/png"), "attachment_type": attachment_type},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 201
+    return resp.get_json()["data"][0]["id"]
+
+
+def test_list_includes_newest_device_photo(helper_client, app):
+    repair_id = _create_repair(helper_client)
+    _upload_png(helper_client, repair_id, "misc")
+    _upload_png(helper_client, repair_id, "device_photo")
+    newest = _upload_png(helper_client, repair_id, "device_photo")
+
+    [item] = helper_client.get("/api/list").get_json()["data"]
+
+    assert item["device_photo_id"] == newest
+
+
+def test_list_device_photo_is_null_without_photos(helper_client):
+    repair_id = _create_repair(helper_client)
+    _upload_png(helper_client, repair_id, "misc")
+
+    [item] = helper_client.get("/api/list").get_json()["data"]
+
+    assert item["device_photo_id"] is None
+
+
+def test_new_device_photo_replaces_the_old_one(helper_client, app):
+    from pathlib import Path
+
+    from app.models import RepairAttachment
+
+    repair_id = _create_repair(helper_client)
+    first = _upload_png(helper_client, repair_id, "device_photo")
+    first_file = Path(app.config["DATA_DIR"]) / "attachments" / str(repair_id) / (
+        RepairAttachment.query.get(first).stored_filename
+    )
+    assert first_file.exists()
+
+    second = _upload_png(helper_client, repair_id, "device_photo")
+
+    photos = RepairAttachment.query.filter_by(repair_id=repair_id, attachment_type="device_photo").all()
+    assert [p.id for p in photos] == [second]
+    assert not first_file.exists()
+
+
+def test_device_photo_upload_takes_exactly_one_image(helper_client):
+    import io
+
+    from PIL import Image
+
+    repair_id = _create_repair(helper_client)
+
+    def png():
+        buf = io.BytesIO()
+        Image.new("RGB", (8, 8), "red").save(buf, format="PNG")
+        buf.seek(0)
+        return buf
+
+    resp = helper_client.post(
+        f"/api/repairs/{repair_id}/attachments",
+        data={
+            "files": [(png(), "a.png", "image/png"), (png(), "b.png", "image/png")],
+            "attachment_type": "device_photo",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400
+
+    pdf = io.BytesIO(b"%PDF-1.4\n%fake\n")
+    resp = helper_client.post(
+        f"/api/repairs/{repair_id}/attachments",
+        data={"files": (pdf, "scan.pdf", "application/pdf"), "attachment_type": "device_photo"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400

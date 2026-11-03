@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { api } from '@/api/client'
+import { attachmentUrl } from '@/api/documents'
 import type { VdeTestCreate } from '@/api/types'
 import { onMounted, ref, shallowRef, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -66,6 +67,14 @@ const {
     selectedStatusDetail.value = loaded.status_detail || ''
     vdeInitialPruferUserId.value = loaded.user_id ?? null
   },
+})
+
+// Newest device photo for the summary
+const devicePhotoUrl = computed(() => {
+  const newest = attachments.value
+    .filter((a) => a.attachment_type === 'device_photo' && a.content_type.startsWith('image/'))
+    .reduce<{ id: number } | null>((best, a) => (!best || a.id > best.id ? a : best), null)
+  return newest && repair.value ? attachmentUrl(repair.value.id, newest.id) : null
 })
 
 const currentRepairStatus = computed(() => normalizeRepairStatus(repair.value?.status))
@@ -329,7 +338,9 @@ async function handleVdeSubmit(payload: VdeFormData) {
             :repair-data="repair"
             :vde-tests="latestVdeTests"
             :logged-duration="loggedDuration"
+            :photo-url="devicePhotoUrl"
             @updated="onRepairFieldsUpdated"
+            @photo-changed="reloadAttachments"
           />
 
           <!-- Small screens: the side panel's assignee moves here -->

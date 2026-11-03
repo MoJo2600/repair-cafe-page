@@ -11,7 +11,7 @@ import CountBadge from '@/components/ui/CountBadge.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
 import RepairNumber from '@/components/ui/RepairNumber.vue'
 import SectionTitle from '@/components/ui/SectionTitle.vue'
-import TagChip from '@/components/ui/TagChip.vue'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
 import ReparateurRequiredDialog from '@/components/ReparateurRequiredDialog.vue'
 
 const router = useRouter()
@@ -106,10 +106,10 @@ async function confirmStartRepair(userId: number) {
           <template #prepend>
             <RepairNumber :id="nextRepair.id" :status="nextRepair.status" class="mr-4" />
           </template>
-          <v-list-item-subtitle class="d-flex flex-wrap align-center ga-3 mt-1">
+          <div class="d-flex flex-column ga-2 mt-2">
+            <RepairMeta :category="nextRepair.repair_type?.name" />
             <PersonLabel :person="nextRepair.customer" role="customer" />
-            <TagChip v-if="nextRepair.repair_type" :label="nextRepair.repair_type.name" />
-          </v-list-item-subtitle>
+          </div>
         </v-list-item>
         <div v-else class="text-title-medium">Keine offenen Reparaturen vorhanden</div>
       </v-card-text>

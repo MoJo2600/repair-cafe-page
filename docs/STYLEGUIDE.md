@@ -70,8 +70,17 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 ## Repair identity
 
 - Repair number: `#23` in text; in cards and headers an avatar with the number in the
-  repair's status color.
-- Title of a repair is the device (`geraet_art`); customer and category are secondary.
+  repair's status color (`RepairNumber`).
+- Title of a repair is the device (`geraet_art`).
+- **Device picture** (`DevicePhoto`): the repair's one device photo; without one, a
+  light placeholder with the category's icon (`domain/repairCategory.ts`). A device has
+  exactly one photo (a new one replaces it, enforced by the API); further photos belong
+  to log entries.
+- **Fixed order** everywhere a repair is shown (cards, summary, "Nächste Reparatur"):
+  1. picture (where there is room), 2. number + device, 3. **meta row** (`RepairMeta`):
+  status chip, then category chip; leave out the status where the context already
+  shows it (e.g. a status section), 4. people, one per line: customer, then repairer,
+  5. content (defect, latest entry, ...).
 
 ## Dates and numbers
 

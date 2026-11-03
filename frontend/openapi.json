@@ -784,6 +784,12 @@
           "type": "string",
           "x-nullable": true
         },
+        "device_photo_id": {
+          "default": null,
+          "description": "Attachment ID of the newest device photo, if any",
+          "type": "integer",
+          "x-nullable": true
+        },
         "din_pruef": {
           "default": null,
           "description": "DIN test performed",
@@ -3408,7 +3414,7 @@
             "type": "array"
           },
           {
-            "description": "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc)",
+            "description": "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo.",
             "in": "formData",
             "name": "attachment_type",
             "required": false,

@@ -6,7 +6,9 @@ import { formatDateTime } from '@/utils/date'
 import { getRepairStatusColor, getRepairStatusIcon } from '@/domain/repairStatus'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
 import RepairNumber from '@/components/ui/RepairNumber.vue'
-import TagChip from '@/components/ui/TagChip.vue'
+import DevicePhoto from '@/components/ui/DevicePhoto.vue'
+import RepairMeta from '@/components/ui/RepairMeta.vue'
+import { attachmentUrl } from '@/api/documents'
 
 /** A repair in the overview: tap the card to open it; the button runs its next step. */
 const { repair } = defineProps<{ repair: RepairListItem }>()
@@ -23,23 +25,26 @@ function openRepair() {
 }
 
 const isOpen = computed(() => repair.status === 'Offen')
+const photoUrl = computed(() =>
+  repair.device_photo_id ? attachmentUrl(repair.id, repair.device_photo_id) : null
+)
 </script>
 
 <template>
   <v-card class="d-flex flex-column h-100" border @click="openRepair">
+    <DevicePhoto :src="photoUrl" :category="repair.repair_type?.name" :height="140" />
     <v-card-item>
       <template #prepend>
         <RepairNumber :id="repair.id" :status="repair.status" />
       </template>
       <v-card-title class="text-title-large">{{ repair.geraet_art }}</v-card-title>
-      <v-card-subtitle>
-        <PersonLabel :person="repair.customer" role="customer" />
-      </v-card-subtitle>
     </v-card-item>
 
     <v-card-text class="flex-grow-1 pt-0 d-flex flex-column ga-2">
-      <div v-if="repair.repair_type || repair.user" class="d-flex flex-wrap align-center ga-3">
-        <TagChip v-if="repair.repair_type" :label="repair.repair_type.name" />
+      <!-- The section already says the status -->
+      <RepairMeta :category="repair.repair_type?.name" />
+      <div class="d-flex flex-column ga-1 text-body-medium">
+        <PersonLabel :person="repair.customer" role="customer" />
         <PersonLabel v-if="repair.user" :person="repair.user" role="repairer" />
       </div>
 

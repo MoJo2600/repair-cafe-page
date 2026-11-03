@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import type { VForm } from 'vuetify/components'
@@ -53,7 +53,7 @@ function initialForm() {
 }
 
 const formData = ref(initialForm())
-const devicePhotos = ref<File[]>([])
+const devicePhoto = ref<File | null>(null)
 const repairTypes = ref<Array<{ id: number; name: string }>>([])
 const labelPrinterEnabled = shallowRef(false)
 
@@ -120,6 +120,17 @@ function selectCustomer(customer: CustomerResponse | null) {
   }
 }
 
+// Device photo for the review step; object URL released when it changes
+const reviewPhotoUrl = computed(() =>
+  devicePhoto.value ? URL.createObjectURL(devicePhoto.value) : null
+)
+watch(reviewPhotoUrl, (_next, previous) => {
+  if (previous) URL.revokeObjectURL(previous)
+})
+onUnmounted(() => {
+  if (reviewPhotoUrl.value) URL.revokeObjectURL(reviewPhotoUrl.value)
+})
+
 // ── Disclaimer (step 3) ──────────────────────────────────────────────────────
 const disclaimerMode = ref<'sign' | 'upload'>('sign')
 const signatureData = ref<string | null>(null)
@@ -180,24 +191,25 @@ async function uploadExtras(repairId: number) {
       await api.uploadRepairDisclaimer({ id: repairId }, { file: uploadedPdfFile.value })
     } catch (err) {
       console.error('Error uploading disclaimer PDF:', err)
-      problems.push('Haftungsausschluss')
+      problems.push('der Haftungsausschluss')
     }
   }
-  if (devicePhotos.value.length > 0) {
+  if (devicePhoto.value) {
     try {
       await api.uploadRepairAttachments(
         { repairId },
-        asFormData({ files: devicePhotos.value, attachment_type: 'device_photo' })
+        asFormData({ files: [devicePhoto.value], attachment_type: 'device_photo' })
       )
     } catch (err) {
-      console.error('Error uploading device photos:', err)
-      problems.push('Fotos')
+      console.error('Error uploading device photo:', err)
+      problems.push('das Gerätefoto')
     }
   }
   if (problems.length > 0) {
     // The repair exists; don't report the whole save as failed (risk of duplicates)
+    const verb = problems.length === 1 ? 'konnte' : 'konnten'
     toast.warning(
-      `Reparatur erstellt, aber ${problems.join(' und ')} konnten nicht hochgeladen werden. ` +
+      `Reparatur erstellt, aber ${problems.join(' und ')} ${verb} nicht hochgeladen werden. ` +
         'Bitte in der Reparatur erneut hochladen.',
       8000
     )
@@ -266,7 +278,7 @@ function openCreatedRepair() {
 
 function createAnother() {
   formData.value = initialForm()
-  devicePhotos.value = []
+  devicePhoto.value = null
   signatureData.value = null
   signatureError.value = ''
   disclaimerMode.value = 'sign'
@@ -387,11 +399,16 @@ function createAnother() {
           </v-row>
         </v-form>
 
-        <div class="text-title-small text-medium-emphasis mb-1">Fotos des Geräts (optional)</div>
+        <div class="text-title-small text-medium-emphasis mb-1">Foto des Geräts (optional)</div>
         <p class="text-body-small text-medium-emphasis mb-3">
-          Fotos dokumentieren den Zustand bei der Annahme.
+          Ein Foto zeigt den Zustand bei der Annahme. Weitere Fotos kannst du später in
+          Logeinträgen hinzufügen.
         </p>
-        <DevicePhotoCapture v-model="devicePhotos" :active="step === 2" />
+        <DevicePhotoCapture
+          v-model="devicePhoto"
+          :active="step === 2"
+          :category="formData.repair_type?.name"
+        />
       </template>
 
       <!-- Step 3: disclaimer, read and signed by the customer -->
@@ -428,12 +445,8 @@ function createAnother() {
 
       <!-- Step 4: review -->
       <template #[`item.4`]>
-        <RepairSummaryCard :repair-data="formData" />
+        <RepairSummaryCard :repair-data="formData" :photo-url="reviewPhotoUrl" />
         <div class="d-flex flex-wrap ga-4 text-body-medium text-medium-emphasis">
-          <span>
-            <v-icon icon="mdi-camera" size="small" />
-            {{ devicePhotos.length }} {{ devicePhotos.length === 1 ? 'Foto' : 'Fotos' }}
-          </span>
           <span>
             <v-icon :icon="disclaimerMode === 'sign' ? 'mdi-draw' : 'mdi-file-pdf-box'" size="small" />
             {{ disclaimerMode === 'sign' ? 'Unterschrieben' : 'Unterschriebene PDF' }}
