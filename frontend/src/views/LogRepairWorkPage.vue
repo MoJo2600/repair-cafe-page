@@ -309,7 +309,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
 </script>
 
 <template>
-  <v-container class="page pb-16">
+  <v-container fluid class="page-container pb-16">
     <div v-if="loading" class="d-flex align-center ga-3 pa-4">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
       <span>Lade Reparaturdaten...</span>
@@ -551,9 +551,6 @@ async function handleVdeSubmit(payload: VdeFormData) {
 </template>
 
 <style scoped>
-.page {
-  max-width: 1200px;
-}
 
 .side-panel {
   position: sticky;

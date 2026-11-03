@@ -26,7 +26,7 @@ const typography = [
 </script>
 
 <template>
-  <v-container fluid class="styleguide">
+  <v-container fluid class="page-container">
     <PageHeader title="Styleguide" subtitle="Lebende Version von docs/STYLEGUIDE.md" />
 
     <v-row>
@@ -147,9 +147,6 @@ const typography = [
 </template>
 
 <style scoped>
-.styleguide {
-  max-width: 1400px;
-}
 
 .swatch {
   width: 120px;

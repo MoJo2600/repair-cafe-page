@@ -6,14 +6,9 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 </script>
 
 <template>
-  <v-container fluid class="dashboard">
+  <v-container fluid class="page-container">
     <PageHeader title="Dashboard" subtitle="Diese Übersicht erscheint auch auf dem Sperrbildschirm" />
     <DashboardSummary />
   </v-container>
 </template>
 
-<style scoped>
-.dashboard {
-  max-width: 1600px;
-}
-</style>

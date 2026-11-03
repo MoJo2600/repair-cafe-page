@@ -92,8 +92,10 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 
 ## Layout
 
-- Pages: `PageHeader` (title, optional subtitle and actions), content in cards.
-  Container `fluid`, max width 1400 px.
+- Pages: `<v-container fluid class="page-container">` (max width 1400 px, centered;
+  defined in `src/styles/main.css`), `PageHeader` (title, optional subtitle and actions),
+  content in cards. Only the lock screen (wall display) is wider.
+- Action bars and step content line up with the page content (no extra side padding).
 - Spacing on the 4 px grid; between cards `mb-4`, inside groups `ga-2`.
 - Small screens: one column, tabs instead of side-by-side sections, the main action in
   a bottom bar or `v-fab`; dialogs fullscreen (`ResponsiveDialog`).

@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-4">
+  <v-container fluid class="page-container">
     <PageHeader title="Einstellungen" />
 
     <!-- Organisation -->

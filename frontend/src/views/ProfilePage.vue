@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page pa-4">
+  <v-container fluid class="page-container">
     <PageHeader title="Mein Profil" />
 
     <dl class="profile-details mb-8">
@@ -120,7 +120,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -205,10 +205,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.profile-page {
-  max-width: 720px;
-  margin-inline: auto;
-}
 .profile-details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

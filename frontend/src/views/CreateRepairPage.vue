@@ -282,7 +282,7 @@ function createAnother() {
 </script>
 
 <template>
-  <v-container fluid class="create-repair pb-16">
+  <v-container fluid class="page-container pb-16">
     <PageHeader title="Neue Reparatur" />
 
     <!-- The mobile stepper shows numbers only; name the current step -->
@@ -483,7 +483,7 @@ function createAnother() {
     </v-stepper>
 
     <!-- Actions within thumb reach -->
-    <div class="action-bar d-flex align-center ga-2 pa-3">
+    <div class="action-bar d-flex align-center ga-2 py-3">
       <template v-if="step < 5">
         <v-btn variant="text" size="large" @click="cancel">Abbrechen</v-btn>
         <v-spacer />
@@ -513,8 +513,9 @@ function createAnother() {
 </template>
 
 <style scoped>
-.create-repair {
-  max-width: 1000px;
+/* Step content flush with the stepper header and the action bar */
+:deep(.v-stepper-window) {
+  margin-inline: 0;
 }
 
 .disclaimer-frame {

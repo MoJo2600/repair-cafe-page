@@ -15,3 +15,9 @@
 .v-file-upload-dropzone--density-compact {
   padding-block: 12px;
 }
+
+/* Page width (docs/STYLEGUIDE.md → Layout): every page uses <v-container fluid class="page-container"> */
+.page-container {
+  max-width: 1400px;
+  margin-inline: auto;
+}
