@@ -76,7 +76,7 @@ stale fetches with a revision counter.
 | **Build fixes** | Lockfile + Docker after Dependabot bumps (see below) | done |
 | **Vuetify 4** | Upgrade 3.13.7 → 4.3.1 on `feat/vuetify-4` (see below) | done – needs page-by-page browser check |
 | **P1 – structure** | Items 8 → 7 → 9 → 13 → 10 (toast first; later steps use it) | done (+ VForm refs and `markLocked` from 12), checked in the browser |
-| **UI rework** | Workshop/touch focus (shared PC + tablets) on Vuetify 4 defaults, in the small components P1 produces; finish v4 cleanup (gap-based grid spacing, smaller breakpoints, button styles) | in progress: repairs overview, repair page (action bar, tabs, fullscreen dialogs) and app shell (rail / bottom nav) done and checked in the browser; open: new repair stepper, PIN lock screen, smaller pages, inline styles |
+| **UI rework** | Workshop/touch focus (shared PC + tablets); consistent look via docs/STYLEGUIDE.md | done: overview, repair page, app shell, style guide + shared ui components applied to all pages, new repair flow, dashboard / lock screen with PIN keypad, lint rules; checked in the browser |
 | **P2 – API layer** | Item 6, item 11 (backend writes the status log); see P2 plan below | done, checked in the browser |
 | **P3 – checks** | Vitest + `@vue/test-utils` (status transitions, PIN/idle lock, dialogs) — configure `server.deps.inline: ['vuetify']`; clear `any` warnings; lint rule for SFC block order | open |
 | **Housekeeping** | Dependabot: group frontend npm updates into one PR so the lockfile is updated once; run CI on Node 26 like the Docker image | open |

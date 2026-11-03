@@ -4,6 +4,10 @@ How the Repair Café app presents information. Every page follows these rules; t
 shared components in `frontend/src/components/ui/` implement them, so pages use those
 instead of styling things themselves. Base: Vuetify 4 (Material Design 3) defaults.
 
+Enforced by lint (`frontend/eslint.config.js`): outside `components/ui/`, no raw
+`<v-chip>` (except closable filter chips) and no palette colors (`teal`, `grey-*`, …)
+in `color` / `dot-color` / `bg-color`. Admins see every building block at `/styleguide`.
+
 ## Principles
 
 1. **Built for the workbench.** Tablets and the shared workshop PC, used with dirty
