@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import DashboardSummary from '@/components/dashboard/DashboardSummary.vue'
 import PinUnlockDialog from '@/components/PinUnlockDialog.vue'
+import { redirectTarget } from '@/utils/redirect'
 
 /** Shown while the shared PC is locked: public repair figures plus the way back in. */
 const router = useRouter()
+const route = useRoute()
+const ssoUrl = computed(
+  () => `/api/auth/oidc/login?next=${encodeURIComponent(redirectTarget(route.query))}`
+)
 const authStore = useAuthStore()
 
 const unlockOpen = shallowRef(false)
@@ -61,7 +66,7 @@ async function logout() {
                   variant="flat"
                   size="large"
                   prepend-icon="mdi-login"
-                  href="/api/auth/oidc/login"
+                  :href="ssoUrl"
                 >
                   Mit SSO anmelden
                 </v-btn>

@@ -114,6 +114,7 @@ import { computed, onMounted, ref } from 'vue'
 import type { VForm } from 'vuetify/components'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { redirectTarget } from '@/utils/redirect'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -138,8 +139,8 @@ const SSO_ERRORS: Record<string, string> = {
 const errorCode = route.query.error as string | undefined
 const errorMessage = ref(errorCode ? (SSO_ERRORS[errorCode] ?? SSO_ERRORS.sso_failed) : '')
 
-const redirectTarget = computed(() => (route.query.redirect as string) || '/')
-const ssoUrl = computed(() => `/api/auth/oidc/login?next=${encodeURIComponent(redirectTarget.value)}`)
+const loginTarget = computed(() => redirectTarget(route.query))
+const ssoUrl = computed(() => `/api/auth/oidc/login?next=${encodeURIComponent(loginTarget.value)}`)
 
 const required = (v: string) => !!v || 'Pflichtfeld'
 
@@ -162,7 +163,7 @@ async function submit() {
   const result = await authStore.login(username.value, password.value)
 
   if (result.success) {
-    router.push(redirectTarget.value)
+    router.push(loginTarget.value)
   } else {
     errorMessage.value = result.error ?? 'Anmeldung fehlgeschlagen'
     password.value = ''
