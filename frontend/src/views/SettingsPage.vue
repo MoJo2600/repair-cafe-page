@@ -145,6 +145,41 @@ v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.pn
       </v-card-text>
     </v-card>
 
+    <!-- Jubelton -->
+    <v-card class="mb-6">
+      <v-card-title>Jubelton</v-card-title>
+      <v-card-text>
+        <p class="text-body-medium text-medium-emphasis mb-4">
+          Wird auf dem Dashboard abgespielt, wenn ein Gerät repariert wurde. Laden Sie eine
+          MP3-Datei hoch (max. 2 MB). Geöffnete Dashboards übernehmen den neuen Ton nach dem
+          Neuladen.
+        </p>
+        <v-row class="ga-4 align-center">
+          <v-col cols="12" sm>
+            <v-file-input
+              v-model="soundFile"
+              label="Neuen Jubelton hochladen"
+              accept="audio/mpeg,.mp3"
+              prepend-icon="mdi-music-note"
+              :error-messages="soundError"
+              hide-details="auto"
+              @update:model-value="onSoundFileChange"
+            />
+          </v-col>
+          <v-col cols="12" sm="auto" class="d-flex flex-wrap ga-2">
+            <v-btn color="primary" variant="flat" :loading="soundUploading" :disabled="!soundFile" @click="uploadSound">
+              Hochladen
+            </v-btn>
+            <v-btn variant="tonal" prepend-icon="mdi-play" @click="previewSound">Anhören</v-btn>
+            <v-btn variant="text" :loading="soundResetting" @click="resetSound">Standard</v-btn>
+          </v-col>
+        </v-row>
+        <v-alert v-if="soundSuccess" type="success" variant="tonal" density="compact" class="mt-4">
+          {{ soundSuccess }}
+        </v-alert>
+      </v-card-text>
+    </v-card>
+
     <!-- Reparaturarten -->
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
@@ -249,7 +284,8 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
 import { api } from '@/api/client'
 import { errorMessage } from '@/utils/errors'
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { CELEBRATION_SOUND_URL } from '@/composables/useCelebration'
 import type { VForm } from 'vuetify/components'
 import type { SettingResponse } from '../api/generated/data-contracts'
 import { useToast } from '@/composables/useToast'
@@ -490,6 +526,61 @@ async function uploadLogo() {
     logoUploading.value = false
   }
 }
+
+// ── Celebration sound ────────────────────────────────────────────────────────
+
+const soundFile = ref<File | null>(null)
+const soundUploading = ref(false)
+const soundResetting = ref(false)
+const soundError = ref('')
+const soundSuccess = ref('')
+let soundPreview: HTMLAudioElement | null = null
+
+function onSoundFileChange() {
+  soundError.value = ''
+  soundSuccess.value = ''
+}
+
+/** Plays the active sound (fresh from the server, so right after an upload too). */
+function previewSound() {
+  soundPreview?.pause()
+  soundPreview = new Audio(`${CELEBRATION_SOUND_URL}?t=${Date.now()}`)
+  soundPreview.play().catch((err) => {
+    soundError.value = errorMessage(err, 'Ton konnte nicht abgespielt werden')
+  })
+}
+
+async function uploadSound() {
+  if (!soundFile.value) return
+  soundUploading.value = true
+  soundError.value = ''
+  soundSuccess.value = ''
+  try {
+    await api.uploadCelebrationSound({ file: soundFile.value })
+    soundSuccess.value = 'Jubelton erfolgreich aktualisiert.'
+    soundFile.value = null
+  } catch (err) {
+    soundError.value = errorMessage(err, 'Fehler beim Hochladen')
+  } finally {
+    soundUploading.value = false
+  }
+}
+
+async function resetSound() {
+  soundResetting.value = true
+  soundError.value = ''
+  soundSuccess.value = ''
+  try {
+    await api.resetCelebrationSound()
+    soundSuccess.value = 'Standard-Jubelton ist wieder aktiv.'
+  } catch (err) {
+    soundError.value = errorMessage(err, 'Zurücksetzen fehlgeschlagen')
+  } finally {
+    soundResetting.value = false
+  }
+}
+
+onUnmounted(() => soundPreview?.pause())
 
 // ── Disclaimer upload ─────────────────────────────────────────────────────────
 

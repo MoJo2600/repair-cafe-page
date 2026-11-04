@@ -12,6 +12,7 @@ PUBLIC = {
     ("health.healthcheck", "GET"),
     ("auth.api_login", "POST"),
     ("config.get_logo", "GET"),
+    ("config.get_celebration_sound", "GET"),
     ("oidc.auth_config", "GET"),
     ("oidc.oidc_login", "GET"),
     ("oidc.oidc_callback", "GET"),
@@ -48,7 +49,7 @@ def test_anonymous_requests_are_rejected(app, client):
     assert not unprotected, "endpoints reachable without login:\n" + "\n".join(unprotected)
 
 
-@pytest.mark.parametrize("url", ["/api/healthz", "/api/config/logo"])
+@pytest.mark.parametrize("url", ["/api/healthz", "/api/config/logo", "/api/config/celebration-sound"])
 def test_public_endpoints_need_no_login(client, url):
     assert client.get(url).status_code != 401
 

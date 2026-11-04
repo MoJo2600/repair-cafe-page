@@ -2600,6 +2600,70 @@
         ]
       }
     },
+    "/api/config/celebration-sound": {
+      "delete": {
+        "operationId": "resetCelebrationSound",
+        "responses": {
+          "200": {
+            "description": "Default sound active again",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        },
+        "summary": "Remove the custom celebration sound and go back to the bundled fanfare (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "get": {
+        "description": "Public because the lock screen dashboard celebrates too.<br/>Falls back to the bundled fanfare when no custom sound has been uploaded.<br/>",
+        "operationId": "getCelebrationSound",
+        "produces": [
+          "audio/mpeg"
+        ],
+        "responses": {
+          "200": {
+            "description": "MP3 audio"
+          }
+        },
+        "summary": "Serve the MP3 played when a repair succeeds.",
+        "tags": [
+          "Configuration"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Accepts an MP3 file of at most 2 MB. Takes effect on the next page load.<br/>",
+        "operationId": "uploadCelebrationSound",
+        "parameters": [
+          {
+            "description": "MP3 file (max. 2 MB)",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sound replaced successfully",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid or missing file"
+          }
+        },
+        "summary": "Upload and activate a custom celebration sound (admin only).",
+        "tags": [
+          "Configuration"
+        ]
+      }
+    },
     "/api/config/disclaimer": {
       "get": {
         "operationId": "getDisclaimerTemplate",

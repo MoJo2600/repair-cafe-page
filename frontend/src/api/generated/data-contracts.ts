@@ -1273,6 +1273,14 @@ export interface UploadCancellationTemplatePayload {
   file: File;
 }
 
+export interface UploadCelebrationSoundPayload {
+  /**
+   * MP3 file (max. 2 MB)
+   * @format binary
+   */
+  file: File;
+}
+
 export interface UploadDisclaimerTemplatePayload {
   /**
    * PDF file with required AcroForm fields

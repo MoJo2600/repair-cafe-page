@@ -24,7 +24,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 /**
  * Non-identifying repair figures; shown on the dashboard and on the lock screen
  * (also projected on the wall, so no customer data here). Refreshes every 5 s and
- * celebrates every newly repaired device with confetti and a fanfare.
+ * celebrates every newly repaired device with confetti and the celebration sound.
  */
 const REFRESH_MS = 5_000
 

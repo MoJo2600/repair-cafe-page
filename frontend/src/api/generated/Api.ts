@@ -85,6 +85,7 @@ import {
   UpdateSettingParams,
   UpdateUserParams,
   UploadCancellationTemplatePayload,
+  UploadCelebrationSoundPayload,
   UploadDisclaimerTemplatePayload,
   UploadLogoPayload,
   UploadRepairAttachmentsParams,
@@ -385,6 +386,55 @@ export class Api<
   ) =>
     this.request<APIResponse, void>({
       path: `/api/config/cancellation`,
+      method: "POST",
+      body: data,
+      type: ContentType.FormData,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Configuration
+   * @name ResetCelebrationSound
+   * @summary Remove the custom celebration sound and go back to the bundled fanfare (admin only).
+   * @request DELETE:/api/config/celebration-sound
+   */
+  resetCelebrationSound = (params: RequestParams = {}) =>
+    this.request<APIResponse, any>({
+      path: `/api/config/celebration-sound`,
+      method: "DELETE",
+      format: "json",
+      ...params,
+    });
+  /**
+   * @description Public because the lock screen dashboard celebrates too.<br/>Falls back to the bundled fanfare when no custom sound has been uploaded.<br/>
+   *
+   * @tags Configuration
+   * @name GetCelebrationSound
+   * @summary Serve the MP3 played when a repair succeeds.
+   * @request GET:/api/config/celebration-sound
+   */
+  getCelebrationSound = (params: RequestParams = {}) =>
+    this.request<Blob, any>({
+      path: `/api/config/celebration-sound`,
+      method: "GET",
+      ...params,
+    });
+  /**
+   * @description Accepts an MP3 file of at most 2 MB. Takes effect on the next page load.<br/>
+   *
+   * @tags Configuration
+   * @name UploadCelebrationSound
+   * @summary Upload and activate a custom celebration sound (admin only).
+   * @request POST:/api/config/celebration-sound
+   */
+  uploadCelebrationSound = (
+    data: UploadCelebrationSoundPayload,
+    params: RequestParams = {},
+  ) =>
+    this.request<APIResponse, void>({
+      path: `/api/config/celebration-sound`,
       method: "POST",
       body: data,
       type: ContentType.FormData,

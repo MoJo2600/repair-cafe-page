@@ -40,6 +40,21 @@ def _get_logo_store() -> Path:
     return Path(current_app.config["DATA_DIR"]) / "logo.png"
 
 
+_CELEBRATION_SOUND_DEFAULT = Path(__file__).parent.parent / "static" / "fanfare.mp3"
+CELEBRATION_SOUND_MAX_BYTES = 2 * 1024 * 1024
+
+
+def _get_celebration_sound_store() -> Path:
+    return Path(current_app.config["DATA_DIR"]) / "celebration.mp3"
+
+
+def _is_mp3(head: bytes) -> bool:
+    """MP3 with an ID3 tag, or starting directly with an MPEG audio frame header."""
+    if head.startswith(b"ID3"):
+        return True
+    return len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0
+
+
 @config_bp.route("/config/dropdowns", methods=["GET"])
 def get_dropdown_config():
     """
@@ -403,6 +418,112 @@ def upload_logo():
         json.dumps({"reply": "done"}),
         status=200,
         mimetype="application/json",
+    )
+
+
+# ── Celebration sound ──────────────────────────────────────────────────────
+
+
+@config_bp.route("/config/celebration-sound", methods=["GET"])
+@public_endpoint
+def get_celebration_sound():
+    """
+    Serve the MP3 played when a repair succeeds.
+    Public because the lock screen dashboard celebrates too.
+    Falls back to the bundled fanfare when no custom sound has been uploaded.
+    ---
+    operationId: getCelebrationSound
+    tags:
+      - Configuration
+    produces:
+      - audio/mpeg
+    responses:
+      200:
+        description: MP3 audio
+    """
+    store = _get_celebration_sound_store()
+    path = store if store.exists() else _CELEBRATION_SOUND_DEFAULT
+    response = send_file(str(path), mimetype="audio/mpeg")
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@config_bp.route("/config/celebration-sound", methods=["POST"])
+@admin_required
+def upload_celebration_sound():
+    """
+    Upload and activate a custom celebration sound (admin only).
+    Accepts an MP3 file of at most 2 MB. Takes effect on the next page load.
+    ---
+    operationId: uploadCelebrationSound
+    tags:
+      - Configuration
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: MP3 file (max. 2 MB)
+    responses:
+      200:
+        description: Sound replaced successfully
+        schema:
+          $ref: '#/definitions/APIResponse'
+      400:
+        description: Invalid or missing file
+    """
+    uploaded_file = request.files.get("file")
+    if uploaded_file is None or not uploaded_file.filename:
+        return Response(
+            json.dumps({"reply": "error", "error": "No file provided"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    data = uploaded_file.read(CELEBRATION_SOUND_MAX_BYTES + 1)
+    if len(data) > CELEBRATION_SOUND_MAX_BYTES:
+        return Response(
+            json.dumps({"reply": "error", "error": "The file is larger than 2 MB"}),
+            status=400,
+            mimetype="application/json",
+        )
+    if not _is_mp3(data[:4]):
+        return Response(
+            json.dumps({"reply": "error", "error": "Only MP3 files are accepted"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    store = _get_celebration_sound_store()
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_bytes(data)
+    current_app.logger.info("Celebration sound replaced via admin upload")
+    return Response(
+        json.dumps({"reply": "done"}), status=200, mimetype="application/json"
+    )
+
+
+@config_bp.route("/config/celebration-sound", methods=["DELETE"])
+@admin_required
+def reset_celebration_sound():
+    """
+    Remove the custom celebration sound and go back to the bundled fanfare (admin only).
+    ---
+    operationId: resetCelebrationSound
+    tags:
+      - Configuration
+    responses:
+      200:
+        description: Default sound active again
+        schema:
+          $ref: '#/definitions/APIResponse'
+    """
+    _get_celebration_sound_store().unlink(missing_ok=True)
+    current_app.logger.info("Celebration sound reset to the default")
+    return Response(
+        json.dumps({"reply": "done"}), status=200, mimetype="application/json"
     )
 
 
