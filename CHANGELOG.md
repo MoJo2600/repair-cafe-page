@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.6.1...v1.7.0) (2026-11-04)
+
+
+### Features
+
+* success sound as mp3 ([30c910a](https://github.com/MoJo2600/repair-cafe-page/commit/30c910aec2d40f8fc02a8ebc36efb2184937c500))
+
 ## [1.6.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.6.0...v1.6.1) (2026-11-04)
 
 
