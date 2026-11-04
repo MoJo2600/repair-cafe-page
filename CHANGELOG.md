@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/MoJo2600/repair-cafe-page/compare/v1.6.0...v1.6.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **frontend:** scanned label QR codes open the repair; confetti works under CSP ([6a5d2e4](https://github.com/MoJo2600/repair-cafe-page/commit/6a5d2e4a1f91cdd50ad7a14a0057c1745c749e8f))
+
 ## [1.6.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.5.0...v1.6.0) (2026-11-03)
 
 
