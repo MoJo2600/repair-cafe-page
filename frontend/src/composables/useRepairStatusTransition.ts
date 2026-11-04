@@ -11,7 +11,7 @@ import {
   canTransitionStatus,
   requiresReparateurForTransition,
 } from '@/domain/repairStatus'
-import confetti from 'canvas-confetti'
+import { fireConfetti } from '@/utils/confetti'
 import { useToast } from '@/composables/useToast'
 import type { Repair } from '@/api/types'
 
@@ -214,7 +214,7 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
 
       toast.success(`Status update erfolgreich: ${toStatus}`)
       if (toStatus === 'Repariert') {
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
+        fireConfetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
       }
 
       options.repairRecord.value.status = status

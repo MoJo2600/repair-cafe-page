@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useRepairStore } from '@/stores/repairStore'
 import { useUserStore } from '@/stores/userStore'
+import { redirectTarget } from '@/utils/redirect'
 
 /** Minimum gap between activity heartbeats sent to the server. */
 const ACTIVITY_REQUEST_INTERVAL_MS = 5_000
@@ -152,7 +153,7 @@ export function usePinSession() {
     } else {
       handleUserActivity()
       if (route.name === 'PinLock') {
-        await router.replace({ name: 'Home' })
+        await router.replace(redirectTarget(route.query))
       }
     }
   }

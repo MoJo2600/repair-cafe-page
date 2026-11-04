@@ -1,5 +1,5 @@
 import { onScopeDispose, shallowRef } from 'vue'
-import confetti from 'canvas-confetti'
+import { fireConfetti } from '@/utils/confetti'
 
 /**
  * Celebrates a successful repair: confetti plus a short fanfare.
@@ -84,8 +84,13 @@ export function useCelebration() {
   }
 
   function celebrate() {
-    confetti({ particleCount: 180, spread: 90, origin: { y: 0.6 } })
-    if (soundEnabled.value) playFanfare()
+    // Each effect on its own, so a failing one doesn't take the other down
+    try {
+      if (soundEnabled.value) playFanfare()
+    } catch (err) {
+      console.warn('Celebration sound failed', err)
+    }
+    fireConfetti({ particleCount: 180, spread: 90, origin: { y: 0.6 } })
   }
 
   /** Switch the sound on or off for this device; switching on also unlocks audio. */

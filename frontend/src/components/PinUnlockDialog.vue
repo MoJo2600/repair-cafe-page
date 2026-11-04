@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onScopeDispose, shallowRef, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { redirectTarget } from '@/utils/redirect'
 
 /**
  * Helper change on the shared PC: 6-digit PIN on a large keypad for touch,
@@ -13,6 +14,7 @@ const PIN_LENGTH = 6
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'] as const
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const pin = shallowRef('')
@@ -54,13 +56,13 @@ async function submit() {
   submitting.value = false
   if (result.success) {
     open.value = false
-    await router.replace({ name: 'Home' })
+    await router.replace(redirectTarget(route.query))
     return
   }
   if (result.sessionEnded) {
     // Too many wrong PINs end the whole session on the server
     open.value = false
-    await router.replace({ name: 'Login', query: { error: 'pin_locked' } })
+    await router.replace({ name: 'Login', query: { error: 'pin_locked', redirect: redirectTarget(route.query) } })
     return
   }
   error.value = result.error ?? 'PIN ungültig'

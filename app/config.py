@@ -35,13 +35,19 @@ class BaseConfig:
     TESTING = False
     APP_HEADERS = {"Content-type": "application/json"}
 
+    # Label printing
+    LABEL_PRINTER_ENABLED = bool(os.environ.get("LABEL_PRINTER_ENABLED", False))
+    LABEL_PRINTER_HOST = os.environ.get("LABEL_PRINTER_HOST", "localhost")
+    LABEL_PRINTER_PORT = int(os.environ.get("LABEL_PRINTER_PORT", "9100"))
+    LABEL_PRINTER_TIMEOUT = int(os.environ.get("LABEL_PRINTER_TIMEOUT", "5"))
+
     # Database
     HOST = os.environ.get("MYSQL_HOST", "db")
     DB = os.environ.get("MYSQL_DATABASE", "repaircafepage")
     TABLE = "repairs"
     USERNAME = os.environ.get("MYSQL_USER", "root")
     PASSWORD = os.environ.get("MYSQL_PASSWORD", "mariadb")
-    DBPORT = "3306"
+    DBPORT = os.environ.get("MYSQL_PORT", "3306")
 
     # SQLAlchemy
     SQLALCHEMY_TRACK_MODIFICATIONS = False

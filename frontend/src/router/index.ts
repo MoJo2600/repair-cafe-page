@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { redirectQuery, redirectTarget } from '../utils/redirect'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -85,15 +86,15 @@ router.beforeEach(async (to) => {
 
   if (authStore.pinSessionEligible) {
     if (authStore.isLocked) {
-      return to.name === 'PinLock' ? true : { name: 'PinLock' }
+      return to.name === 'PinLock' ? true : { name: 'PinLock', query: redirectQuery(to) }
     }
-    if (to.name === 'PinLock' || to.name === 'Login') return { name: 'Home' }
+    if (to.name === 'PinLock' || to.name === 'Login') return redirectTarget(to.query)
     if (to.meta.adminOnly && !authStore.isAdmin) return { name: 'Home' }
     return true
   }
 
   if (to.meta.public && to.name === 'Login') return true
-  return { name: 'Login', query: { redirect: to.fullPath } }
+  return { name: 'Login', query: redirectQuery(to) }
 })
 
 export default router
