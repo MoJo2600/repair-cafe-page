@@ -1,5 +1,7 @@
 # Known Bugs
 
+No open bugs. Add new ones at the top; mark fixed ones as resolved.
+
 ## [Resolved] Cancellation signature is discarded
 
 **Found:** 2026-10-18 | **Resolved:** 2026-10-29

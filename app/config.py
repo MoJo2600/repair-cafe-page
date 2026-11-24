@@ -119,27 +119,6 @@ class BaseConfig:
         if g.strip()
     ]
 
-    # Public base URL as seen by the browser, e.g. https://reparaturen.repaircafe-hemau.de
-    # (behind the TLS-terminating proxy the request scheme is not reliable).
-    PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
-
-    # OIDC login. Enabled when issuer, client id/secret and PUBLIC_URL are set.
-    # While enabled, password login is restricted to local admin accounts (break-glass).
-    OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "")
-    OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
-    OIDC_CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "")
-    OIDC_SCOPES = os.environ.get("OIDC_SCOPES", "openid email profile")
-    OIDC_PIN_CLAIM = os.environ.get("OIDC_PIN_CLAIM", "pin_code")
-    OIDC_ADMIN_CLAIM = os.environ.get("OIDC_ADMIN_CLAIM", "repaircafe_admin")
-    OIDC_GROUPS_CLAIM = os.environ.get("OIDC_GROUPS_CLAIM", "groups")
-    PIN_MODE = os.environ.get("PIN_MODE", "oidc")
-    PIN_MODE_RESET_ACK = os.environ.get("PIN_MODE_RESET_ACK", "")
-    OIDC_DENIED_GROUPS = [
-        g.strip()
-        for g in os.environ.get("OIDC_DENIED_GROUPS", "").split(",")
-        if g.strip()
-    ]
-
     # PIN unlock limits (wrong PINs). Per session: the session is logged out on
     # reaching the limit. Per account / global: counted within the rate window.
     PIN_MAX_FAILED_PER_SESSION = int(os.environ.get("PIN_MAX_FAILED_PER_SESSION", "5"))

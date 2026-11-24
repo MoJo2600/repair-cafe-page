@@ -15,7 +15,7 @@ This guide explains how to set up the **Seiko Instruments Smart Label Printer 65
 RepairCafePage generates label images in [`app/services/label_service.py`](../app/services/label_service.py) as **602 × 330 px** PNG files (`51 mm × 28 mm` at `300 DPI`) and submits them to CUPS using the standard `lp` command:
 
 ```text
-POST /api/print-label/<id>  ──►  generate_label_image() (602×330 PNG)  ──►  lp -d <LABEL_PRINTER_NAME> <tmp.png>
+POST /api/repairs/<id>/print-label  ──►  generate_label_image() (602×330 PNG)  ──►  lp -d <LABEL_PRINTER_NAME> <tmp.png>
 ```
 
 Depending on where the physical printer is plugged in, the print job follows one of two paths:
@@ -103,7 +103,7 @@ services:
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
       PUBLIC_URL: ${PUBLIC_URL:-}
       # ── Label Printer Configuration ─────────────────────────────────────────
-      # Enables the print button in the UI and POST /api/print-label/<id>
+      # Enables the print button in the UI and POST /api/repairs/<id>/print-label
       LABEL_PRINTER_ENABLED: ${LABEL_PRINTER_ENABLED:-false}
       # Must match the exact CUPS queue name on the Docker host (`lpstat -p`)
       LABEL_PRINTER_NAME: ${LABEL_PRINTER_NAME:-SLP650}
@@ -130,12 +130,12 @@ In your `.env` file (copied from [`.env.example`](../.env.example)), configure:
 
 ```dotenv
 # Browser-facing URL of the RepairCafePage instance.
-# Used as the fallback base URL for the QR code printed on labels (<PUBLIC_URL>/edit/<qr_token>).
+# Required for SSO. Label QR codes use the app URL from Einstellungen instead (see Pitfall 5).
 PUBLIC_URL=https://repairs.example.org
 
 # -- Label Printer (Optional, CUPS) ------------------------------------------
 # Set to true to expose the "Print Label" button in the UI and enable the
-# POST /api/print-label/<id> endpoint.
+# POST /api/repairs/<id>/print-label endpoint.
 LABEL_PRINTER_ENABLED=true
 
 # Exact CUPS queue name configured on the Docker host (verify with `lpstat -p`).
@@ -483,12 +483,12 @@ Adding `ServerAlias *` to `/etc/cups/cupsd.conf` on the remote print server reso
 
 If you use an IP address in `ipp://<IP>:631/printers/SII_SLP650`, assign a **static IP / DHCP reservation** to the Raspberry Pi print server in your router (e.g., Fritz!Box -> Home Network -> Network -> Edit device -> "Always assign this network device the same IPv4 address"). Otherwise, if the print server's IP changes, print jobs on the Docker host will hang waiting for the old IP.
 
-### 5. QR Code Target URL (`app_url` / `PUBLIC_URL`) and Custom Label Logo
+### 5. QR Code Target URL (app URL) and Custom Label Logo
 
 Each printed label includes a QR code pointing to `<app_url>/edit/<qr_token>` so repairers can scan the label with a smartphone or tablet to open the repair record directly.
-- Look at [`app/api/repairs.py`](../app/api/repairs.py): it uses `app_url` from the application settings (`config.json` / Admin UI), falling back to the incoming HTTP `Host` header.
-- **Make sure `app_url` in Admin Settings** is set to the actual LAN IP/hostname or domain of your RepairCafePage instance (e.g., `http://192.168.178.50` or `https://repaircafe.example.org`), **not** `http://localhost`, otherwise phones scanning the printed QR code will try to open `localhost` on the phone itself.
-- **Custom Logo:** To print your own Repair Café logo on the bottom-left of the label instead of the default logo, place a square PNG file at `/data/logo.png` inside the `app_data` volume (or configure `org_name` and `org_website` in Admin Settings).
+- Look at [`app/api/repairs.py`](../app/api/repairs.py): it uses the app URL from **Einstellungen** (stored in the database), falling back to the host of the request that triggered the print.
+- **Make sure the app URL in Einstellungen** is set to the actual LAN IP/hostname or domain of your RepairCafePage instance (e.g., `http://192.168.178.50` or `https://repaircafe.example.org`), **not** `http://localhost`, otherwise phones scanning the printed QR code will try to open `localhost` on the phone itself.
+- **Custom Logo:** To print your own Repair Café logo on the bottom-left of the label instead of the default logo, upload it under **Einstellungen** (stored as `/data/logo.png`). Organisation name and website on the label are set there too.
 
 ### 6. Re-enabling a Paused Queue After Printer Power-Off
 

@@ -29,11 +29,7 @@ data/
 # CI / docs
 .gitlab-ci.yml
 *.md
-ARCHITECTURE.md
-DEPLOYMENT.md
-FRONTEND.md
-QUICK_REFERENCE.md
-QUICKSTART.md
+docs/
 
 # Misc
 *.log
