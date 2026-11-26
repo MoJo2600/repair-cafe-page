@@ -405,6 +405,48 @@ def test_pin_unlock_failures_migration_round_trips():
     engine.dispose()
 
 
+def test_auto_lock_opt_in_migration_changes_database_default():
+    engine = sa.create_engine("sqlite://")
+    sessions = import_module("app.migrations.versions.013_pin_unlock_sessions")
+    auto_lock = import_module("app.migrations.versions.015_pin_auto_lock")
+    opt_in = import_module("app.migrations.versions.017_auto_lock_opt_in")
+    with engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE users (id INTEGER PRIMARY KEY)"))
+        connection.execute(sa.text("INSERT INTO users (id) VALUES (1)"))
+        monkeypatch = pytest.MonkeyPatch()
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(sessions, "op", operations)
+        monkeypatch.setattr(auto_lock, "op", operations)
+        monkeypatch.setattr(opt_in, "op", operations)
+        try:
+            sessions.upgrade()
+            auto_lock.upgrade()
+            opt_in.upgrade()
+            connection.execute(
+                sa.text(
+                    "INSERT INTO pin_unlock_sessions (session_id, active_user_id) "
+                    "VALUES ('session', 1)"
+                )
+            )
+            enabled = connection.execute(
+                sa.text(
+                    "SELECT auto_lock_enabled FROM pin_unlock_sessions "
+                    "WHERE session_id = 'session'"
+                )
+            ).scalar_one()
+            assert enabled == 0
+
+            opt_in.downgrade()
+            assert any(
+                column["name"] == "auto_lock_enabled"
+                and column["default"] == "1"
+                for column in sa.inspect(connection).get_columns("pin_unlock_sessions")
+            )
+        finally:
+            monkeypatch.undo()
+    engine.dispose()
+
+
 def test_locked_dashboard_summary_excludes_private_repair_data(
     app, helper_client, helper_user
 ):

@@ -1,6 +1,5 @@
 """
-The idle auto-lock can be switched off per browser session (personal devices in the
-workshop network); the workshop PC keeps it on by default.
+The idle auto-lock can be enabled per browser session and starts off by default.
 """
 
 from datetime import timedelta
@@ -28,7 +27,7 @@ def _go_idle(client, seconds=61):
 def test_status_reports_auto_lock_and_timeout(helper_client):
     status = helper_client.get("/api/auth/pin-session").get_json()
 
-    assert status["auto_lock_enabled"] is True
+    assert status["auto_lock_enabled"] is False
     assert status["idle_timeout_seconds"] == 60
 
 
@@ -66,6 +65,7 @@ def test_enabling_again_starts_a_fresh_idle_period(helper_client):
 
 
 def test_cannot_switch_off_an_already_expired_session(helper_client):
+    helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True})
     _go_idle(helper_client)
 
     resp = helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": False})
@@ -74,13 +74,13 @@ def test_cannot_switch_off_an_already_expired_session(helper_client):
     assert _grant(helper_client).auto_lock_enabled is True
 
 
-def test_new_login_starts_with_auto_lock_on(helper_client):
-    helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": False})
+def test_new_login_starts_with_auto_lock_off(helper_client):
+    helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True})
 
     helper_client.post("/api/auth/logout")
     helper_client.post("/api/auth/login", json={"username": "helfer", "password": "secret"})
 
-    assert helper_client.get("/api/auth/pin-session").get_json()["auto_lock_enabled"] is True
+    assert helper_client.get("/api/auth/pin-session").get_json()["auto_lock_enabled"] is False
 
 
 def test_invalid_body_is_rejected(helper_client):

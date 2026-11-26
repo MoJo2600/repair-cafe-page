@@ -18,12 +18,29 @@
       <v-btn icon aria-label="QR-Code scannen" @click="qrScannerOpen = true">
         <v-icon>mdi-qrcode-scan</v-icon>
       </v-btn>
+      <div
+        v-if="authStore.pinUnlockAvailable"
+        class="lock-control d-flex flex-column align-center justify-center"
+      >
+        <v-btn
+          icon="mdi-lock"
+          variant="text"
+          aria-label="Bildschirm sperren"
+          title="Bildschirm sperren"
+          @click="lockNow"
+        />
+        <span
+          v-if="authStore.autoLockEnabled && secondsUntilLock !== null"
+          class="lock-countdown"
+          aria-live="off"
+        >
+          {{ formatLockCountdown(secondsUntilLock) }}
+        </span>
+      </div>
       <AutoLockMenu
         v-if="authStore.pinUnlockAvailable"
-        :seconds-until-lock="secondsUntilLock"
         :auto-lock-enabled="authStore.autoLockEnabled"
         :set-auto-lock="setAutoLockForDevice"
-        @lock="lockNow"
       />
     </v-app-bar>
 
@@ -68,6 +85,11 @@ const { smAndDown } = useDisplay()
 const navOpen = ref(false)
 const qrScannerOpen = ref(false)
 
+function formatLockCountdown(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
+}
+
 // Nothing from the previous user may stay visible behind the PIN screen
 watch(canUseApp, (active) => {
   if (!active) {
@@ -86,3 +108,17 @@ onMounted(() => {
     })
 })
 </script>
+
+<style scoped>
+.lock-control {
+  min-width: 48px;
+}
+
+.lock-countdown {
+  margin-top: -8px;
+  padding-bottom: 3px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+</style>

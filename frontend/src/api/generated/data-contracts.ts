@@ -374,7 +374,7 @@ export interface PinSessionActionResponse {
 export interface PinSessionStatusResponse {
   /**
    * Idle auto-lock active for this session
-   * @default true
+   * @default false
    */
   auto_lock_enabled?: boolean;
   eligible: boolean;

@@ -22,6 +22,34 @@
   margin-inline: auto;
 }
 
+/*
+ * One readable type scale for interactive UI.
+ * Vuetify utility classes remain available for semantic metadata and headings.
+ */
+.v-list-item-title {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.v-list-item-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.v-data-table tbody td {
+  font-size: 1rem;
+}
+
+.v-data-table thead th {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.v-bottom-navigation .v-btn__content > span {
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+
 /* Shared responsive patterns. Component-specific positioning stays in the SFC. */
 .app-action-bar {
   position: sticky;

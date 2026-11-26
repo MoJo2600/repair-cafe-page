@@ -744,7 +744,7 @@
     "PinSessionStatusResponse": {
       "properties": {
         "auto_lock_enabled": {
-          "default": true,
+          "default": false,
           "description": "Idle auto-lock active for this session",
           "type": "boolean"
         },

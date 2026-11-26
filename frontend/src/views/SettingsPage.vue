@@ -11,8 +11,7 @@
       <v-tab value="workshop" prepend-icon="mdi-tools">Werkstatt</v-tab>
     </v-tabs>
 
-    <v-window v-model="activeSection">
-      <v-window-item value="general">
+    <section v-if="activeSection === 'general'">
         <!-- Organisation -->
         <v-card class="mb-6">
           <v-card-title>Organisation</v-card-title>
@@ -167,13 +166,13 @@
             </v-alert>
           </v-card-text>
         </v-card>
-      </v-window-item>
+    </section>
 
-      <v-window-item value="documents">
-        <DocumentTemplatesSettings />
-      </v-window-item>
+    <section v-else-if="activeSection === 'documents'">
+      <DocumentTemplatesSettings />
+    </section>
 
-      <v-window-item value="workshop">
+    <section v-else>
         <!-- Reparaturarten -->
         <v-card class="mb-6">
           <v-card-title class="d-flex align-center justify-space-between flex-wrap ga-2">
@@ -305,8 +304,7 @@
             <v-list-item v-if="byCategory('test_device').length === 0" title="Keine Einträge" />
           </v-list>
         </v-card>
-      </v-window-item>
-    </v-window>
+    </section>
 
     <!-- Add / Edit dialog -->
     <v-dialog v-model="formDialog" max-width="480" persistent>

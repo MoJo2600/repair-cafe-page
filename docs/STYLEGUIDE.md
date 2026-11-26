@@ -97,6 +97,7 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 | Card title | `text-title-large` |
 | Field label above a value | `text-title-small text-medium-emphasis` |
 | Body text | Vuetify default within `v-card-text`; use `text-body-large` only for deliberately emphasized card text |
+| Navigation and interactive list labels | default Vuetify body sizing; do not use `text-label-*` |
 | Meta (dates, authors) | `text-body-small text-medium-emphasis` |
 
 ## Layout
