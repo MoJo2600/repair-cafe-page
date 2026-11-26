@@ -182,6 +182,10 @@ def test_pin_grant_is_isolated_to_the_primary_login_browser(app, helper_user):
 
 
 def test_locked_pin_session_expires_after_sixty_seconds(helper_client, helper_user):
+    assert (
+        helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True}).status_code
+        == 200
+    )
     helper_client.post("/api/auth/pin-session/lock", json={})
     with helper_client.session_transaction() as browser_session:
         session_id = browser_session["pin_unlock_session_id"]
@@ -308,6 +312,10 @@ def test_status_reports_pin_unlock_availability(helper_client):
 
 
 def test_no_idle_lock_outside_the_workshop(helper_client):
+    assert (
+        helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True}).status_code
+        == 200
+    )
     grant = _grant(helper_client)
     grant.last_activity_at = utc_now() - timedelta(minutes=10)
     db.session.commit()
