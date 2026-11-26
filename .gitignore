@@ -99,3 +99,6 @@ frontend/dist/
 *.sw?
 
 .venv/
+
+# Local scratch data (scanned forms with personal data, import CSVs)
+tmp/

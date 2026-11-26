@@ -224,7 +224,30 @@ push to `main` also publishes `:dev` images. Dependabot opens dependency updates
 
 `.github/instructions/` holds Copilot instructions for recurring tasks (new API
 endpoint, app config value, settings dropdowns, linked settings fields).
-`.agents/skills/` holds Vue best-practice skills used for frontend reviews.
+`.agents/skills/` holds reusable framework and repository best-practice skills.
+The `vue-best-practices` skill and related task-specific skills come from
+[`vuejs-ai/skills`](https://github.com/vuejs-ai/skills); the installed revisions
+are recorded in `skills-lock.json`.
+`flask-backend-best-practices` is a repository-owned skill that captures this
+project's Python 3.12, Flask, SQLAlchemy, Alembic, Pydantic, Flasgger,
+Flask-Login, PIN-session, and pytest conventions.
+
+Repository-level Copilot custom agents are available in `.github/agents/`:
+
+- **Flask Backend Pro** (`flask-backend.agent.md`) handles Python, Flask,
+  SQLAlchemy, Alembic, Pydantic, authentication, services, and backend tests.
+  It must load `flask-backend-best-practices` before backend work. Its write
+  scope is `app/` only.
+- **Vue Frontend Pro** (`vue-frontend.agent.md`) handles Vue 3, TypeScript,
+  Vuetify, Pinia, routing, composables, generated API usage, and frontend
+  validation. It must load `vue-best-practices` before Vue work and uses the
+  matching Pinia, router, testing, debugging, or composable skill when needed.
+  Its write scope is `frontend/` only.
+
+Keep the boundary strict. If a task spans the API contract, run the backend
+agent for the Flask/Pydantic part and the frontend agent for the Vue/generated
+client part, with a coordinator resolving the handoff. Neither specialist edits
+the other layer to work around a missing contract.
 
 ## Troubleshooting
 
