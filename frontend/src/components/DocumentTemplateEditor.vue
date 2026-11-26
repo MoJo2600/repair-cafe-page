@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TextAlign from '@tiptap/extension-text-align'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { onBeforeUnmount, watch } from 'vue'
@@ -32,7 +33,13 @@ const placeholders = [
 ] as const
 
 const editor = useEditor({
-  extensions: [StarterKit],
+  extensions: [
+    StarterKit,
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+      alignments: ['left', 'center', 'right', 'justify'],
+    }),
+  ],
   content: model.value,
   editable: !props.disabled,
   editorProps: {
@@ -59,15 +66,46 @@ watch(
   (disabled) => editor.value?.setEditable(!disabled)
 )
 
-function command(name: 'bold' | 'italic' | 'bulletList' | 'orderedList' | 'undo' | 'redo') {
+type EditorCommand =
+  | 'bold'
+  | 'italic'
+  | 'underline'
+  | 'strike'
+  | 'bulletList'
+  | 'orderedList'
+  | 'blockquote'
+  | 'horizontalRule'
+  | 'undo'
+  | 'redo'
+
+function command(name: EditorCommand) {
   const chain = editor.value?.chain().focus()
   if (!chain) return
   if (name === 'bold') chain.toggleBold().run()
   else if (name === 'italic') chain.toggleItalic().run()
+  else if (name === 'underline') chain.toggleUnderline().run()
+  else if (name === 'strike') chain.toggleStrike().run()
   else if (name === 'bulletList') chain.toggleBulletList().run()
   else if (name === 'orderedList') chain.toggleOrderedList().run()
+  else if (name === 'blockquote') chain.toggleBlockquote().run()
+  else if (name === 'horizontalRule') chain.setHorizontalRule().run()
   else if (name === 'undo') chain.undo().run()
   else chain.redo().run()
+}
+
+function setBlock(level: 1 | 2 | 3 | 4 | 5 | 6 | null) {
+  const chain = editor.value?.chain().focus()
+  if (!chain) return
+  if (level === null) chain.setParagraph().run()
+  else chain.toggleHeading({ level }).run()
+}
+
+function setTextAlign(alignment: 'left' | 'center' | 'right' | 'justify') {
+  editor.value?.chain().focus().setTextAlign(alignment).run()
+}
+
+function clearFormatting() {
+  editor.value?.chain().focus().unsetAllMarks().clearNodes().run()
 }
 
 function insertPlaceholder(name: string) {
@@ -79,12 +117,35 @@ onBeforeUnmount(() => editor.value?.destroy())
 
 <template>
   <div class="document-template-editor border rounded">
-    <v-toolbar density="compact" flat class="document-template-editor__toolbar">
+    <div class="document-template-editor__toolbar d-flex flex-wrap align-center ga-1 pa-2">
+      <v-menu :disabled="disabled || !editor">
+        <template #activator="{ props: menuProps }">
+          <v-btn
+            v-bind="menuProps"
+            prepend-icon="mdi-format-header-pound"
+            append-icon="mdi-menu-down"
+          >
+            Absatzstil
+          </v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item title="Normaler Text" @click="setBlock(null)" />
+          <v-divider class="my-1" />
+          <v-list-item title="Überschrift 1" @click="setBlock(1)" />
+          <v-list-item title="Überschrift 2" @click="setBlock(2)" />
+          <v-list-item title="Überschrift 3" @click="setBlock(3)" />
+          <v-list-item title="Überschrift 4" @click="setBlock(4)" />
+          <v-list-item title="Überschrift 5" @click="setBlock(5)" />
+          <v-list-item title="Überschrift 6" @click="setBlock(6)" />
+        </v-list>
+      </v-menu>
+      <v-divider vertical class="mx-1" />
       <v-btn
         icon="mdi-format-bold"
         :active="editor?.isActive('bold')"
         :disabled="disabled || !editor"
         aria-label="Fett"
+        title="Fett"
         @click="command('bold')"
       />
       <v-btn
@@ -92,7 +153,40 @@ onBeforeUnmount(() => editor.value?.destroy())
         :active="editor?.isActive('italic')"
         :disabled="disabled || !editor"
         aria-label="Kursiv"
+        title="Kursiv"
         @click="command('italic')"
+      />
+      <v-btn
+        icon="mdi-format-underline"
+        :active="editor?.isActive('underline')"
+        :disabled="disabled || !editor"
+        aria-label="Unterstreichen"
+        title="Unterstreichen"
+        @click="command('underline')"
+      />
+      <v-btn
+        icon="mdi-format-strikethrough"
+        :active="editor?.isActive('strike')"
+        :disabled="disabled || !editor"
+        aria-label="Durchstreichen"
+        title="Durchstreichen"
+        @click="command('strike')"
+      />
+      <v-divider vertical class="mx-1" />
+      <v-btn
+        v-for="alignment in [
+          { value: 'left', icon: 'mdi-format-align-left', label: 'Linksbündig' },
+          { value: 'center', icon: 'mdi-format-align-center', label: 'Zentriert' },
+          { value: 'right', icon: 'mdi-format-align-right', label: 'Rechtsbündig' },
+          { value: 'justify', icon: 'mdi-format-align-justify', label: 'Blocksatz' },
+        ] as const"
+        :key="alignment.value"
+        :icon="alignment.icon"
+        :active="editor?.isActive({ textAlign: alignment.value })"
+        :disabled="disabled || !editor"
+        :aria-label="alignment.label"
+        :title="alignment.label"
+        @click="setTextAlign(alignment.value)"
       />
       <v-divider vertical class="mx-1" />
       <v-btn
@@ -100,6 +194,7 @@ onBeforeUnmount(() => editor.value?.destroy())
         :active="editor?.isActive('bulletList')"
         :disabled="disabled || !editor"
         aria-label="Aufzählung"
+        title="Aufzählung"
         @click="command('bulletList')"
       />
       <v-btn
@@ -107,7 +202,23 @@ onBeforeUnmount(() => editor.value?.destroy())
         :active="editor?.isActive('orderedList')"
         :disabled="disabled || !editor"
         aria-label="Nummerierte Liste"
+        title="Nummerierte Liste"
         @click="command('orderedList')"
+      />
+      <v-btn
+        icon="mdi-format-quote-close"
+        :active="editor?.isActive('blockquote')"
+        :disabled="disabled || !editor"
+        aria-label="Zitatblock"
+        title="Zitatblock"
+        @click="command('blockquote')"
+      />
+      <v-btn
+        icon="mdi-minus"
+        :disabled="disabled || !editor"
+        aria-label="Trennlinie"
+        title="Trennlinie"
+        @click="command('horizontalRule')"
       />
       <v-divider vertical class="mx-1" />
       <v-menu :disabled="disabled || !editor">
@@ -124,20 +235,29 @@ onBeforeUnmount(() => editor.value?.destroy())
           />
         </v-list>
       </v-menu>
+      <v-btn
+        icon="mdi-format-clear"
+        :disabled="disabled || !editor"
+        aria-label="Formatierung entfernen"
+        title="Formatierung entfernen"
+        @click="clearFormatting"
+      />
       <v-spacer />
       <v-btn
         icon="mdi-undo"
         :disabled="disabled || !editor?.can().undo()"
         aria-label="Rückgängig"
+        title="Rückgängig"
         @click="command('undo')"
       />
       <v-btn
         icon="mdi-redo"
         :disabled="disabled || !editor?.can().redo()"
         aria-label="Wiederholen"
+        title="Wiederholen"
         @click="command('redo')"
       />
-    </v-toolbar>
+    </div>
     <EditorContent :editor="editor" />
   </div>
 </template>
@@ -165,5 +285,15 @@ onBeforeUnmount(() => editor.value?.destroy())
 .document-template-editor :deep(.document-template-editor__content ul),
 .document-template-editor :deep(.document-template-editor__content ol) {
   padding-inline-start: 1.5rem;
+}
+
+.document-template-editor :deep(.document-template-editor__content blockquote) {
+  margin-inline: 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid rgba(var(--v-theme-primary), 0.5);
+}
+
+.document-template-editor :deep(.document-template-editor__content hr) {
+  margin-block: 1.5rem;
 }
 </style>

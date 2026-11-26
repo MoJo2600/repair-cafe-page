@@ -187,6 +187,26 @@ def test_document_types_are_fixed_and_versions_are_sanitized(client, helper_clie
     assert admin.delete("/api/document-templates/1").status_code == 405
 
 
+def test_template_sanitizer_preserves_alignment_only(client):
+    admin = _admin(client)
+    created = admin.post(
+        "/api/document-templates/1/versions",
+        json={
+            "html": (
+                '<h2 style="text-align: center; position: fixed">Hinweis</h2>'
+                '<p style="text-align: justify; background-image: url(javascript:x)">Text</p>'
+            )
+        },
+    )
+
+    assert created.status_code == 201
+    html = created.get_json()["data"]["html"]
+    assert 'style="text-align: center;"' in html
+    assert 'style="text-align: justify;"' in html
+    assert "position" not in html
+    assert "background-image" not in html
+
+
 def test_document_versions_are_immutable_and_publishable(client):
     admin = _admin(client)
     template = _system_template("disclaimer")

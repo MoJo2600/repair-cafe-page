@@ -41,7 +41,10 @@ const safeHtml = computed(() =>
 
 .document-preview__content :deep(h1),
 .document-preview__content :deep(h2),
-.document-preview__content :deep(h3) {
+.document-preview__content :deep(h3),
+.document-preview__content :deep(h4),
+.document-preview__content :deep(h5),
+.document-preview__content :deep(h6) {
   line-height: 1.25;
   margin-block: 1em 0.45em;
 }
@@ -49,6 +52,9 @@ const safeHtml = computed(() =>
 .document-preview__content :deep(h1:first-child),
 .document-preview__content :deep(h2:first-child),
 .document-preview__content :deep(h3:first-child),
+.document-preview__content :deep(h4:first-child),
+.document-preview__content :deep(h5:first-child),
+.document-preview__content :deep(h6:first-child),
 .document-preview__content :deep(p:first-child) {
   margin-top: 0;
 }

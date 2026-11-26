@@ -11,6 +11,9 @@ importers:
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
+      '@tiptap/extension-text-align':
+        specifier: ^3.35.0
+        version: 3.35.0(@tiptap/core@3.35.0(@tiptap/pm@3.35.0))
       '@tiptap/starter-kit':
         specifier: ^3.35.0
         version: 3.35.0
@@ -711,6 +714,11 @@ packages:
 
   '@tiptap/extension-strike@3.35.0':
     resolution: {integrity: sha512-xOLLgRO0yD9gYxMdp5fD4sJw4DJNTGrox4zLOSO99J6Pf8+8GdCPZAb9HBu4aHbCjt+16vu1i2uWmmkNnmbD1A==}
+    peerDependencies:
+      '@tiptap/core': 3.35.0
+
+  '@tiptap/extension-text-align@3.35.0':
+    resolution: {integrity: sha512-5Zfbc7OfK+cXvrGtjzgsjcbr73r/9dzg4df96LcJFrTd1i5lGS1o1mIBUqWSVrIUiGBwYDt6mTf5hh9Zslg6Tw==}
     peerDependencies:
       '@tiptap/core': 3.35.0
 
@@ -2543,6 +2551,10 @@ snapshots:
       '@tiptap/core': 3.35.0(@tiptap/pm@3.35.0)
 
   '@tiptap/extension-strike@3.35.0(@tiptap/core@3.35.0(@tiptap/pm@3.35.0))':
+    dependencies:
+      '@tiptap/core': 3.35.0(@tiptap/pm@3.35.0)
+
+  '@tiptap/extension-text-align@3.35.0(@tiptap/core@3.35.0(@tiptap/pm@3.35.0))':
     dependencies:
       '@tiptap/core': 3.35.0(@tiptap/pm@3.35.0)
 

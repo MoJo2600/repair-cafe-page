@@ -11,6 +11,7 @@ from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
 
+from bleach.css_sanitizer import CSSSanitizer
 from bleach.sanitizer import Cleaner
 from flask import current_app
 from PIL import Image, UnidentifiedImageError
@@ -63,6 +64,8 @@ _CLEANER = Cleaner(
             "h2",
             "h3",
             "h4",
+            "h5",
+            "h6",
             "table",
             "thead",
             "tbody",
@@ -73,7 +76,8 @@ _CLEANER = Cleaner(
             "hr",
         }
     ),
-    attributes={"*": ["class"]},
+    attributes={"*": ["class", "style"]},
+    css_sanitizer=CSSSanitizer(allowed_css_properties=frozenset({"text-align"})),
     protocols=frozenset(),
     strip=True,
 )
@@ -245,7 +249,7 @@ def render_document_html(
 <style>
 @page {{ size: A4; margin: 18mm 18mm 22mm; }}
 html, body {{ font-family: DejaVu Sans, sans-serif; color: #111; font-size: 11pt; line-height: 1.45; }}
-h1, h2, h3 {{ color: #183a37; }}
+h1, h2, h3, h4, h5, h6 {{ color: #183a37; }}
 .document-signature {{ max-width: 70mm; max-height: 25mm; vertical-align: middle; }}
 .document-signature--blank {{ display: inline-block; width: 65mm; height: 12mm; border-bottom: 0.3mm solid #333; }}
 .server-document-footer {{ position: fixed; left: 0; right: 0; bottom: -13mm; border-top: 0.3mm solid #777; padding-top: 2mm; font-size: 8pt; color: #555; display: flex; justify-content: space-between; }}
