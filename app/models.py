@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Optional
 
 import flask_login
+from sqlalchemy import event, inspect
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.extensions import db
@@ -399,7 +400,110 @@ class VdeTest(db.Model):
         return cls(**data)
 
 
-ATTACHMENT_TYPES = ("log_entry", "device_photo", "disclaimer", "misc")
+ATTACHMENT_TYPES = (
+    "log_entry",
+    "device_photo",
+    "disclaimer",
+    "cancellation",
+    "misc",
+)
+
+
+class DocumentTemplate(db.Model):
+    """One of the two editable, versioned customer document types."""
+
+    __tablename__ = "document_templates"
+    __table_args__ = (
+        db.CheckConstraint(
+            "role IN ('disclaimer', 'cancellation')",
+            name="ck_document_templates_role",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(db.String(200), nullable=False)
+    role: Mapped[str] = mapped_column(
+        db.String(30), nullable=False, unique=True, index=True
+    )
+    active_version_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer,
+        db.ForeignKey(
+            "document_template_versions.id",
+            ondelete="SET NULL",
+            name="fk_document_templates_active_version",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now(),
+        onupdate=db.func.now(),
+    )
+
+    versions = db.relationship(
+        "DocumentTemplateVersion",
+        back_populates="template",
+        cascade="all, delete-orphan",
+        foreign_keys="DocumentTemplateVersion.template_id",
+        order_by="DocumentTemplateVersion.version_number",
+    )
+    active_version = db.relationship(
+        "DocumentTemplateVersion",
+        foreign_keys=[active_version_id],
+        post_update=True,
+        uselist=False,
+    )
+
+
+class DocumentTemplateVersion(db.Model):
+    """An immutable, publishable revision of a document template."""
+
+    __tablename__ = "document_template_versions"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "template_id",
+            "version_number",
+            name="uq_document_template_version_number",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[int] = mapped_column(
+        db.Integer, db.ForeignKey("document_templates.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    version_number: Mapped[int] = mapped_column(db.Integer, nullable=False)
+    html: Mapped[str] = mapped_column(db.Text, nullable=False)
+    published_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=False, server_default=db.func.now()
+    )
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    template = db.relationship(
+        "DocumentTemplate",
+        back_populates="versions",
+        foreign_keys=[template_id],
+    )
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+
+@event.listens_for(DocumentTemplateVersion, "before_update")
+def _document_version_is_immutable(_mapper, _connection, target):
+    state = inspect(target)
+    if any(
+        state.attrs[name].history.has_changes()
+        for name in ("template_id", "version_number", "html", "created_by_id")
+    ):
+        raise ValueError("Document template version content is immutable")
 
 
 class RepairAttachment(db.Model):
@@ -429,11 +533,20 @@ class RepairAttachment(db.Model):
     uploaded_by_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    template_version_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer,
+        db.ForeignKey("document_template_versions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Relationships
     repair = db.relationship("Repair", back_populates="attachments")
     log = db.relationship("RepairLog", back_populates="attachments")
     uploaded_by = db.relationship("User", foreign_keys=[uploaded_by_id])
+    template_version = db.relationship(
+        "DocumentTemplateVersion", foreign_keys=[template_version_id]
+    )
 
     def __repr__(self):
         return (

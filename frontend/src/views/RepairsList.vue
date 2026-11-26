@@ -63,11 +63,11 @@
       >
         <!-- Small screens: one compact entry per repair instead of 12 columns -->
         <template v-if="smAndDown" #item="{ item }">
-          <tr class="mobile-row" @click="editRepair(item)">
+          <tr class="app-mobile-row" @click="editRepair(item)">
             <td :colspan="headers.length" class="py-3">
               <div class="d-flex align-start ga-3">
                 <RepairNumber :id="item.id" :status="item.status" :size="40" />
-                <div class="flex-grow-1 mobile-row__body">
+                <div class="flex-grow-1 app-mobile-row__body">
                   <div class="text-title-medium">{{ item.geraet_art }}</div>
                   <RepairMeta :status="item.status" :category="item.repair_type?.name" class="my-1" />
                   <div class="d-flex flex-column ga-1 text-body-medium">
@@ -151,13 +151,20 @@
         </template>
 
         <template #item.actions="{ item }">
-          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click.stop="editRepair(item)" />
-          <v-btn
-v-if="labelPrinterEnabled" icon="mdi-printer" size="small" variant="text" density="compact"
-            :loading="printingLabelId === item.id" @click.stop="printLabel(item.id)" />
-          <v-btn
-v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-            @click.stop="deleteRepair(item.id)" />
+          <TableRowActions
+            primary-label="Öffnen"
+            primary-icon="mdi-open-in-new"
+            :has-secondary="labelPrinterEnabled || authStore.isAdmin"
+            @primary="editRepair(item)">
+            <template v-if="labelPrinterEnabled || authStore.isAdmin" #secondary>
+              <v-list-item
+v-if="labelPrinterEnabled" prepend-icon="mdi-printer" title="Etikett drucken"
+                @click="printLabel(item.id)" />
+              <v-list-item
+v-if="authStore.isAdmin" prepend-icon="mdi-delete" title="Löschen"
+                base-color="error" @click="deleteRepair(item.id)" />
+            </template>
+          </TableRowActions>
         </template>
 
         <template #loading>
@@ -312,6 +319,7 @@ import { personName } from '@/utils/person'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
+import TableRowActions from '@/components/ui/TableRowActions.vue'
 import TagChip from '@/components/ui/TagChip.vue'
 import { api } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
@@ -586,13 +594,3 @@ onMounted(() => {
     .catch(() => { })
 })
 </script>
-
-<style scoped>
-.mobile-row {
-  cursor: pointer;
-}
-
-.mobile-row__body {
-  min-width: 0;
-}
-</style>

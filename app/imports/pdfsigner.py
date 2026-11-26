@@ -3,7 +3,7 @@ import datetime
 import io
 import logging
 
-import fitz  # PyMuPDF
+import pymupdf
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class PDFSigner:
             raise FileNotFoundError(error_msg)
 
         # Detect whether the template has named AcroForm fields
-        doc = fitz.open(pdf_path)
+        doc = pymupdf.open(pdf_path)
         page = doc.load_page(0)
 
         # Log every widget found for diagnostics
@@ -49,7 +49,7 @@ class PDFSigner:
             w.field_name for w in all_widgets
         }  # type: ignore[union-attr]
         # Stash widget rects for positional fallback when field_value doesn't render
-        self._widget_rects: dict[str, fitz.Rect] = {
+        self._widget_rects: dict[str, pymupdf.Rect] = {
             w.field_name: w.rect  # type: ignore[union-attr]
             for w in all_widgets
             if w.field_name  # type: ignore[union-attr]
@@ -77,7 +77,7 @@ class PDFSigner:
             logger.warning("PDFSigner: 'signature' widget rect not found")
             return
         signature_image_data = base64.b64decode(signature.split(",")[1])
-        img_pixmap = fitz.Pixmap(signature_image_data)
+        img_pixmap = pymupdf.Pixmap(signature_image_data)
         page.insert_image(rect, pixmap=img_pixmap, keep_proportion=True)
         logger.debug("PDFSigner: signature image inserted at %s", rect)
 
@@ -105,7 +105,7 @@ class PDFSigner:
         font_size = max(8, rect.height * 0.55)
         # insert_text baseline = y coordinate; anchor to bottom-left of the widget
         # with a small inset so descenders don't get clipped
-        text_point = fitz.Point(rect.x0 + 2, rect.y1 - 2)
+        text_point = pymupdf.Point(rect.x0 + 2, rect.y1 - 2)
         page.insert_text(text_point, text, fontsize=font_size, color=(0, 0, 0))
         logger.debug(
             "PDFSigner: field '%s' filled with %r at %s", field_name, text, rect
@@ -113,7 +113,7 @@ class PDFSigner:
 
     def get_signed_pdf(self, signature, date, name: str | None = None):
         try:
-            doc = fitz.open(self.pdf_path)
+            doc = pymupdf.open(self.pdf_path)
             page = doc.load_page(0)
 
             if FIELD_SIGNATURE in self._field_names:

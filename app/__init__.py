@@ -196,6 +196,19 @@ def create_app(config_name=None):
     # Safe to run repeatedly — is a no-op when an admin already exists.
     with app.app_context():
         ensure_admin_user(app)
+        from app.services.document_service import (
+            ensure_system_document_templates,
+            import_all_legacy_documents,
+        )
+
+        ensure_system_document_templates()
+        imported_documents, document_import_failures = import_all_legacy_documents()
+        if imported_documents or document_import_failures:
+            app.logger.info(
+                "Legacy document import complete: %s imported, %s failed",
+                imported_documents,
+                document_import_failures,
+            )
         from app.services.pin_service import reconcile_pin_mode
 
         reconcile_pin_mode()
@@ -239,6 +252,7 @@ def register_blueprints(app):
     from app.api.attachments import attachments_bp
     from app.api.config import config_bp
     from app.api.customers import customers_bp
+    from app.api.document_templates import document_templates_bp
     from app.api.health import health_bp
     from app.api.repair_logs import repair_logs_bp
     from app.api.repairs import repairs_bp
@@ -259,6 +273,7 @@ def register_blueprints(app):
     app.register_blueprint(vde_tests_bp, url_prefix="/api")
     app.register_blueprint(config_bp, url_prefix="/api")
     app.register_blueprint(customers_bp, url_prefix="/api")
+    app.register_blueprint(document_templates_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(settings_bp, url_prefix="/api")
 

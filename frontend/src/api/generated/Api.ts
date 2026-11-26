@@ -15,8 +15,8 @@ import {
   AppConfigResponse,
   AuthConfigResponse,
   AuthResponse,
+  CreateDocumentTemplateVersionParams,
   CreateOrUploadRepairCancellationParams,
-  CreateOrUploadRepairCancellationPayload,
   CreateRepairLogParams,
   CreateVdeTestParams,
   CustomerCreate,
@@ -29,9 +29,18 @@ import {
   DeleteRepairLogParams,
   DeleteRepairParams,
   DeleteSettingParams,
+  DocumentBlankPrintRequest,
+  DocumentRenderRequest,
+  DocumentTemplateListResponse,
+  DocumentTemplateSingleResponse,
+  DocumentTemplateUpdate,
+  DocumentTemplateVersionCreate,
+  DocumentTemplateVersionSingleResponse,
   DropdownConfigResponse,
   FeaturesResponse,
+  GetActiveDocumentTemplateParams,
   GetCustomerParams,
+  GetDocumentTemplateParams,
   GetRepairAttachmentParams,
   GetRepairByQrTokenParams,
   GetRepairCancellationParams,
@@ -56,10 +65,15 @@ import {
   PinSessionStatusResponse,
   PinStatusResponse,
   PinUnlockRequest,
+  PreviewDocumentTemplateParams,
+  PrintBlankDocumentTemplateParams,
   PrintRepairLabelParams,
   PrintRepairLabelPayload,
   PruefgeraetResponse,
+  PublishDocumentTemplateVersionParams,
+  RenderDocumentTemplateParams,
   RepairAttachmentListResponse,
+  RepairCancellationCreate,
   RepairCreate,
   RepairCreateResponse,
   RepairListResponse,
@@ -80,6 +94,7 @@ import {
   SettingsGroupedResponse,
   UpdateAppConfigPayload,
   UpdateCustomerParams,
+  UpdateDocumentTemplateParams,
   UpdateRepairLogParams,
   UpdateRepairParams,
   UpdateSettingParams,
@@ -669,6 +684,157 @@ export class Api<
   /**
    * No description
    *
+   * @tags Documents
+   * @name ListDocumentTemplates
+   * @summary List editable templates and all immutable versions.
+   * @request GET:/api/document-templates
+   */
+  listDocumentTemplates = (params: RequestParams = {}) =>
+    this.request<DocumentTemplateListResponse, void>({
+      path: `/api/document-templates`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name GetActiveDocumentTemplate
+   * @summary Get the active published version for a fixed document role.
+   * @request GET:/api/document-templates/active/{role}
+   */
+  getActiveDocumentTemplate = (
+    { role }: GetActiveDocumentTemplateParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<DocumentTemplateSingleResponse, void>({
+      path: `/api/document-templates/active/${role}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name GetDocumentTemplate
+   * @summary Get a template and its version history.
+   * @request GET:/api/document-templates/{template_id}
+   */
+  getDocumentTemplate = (
+    { templateId }: GetDocumentTemplateParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<DocumentTemplateSingleResponse, void>({
+      path: `/api/document-templates/${templateId}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name UpdateDocumentTemplate
+   * @summary Update mutable template metadata; version HTML is never edited.
+   * @request PUT:/api/document-templates/{template_id}
+   */
+  updateDocumentTemplate = (
+    { templateId }: UpdateDocumentTemplateParams,
+    body: DocumentTemplateUpdate,
+    params: RequestParams = {},
+  ) =>
+    this.request<DocumentTemplateSingleResponse, void>({
+      path: `/api/document-templates/${templateId}`,
+      method: "PUT",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name PreviewDocumentTemplate
+   * @summary Render a signed HTML preview from a pinned version.
+   * @request POST:/api/document-templates/{template_id}/preview
+   */
+  previewDocumentTemplate = (
+    { templateId }: PreviewDocumentTemplateParams,
+    body: DocumentRenderRequest,
+    params: RequestParams = {},
+  ) =>
+    this.request<void, void>({
+      path: `/api/document-templates/${templateId}/preview`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name RenderDocumentTemplate
+   * @summary Render a PDF from a pinned version without storing an attachment.
+   * @request POST:/api/document-templates/{template_id}/render
+   */
+  renderDocumentTemplate = (
+    { templateId }: RenderDocumentTemplateParams,
+    body: DocumentRenderRequest,
+    params: RequestParams = {},
+  ) =>
+    this.request<Blob, void>({
+      path: `/api/document-templates/${templateId}/render`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name CreateDocumentTemplateVersion
+   * @summary Create a new immutable draft version.
+   * @request POST:/api/document-templates/{template_id}/versions
+   */
+  createDocumentTemplateVersion = (
+    { templateId }: CreateDocumentTemplateVersionParams,
+    body: DocumentTemplateVersionCreate,
+    params: RequestParams = {},
+  ) =>
+    this.request<DocumentTemplateVersionSingleResponse, void>({
+      path: `/api/document-templates/${templateId}/versions`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Documents
+   * @name PublishDocumentTemplateVersion
+   * @summary Make an immutable version active without changing its content.
+   * @request POST:/api/document-templates/{template_id}/versions/{version_id}/publish
+   */
+  publishDocumentTemplateVersion = (
+    { templateId, versionId }: PublishDocumentTemplateVersionParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<DocumentTemplateSingleResponse, void>({
+      path: `/api/document-templates/${templateId}/versions/${versionId}/publish`,
+      method: "POST",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
    * @tags Health
    * @name Healthcheck
    * @summary Health check endpoint
@@ -816,7 +982,7 @@ export class Api<
    */
   createOrUploadRepairCancellation = (
     { id }: CreateOrUploadRepairCancellationParams,
-    body: CreateOrUploadRepairCancellationPayload,
+    body: RepairCancellationCreate,
     params: RequestParams = {},
   ) =>
     this.request<APIResponse, void>({
@@ -1182,6 +1348,26 @@ export class Api<
       path: `/api/settings/all`,
       method: "GET",
       format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Settings, Documents
+   * @name PrintBlankDocumentTemplate
+   * @summary Render a blank printable PDF without creating a repair attachment.
+   * @request POST:/api/settings/document-templates/{template_id}/blank-print
+   */
+  printBlankDocumentTemplate = (
+    { templateId }: PrintBlankDocumentTemplateParams,
+    body: DocumentBlankPrintRequest,
+    params: RequestParams = {},
+  ) =>
+    this.request<Blob, void>({
+      path: `/api/settings/document-templates/${templateId}/blank-print`,
+      method: "POST",
+      body: body,
+      type: ContentType.Json,
       ...params,
     });
   /**

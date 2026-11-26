@@ -72,11 +72,30 @@ message meant for the UI.
 |---|---|---|---|
 | GET / POST | `/api/repairs/<id>/logs` | login | list / add work log entries |
 | GET / PUT / DELETE | `/api/repairs/<id>/logs/<log_id>` | login | one entry |
-| GET / POST | `/api/repairs/<id>/attachments` | login | list / upload files (`attachment_type`: `device_photo`, `log_entry`, `disclaimer`, `misc`) |
-| GET / DELETE | `/api/repairs/<id>/attachments/<attachment_id>` | login | download / delete |
+| GET / POST | `/api/repairs/<id>/attachments` | login | list / upload files (`attachment_type`: `device_photo`, `log_entry`, `disclaimer`, `cancellation`, `misc`) |
+| GET / DELETE | `/api/repairs/<id>/attachments/<attachment_id>` | login | download; owners can delete ordinary attachments, only admins can delete `disclaimer` or `cancellation` documents |
 | GET / POST | `/api/repairs/<id>/vde-tests` | login | list / record VDE tests |
 | GET | `/api/repairs/<id>/vde-tests/<test_id>` | login | one test |
 | GET | `/api/repairs/<id>/vde-tests/<test_id>/pdf` | login | Prüfprotokoll PDF |
+
+### Customer documents
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/document-templates` | admin | list the fixed `disclaimer` and `cancellation` templates |
+| GET / PUT | `/api/document-templates/<id>` | admin | read or rename a template |
+| POST | `/api/document-templates/<id>/versions` | admin | create an immutable draft version |
+| POST | `/api/document-templates/<id>/versions/<version_id>/publish` | admin | publish and activate a version |
+| POST | `/api/document-templates/<id>/preview` | login | render an HTML preview with a pinned version |
+| POST | `/api/document-templates/<id>/render` | login | render a PDF with a pinned published version |
+| POST | `/api/settings/document-templates/<id>/blank-print` | login | render a blank PDF without storing an attachment |
+
+Template HTML is sanitized server-side. Only the documented WYSIWYG placeholders
+(`customer_name`, `customer_first_name`, `customer_last_name`, `customer_phone`,
+`customer_email`, `date`, `repair_number`, `repair_type`, `device`,
+`defect_description`, `signature`, `template_version`) are accepted. Rendered customer
+values are HTML-escaped, and the server adds the template title and version footer.
+The two fixed `disclaimer` and `cancellation` template roles cannot be deleted.
 
 ### Customers and users
 

@@ -237,6 +237,302 @@
       ],
       "type": "object"
     },
+    "DocumentBlankPrintRequest": {
+      "properties": {
+        "version_id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version_id"
+      ],
+      "type": "object"
+    },
+    "DocumentRenderContext": {
+      "properties": {
+        "datum": {
+          "format": "date",
+          "type": "string"
+        },
+        "defekt_besch": {
+          "default": null,
+          "maxLength": 400,
+          "type": "string",
+          "x-nullable": true
+        },
+        "email": {
+          "default": null,
+          "format": "email",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "geraet_art": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "nachname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "repair_number": {
+          "default": null,
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "repair_type": {
+          "default": null,
+          "maxLength": 200,
+          "type": "string",
+          "x-nullable": true
+        },
+        "telefon": {
+          "default": null,
+          "maxLength": 40,
+          "type": "string",
+          "x-nullable": true
+        },
+        "vorname": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "datum",
+        "vorname",
+        "nachname",
+        "geraet_art"
+      ],
+      "type": "object"
+    },
+    "DocumentRenderRequest": {
+      "properties": {
+        "context": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DocumentRenderContext"
+            }
+          ],
+          "x-nullable": true
+        },
+        "repair_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "signature": {
+          "default": null,
+          "description": "Transient PNG/JPEG data URL",
+          "maxLength": 1400000,
+          "type": "string",
+          "x-nullable": true
+        },
+        "version_id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version_id"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateListResponse": {
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "data": {
+          "items": {
+            "$ref": "#/definitions/DocumentTemplateResponse"
+          },
+          "type": "array"
+        },
+        "reply": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "count"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateResponse": {
+      "properties": {
+        "active_version": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DocumentTemplateVersionResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "active_version_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "disclaimer",
+            "cancellation"
+          ],
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "$ref": "#/definitions/DocumentTemplateVersionResponse"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "role",
+        "created_at",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/DocumentTemplateResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateUpdate": {
+      "properties": {
+        "title": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "DocumentTemplateVersionCreate": {
+      "properties": {
+        "html": {
+          "maxLength": 250000,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "html"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateVersionResponse": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "created_by_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
+        },
+        "html": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "published_at": {
+          "default": null,
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "template_id": {
+          "type": "integer"
+        },
+        "version_number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "template_id",
+        "version_number",
+        "html",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "DocumentTemplateVersionSingleResponse": {
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/DocumentTemplateVersionResponse"
+        },
+        "error": {
+          "default": null,
+          "description": "Error message if reply is error",
+          "type": "string",
+          "x-nullable": true
+        },
+        "message": {
+          "default": null,
+          "description": "Response message",
+          "type": "string",
+          "x-nullable": true
+        },
+        "reply": {
+          "description": "Response status (done, error)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply",
+        "data"
+      ],
+      "type": "object"
+    },
     "DropdownConfigResponse": {
       "properties": {
         "repair_type": {
@@ -567,7 +863,7 @@
     "RepairAttachmentResponse": {
       "properties": {
         "attachment_type": {
-          "description": "One of: log_entry, device_photo, disclaimer, misc",
+          "description": "One of: log_entry, device_photo, disclaimer, cancellation, misc",
           "type": "string"
         },
         "content_type": {
@@ -593,6 +889,11 @@
         },
         "stored_filename": {
           "type": "string"
+        },
+        "template_version_id": {
+          "default": null,
+          "type": "integer",
+          "x-nullable": true
         },
         "uploaded_at": {
           "format": "date-time",
@@ -624,6 +925,25 @@
       ],
       "type": "object"
     },
+    "RepairCancellationCreate": {
+      "properties": {
+        "signature": {
+          "description": "Transient PNG/JPEG data URL",
+          "minLength": 1,
+          "type": "string"
+        },
+        "template_version_id": {
+          "default": null,
+          "description": "Pinned cancellation version; active system version is used when omitted",
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "signature"
+      ],
+      "type": "object"
+    },
     "RepairCreate": {
       "properties": {
         "customer_id": {
@@ -642,6 +962,12 @@
           "description": "Defect description",
           "maxLength": 400,
           "type": "string",
+          "x-nullable": true
+        },
+        "disclaimer_template_version_id": {
+          "default": null,
+          "description": "Pinned disclaimer version; active system version is used when omitted",
+          "type": "integer",
           "x-nullable": true
         },
         "email": {
@@ -677,7 +1003,8 @@
         },
         "unterschrift": {
           "default": null,
-          "description": "Signature image as base64",
+          "description": "Transient signature PNG/JPEG data URL",
+          "maxLength": 1400000,
           "type": "string",
           "x-nullable": true
         },
@@ -857,12 +1184,6 @@
           "default": null,
           "description": "Additional detail for repair status",
           "maxLength": 100,
-          "type": "string",
-          "x-nullable": true
-        },
-        "unterschrift": {
-          "default": null,
-          "description": "Signature image as base64",
           "type": "string",
           "x-nullable": true
         },
@@ -1258,12 +1579,6 @@
           "type": "string",
           "x-nullable": true
         },
-        "unterschrift": {
-          "default": null,
-          "description": "Signature image as base64",
-          "type": "string",
-          "x-nullable": true
-        },
         "unterschrift_haft": {
           "default": null,
           "description": "Liability disclaimer signed",
@@ -1382,12 +1697,6 @@
           "default": null,
           "description": "Additional detail for repair status",
           "maxLength": 100,
-          "type": "string",
-          "x-nullable": true
-        },
-        "unterschrift": {
-          "default": null,
-          "description": "Signature image as base64",
           "type": "string",
           "x-nullable": true
         },
@@ -3007,6 +3316,277 @@
         ]
       }
     },
+    "/api/document-templates": {
+      "get": {
+        "operationId": "listDocumentTemplates",
+        "responses": {
+          "200": {
+            "description": "Document templates",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateListResponse"
+            }
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "summary": "List editable templates and all immutable versions.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/active/{role}": {
+      "get": {
+        "operationId": "getActiveDocumentTemplate",
+        "parameters": [
+          {
+            "enum": [
+              "disclaimer",
+              "cancellation"
+            ],
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active document template",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Unknown role or no active version"
+          }
+        },
+        "summary": "Get the active published version for a fixed document role.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/{template_id}": {
+      "get": {
+        "operationId": "getDocumentTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document template",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "summary": "Get a template and its version history.",
+        "tags": [
+          "Documents"
+        ]
+      },
+      "put": {
+        "operationId": "updateDocumentTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated metadata",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "summary": "Update mutable template metadata; version HTML is never edited.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/{template_id}/preview": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "previewDocumentTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentRenderRequest"
+            }
+          }
+        ],
+        "produces": [
+          "text/html"
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized rendered preview"
+          },
+          "400": {
+            "description": "Invalid signature or template"
+          },
+          "404": {
+            "description": "Template, version, or repair not found"
+          }
+        },
+        "summary": "Render a signed HTML preview from a pinned version.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/{template_id}/render": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "renderDocumentTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentRenderRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/pdf"
+        ],
+        "responses": {
+          "200": {
+            "description": "Rendered PDF"
+          },
+          "400": {
+            "description": "Invalid signature or template"
+          },
+          "404": {
+            "description": "Template, version, or repair not found"
+          }
+        },
+        "summary": "Render a PDF from a pinned version without storing an attachment.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/{template_id}/versions": {
+      "post": {
+        "operationId": "createDocumentTemplateVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateVersionCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Draft version",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateVersionSingleResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid template"
+          },
+          "404": {
+            "description": "Template not found"
+          }
+        },
+        "summary": "Create a new immutable draft version.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/api/document-templates/{template_id}/versions/{version_id}/publish": {
+      "post": {
+        "operationId": "publishDocumentTemplateVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active version",
+            "schema": {
+              "$ref": "#/definitions/DocumentTemplateSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Template or version not found"
+          }
+        },
+        "summary": "Make an immutable version active without changing its content.",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
     "/api/healthz": {
       "get": {
         "operationId": "healthcheck",
@@ -3258,15 +3838,7 @@
             "name": "body",
             "required": false,
             "schema": {
-              "properties": {
-                "signature": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "signature"
-              ],
-              "type": "object"
+              "$ref": "#/definitions/RepairCancellationCreate"
             }
           }
         ],
@@ -3422,6 +3994,7 @@
                 "log_entry",
                 "device_photo",
                 "disclaimer",
+                "cancellation",
                 "misc"
               ],
               "type": "string"
@@ -3478,7 +4051,7 @@
             "type": "array"
           },
           {
-            "description": "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo.",
+            "description": "Attachment type: log_entry, device_photo, disclaimer, cancellation, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo.",
             "in": "formData",
             "name": "attachment_type",
             "required": false,
@@ -4006,6 +4579,49 @@
         "summary": "List all settings (including inactive) for admin management.",
         "tags": [
           "Settings"
+        ]
+      }
+    },
+    "/api/settings/document-templates/{template_id}/blank-print": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "printBlankDocumentTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentBlankPrintRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/pdf"
+        ],
+        "responses": {
+          "200": {
+            "description": "Blank printable PDF"
+          },
+          "400": {
+            "description": "Invalid template"
+          },
+          "404": {
+            "description": "Template or version not found"
+          }
+        },
+        "summary": "Render a blank printable PDF without creating a repair attachment.",
+        "tags": [
+          "Settings",
+          "Documents"
         ]
       }
     },

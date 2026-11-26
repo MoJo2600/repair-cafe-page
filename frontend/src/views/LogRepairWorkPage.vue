@@ -49,8 +49,6 @@ const {
   repair,
   logs,
   attachments,
-  disclaimerExists,
-  cancellationExists,
   latestVdeTests,
   lastVdeTestPassed,
   threadEntries,
@@ -95,13 +93,15 @@ const labelPrinterEnabled = shallowRef(false)
 
 onMounted(() => {
   void Promise.all([
-    api.getPruefgeraete()
+    api
+      .getPruefgeraete()
       .then((devices) => {
         pruefgeraete.value = devices
       })
       .catch((err) => console.error('Error loading testing devices:', err)),
     userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
-    api.getFeatures()
+    api
+      .getFeatures()
       .then((f) => {
         labelPrinterEnabled.value = f.label_printer ?? false
       })
@@ -172,7 +172,7 @@ const {
   loadRepairLogs: reloadLogs,
   onNeedsVdeTest: openVdeDialogForCloseFlow,
   onCancellationSigned: () => {
-    cancellationExists.value = true
+    void reloadAttachments()
   },
 })
 
@@ -221,7 +221,13 @@ const quickActions = computed(() => [
       logDialog.value = true
     },
   },
-  { key: 'vde', title: 'VDE-Test protokollieren', icon: 'mdi-flash', loading: false, run: openVdeDialog },
+  {
+    key: 'vde',
+    title: 'VDE-Test protokollieren',
+    icon: 'mdi-flash',
+    loading: false,
+    run: openVdeDialog,
+  },
   ...(labelPrinterEnabled.value
     ? [
         {
@@ -238,9 +244,6 @@ const quickActions = computed(() => [
 const attachmentsPanelProps = computed(() => ({
   repairId: repair.value!.id,
   attachments: attachments.value,
-  disclaimerExists: disclaimerExists.value,
-  cancellationExists: cancellationExists.value,
-  showCancellation: repair.value!.status_detail === 'Abbruch',
 }))
 
 async function downloadVdePdf(testId: number) {
@@ -284,7 +287,10 @@ async function handleVdeSubmit(payload: VdeFormData) {
       bemerkungen: payload.bemerkungen || undefined,
     }
 
-    const vdeResponse = await api.createVdeTest({ repairId: repair.value.id }, { repair_id: repair.value.id, ...vdePayload })
+    const vdeResponse = await api.createVdeTest(
+      { repairId: repair.value.id },
+      { repair_id: repair.value.id, ...vdePayload }
+    )
     if (vdeResponse.reply !== 'done') {
       toast.error('Fehler beim Speichern des VDE Tests')
       return
@@ -361,7 +367,11 @@ async function handleVdeSubmit(payload: VdeFormData) {
               @edit-log="openEditLogDialog"
               @download-vde="downloadVdePdf"
             />
-            <RepairAttachmentsPanel v-bind="attachmentsPanelProps" class="mt-6" @changed="reloadAttachments" />
+            <RepairAttachmentsPanel
+              v-bind="attachmentsPanelProps"
+              class="mt-6"
+              @changed="reloadAttachments"
+            />
           </template>
 
           <!-- Small screens: one section at a time -->
@@ -451,7 +461,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
       </v-row>
 
       <!-- Small screens: actions within thumb reach -->
-      <div v-if="!mdAndUp" class="action-bar d-flex align-center ga-2 pa-3">
+      <div v-if="!mdAndUp" class="app-action-bar action-bar d-flex align-center ga-2 pa-3">
         <v-btn
           v-if="bestNextStatus"
           :color="getRepairStatusColor(bestNextStatus)"
@@ -474,7 +484,13 @@ async function handleVdeSubmit(payload: VdeFormData) {
         />
         <v-menu location="top end">
           <template #activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="large" variant="tonal" aria-label="Weitere Aktionen" />
+            <v-btn
+              v-bind="menuProps"
+              icon="mdi-dots-vertical"
+              size="large"
+              variant="tonal"
+              aria-label="Weitere Aktionen"
+            />
           </template>
           <v-list>
             <v-list-subheader v-if="otherNextStatuses.length">Status ändern</v-list-subheader>
@@ -540,6 +556,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
 
     <AbbruchSignatureDialog
       v-model="abbruchSignatureDialog"
+      :repair-id="repair?.id"
       :loading="savingStatus"
       @confirm="confirmAbbruchSignature"
     />
@@ -562,7 +579,6 @@ async function handleVdeSubmit(payload: VdeFormData) {
 </template>
 
 <style scoped>
-
 .side-panel {
   position: sticky;
   top: calc(var(--v-layout-top, 0px) + 16px);
@@ -570,11 +586,6 @@ async function handleVdeSubmit(payload: VdeFormData) {
 
 /* Sits above the app footer (Vuetify sets --v-layout-bottom on v-main) */
 .action-bar {
-  position: sticky;
-  bottom: var(--v-layout-bottom, 0px);
-  z-index: 2;
   margin: 0 -16px;
-  background: rgb(var(--v-theme-surface));
-  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>

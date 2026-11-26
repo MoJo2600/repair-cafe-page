@@ -45,7 +45,10 @@ function onPointerDown(event: PointerEvent) {
   canvas.value.setPointerCapture(event.pointerId)
   drawing = true
   const { x, y } = toCanvasPoint(event)
-  ctx.strokeStyle = '#000'
+  const ink = getComputedStyle(document.documentElement)
+    .getPropertyValue('--v-theme-signature-ink')
+    .trim()
+  ctx.strokeStyle = ink ? `rgb(${ink})` : 'rgb(0 0 0)'
   ctx.lineWidth = 2
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
@@ -104,7 +107,7 @@ function clear() {
 .signature-pad__canvas {
   display: block;
   width: 100%;
-  border: 1px solid #ccc;
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 4px;
   cursor: crosshair;
   /* Keep touch strokes from scrolling the page */

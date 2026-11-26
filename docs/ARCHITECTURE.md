@@ -65,7 +65,8 @@ browser, whether it is locked, its last activity and failed PIN attempts. Detail
 
 | Module | Does |
 |---|---|
-| `services/pdf_service.py` + `imports/pdfsigner.py` | stamps signature, date and name onto the disclaimer / cancellation template, stores the result |
+| `services/document_service.py` | sanitizes versioned HTML, renders escaped placeholders, and produces WeasyPrint PDFs |
+| `services/pdf_service.py` + `imports/pdfsigner.py` | compatibility support for legacy uploaded PDF templates and old `signed_*` files |
 | `services/vde_pdf_service.py` | renders the VDE Prüfprotokoll PDF |
 | `services/label_service.py` | renders the label PNG and prints it with `lp` |
 | `services/export_service.py`, `web/routes.py` | XLSX export, CSV for the e-mail export |
@@ -82,6 +83,7 @@ customers 1──* repairs *──1 settings (repair_type)
                  ├──* repair_logs *──1 users
                  ├──* vde_tests
                  └──* repair_attachments ──0..1 repair_logs
+                                               └──0..1 document_template_versions *──1 document_templates
 users 1──* pin_unlock_sessions
 pin_state (one row: active PIN mode)   pin_unlock_failures   app_config (key/value)
 ```
@@ -90,10 +92,12 @@ pin_state (one row: active PIN mode)   pin_unlock_failures   app_config (key/val
 |---|---|
 | `users` | local and SSO accounts: username, name, e-mail, password hash, `is_admin`, `is_active`, `oidc_sub`, `pin_code_hash` |
 | `customers` | first and last name, phone, e-mail; reused across repairs |
-| `repairs` | intake date, device (`geraet_art`), category (`repair_type_id` → settings), defect, signature, VDE flag (`din_pruef`), `status` / `status_detail`, assignee, repair description, `closed_at`, `qr_token` |
+| `repairs` | intake date, device (`geraet_art`), category (`repair_type_id` → settings), defect, disclaimer-signed flag (the raw signature is transient), VDE flag (`din_pruef`), `status` / `status_detail`, assignee, repair description, `closed_at`, `qr_token` |
 | `repair_logs` | timeline of a repair: `log_type` `work` (description, duration), `status_change` (`status_from` → `status_to`) or `assignee_change` |
 | `vde_tests` | DIN VDE 0701/0702 results: visual check, protective conductor, insulation, leakage current, overall result, tester, device |
-| `repair_attachments` | files of a repair: `device_photo` (at most one), `log_entry` (photo of a log entry), `disclaimer`, `misc` |
+| `document_templates` | the two fixed editable document roles `disclaimer` and `cancellation` |
+| `document_template_versions` | immutable sanitized HTML revisions; a published version is active per template |
+| `repair_attachments` | files of a repair: `device_photo` (at most one), `log_entry`, `disclaimer`, `cancellation`, `misc`; generated PDFs pin a template version |
 | `settings` | admin-managed dropdown values by `category`: `repair_type`, `test_device` (with serial number) |
 | `app_config` | organisation name, website, app URL for QR codes |
 | `pin_state`, `pin_unlock_sessions`, `pin_unlock_failures` | PIN mode and PIN lock state |
@@ -109,12 +113,15 @@ Everything that is not in the database lives under `DATA_DIR` (`/data`):
 |---|---|
 | `signed_disclaimers/<id>.pdf` | signed or uploaded liability waivers |
 | `signed_cancellations/<id>.pdf` | signed cancellation forms |
-| `attachments/<repair_id>/` | device photos, log photos, other files |
+| `attachments/<repair_id>/` | device photos, log photos, generated/uploaded customer PDFs, other files |
 | `disclaimer.pdf`, `cancellation.pdf` | uploaded templates (otherwise the samples from `CONFIG_DIR` are used) |
 | `logo.png` | uploaded logo (otherwise `app/static/logo.jpg`) |
 | `celebration.mp3` | uploaded celebration sound (otherwise `app/static/fanfare.mp3`) |
 
-Deleting a repair deletes its files.
+New customer PDFs are stored as `RepairAttachment` rows below
+`attachments/<repair_id>/`. The legacy GET endpoints prefer those rows and
+idempotently import old `signed_disclaimers` or `signed_cancellations` files when
+encountered. Deleting a repair removes the unified and remaining legacy files.
 
 ## Repair status model
 

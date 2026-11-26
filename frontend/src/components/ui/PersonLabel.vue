@@ -23,14 +23,7 @@ const name = computed(() => (person ? personName(person) : emptyText))
 </script>
 
 <template>
-  <span class="person-label" :class="{ 'text-medium-emphasis': !person }">
+  <span class="d-inline-flex align-center" :class="{ 'text-medium-emphasis': !person }">
     <v-icon v-if="ROLE_ICON[role]" :icon="ROLE_ICON[role]" size="small" class="mr-1" />{{ name }}
   </span>
 </template>
-
-<style scoped>
-.person-label {
-  display: inline-flex;
-  align-items: center;
-}
-</style>

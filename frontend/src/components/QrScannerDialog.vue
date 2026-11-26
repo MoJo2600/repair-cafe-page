@@ -101,7 +101,12 @@ function handleDetected(data: string) {
       </v-card-title>
       <v-card-text>
         <div v-if="!camera.permissionDenied.value">
-          <video ref="videoElement" class="qr-video" autoplay playsinline></video>
+          <video
+            ref="videoElement"
+            class="app-media-preview qr-video bg-media-background rounded"
+            autoplay
+            playsinline
+          ></video>
           <canvas ref="canvasElement" class="d-none"></canvas>
           <div v-if="scanning" class="text-center mt-3">
             <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -122,8 +127,6 @@ function handleDetected(data: string) {
 
 <style scoped>
 .qr-video {
-  width: 100%;
   max-height: 400px;
-  background: #000;
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue'
 import { api, asFormData } from '@/api/client'
-import { attachmentUrl, documentUrl } from '@/api/documents'
+import { attachmentUrl } from '@/api/documents'
 import type { RepairAttachmentResponse as RepairAttachment } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import SectionTitle from '@/components/ui/SectionTitle.vue'
@@ -13,17 +13,10 @@ import { errorMessage } from '@/utils/errors'
 const {
   repairId,
   attachments,
-  disclaimerExists,
-  cancellationExists,
-  showCancellation,
   showTitle = true,
 } = defineProps<{
   repairId: number
   attachments: RepairAttachment[]
-  disclaimerExists: boolean
-  cancellationExists: boolean
-  /** Show the cancellation row even before its PDF exists (status detail "Abbruch"). */
-  showCancellation: boolean
   /** Off when a surrounding tab already names the section. */
   showTitle?: boolean
 }>()
@@ -39,27 +32,6 @@ const toast = useToast()
 const pendingFiles = ref<File[]>([])
 const uploading = shallowRef(false)
 
-const documents = computed(() => [
-  {
-    key: 'disclaimer',
-    title: 'Haftungsausschluss',
-    exists: disclaimerExists,
-    url: documentUrl(repairId, 'disclaimer'),
-    filename: `haftungsausschluss_${repairId}.pdf`,
-  },
-  ...(cancellationExists || showCancellation
-    ? [
-        {
-          key: 'cancellation',
-          title: 'Abbruchbestätigung',
-          exists: cancellationExists,
-          url: documentUrl(repairId, 'cancellation'),
-          filename: `abbruch_${repairId}.pdf`,
-        },
-      ]
-    : []),
-])
-
 const files = computed(() =>
   attachments.map((att) => {
     const image = isImage(att.content_type)
@@ -71,7 +43,10 @@ const files = computed(() =>
       openIcon: image ? 'mdi-open-in-new' : 'mdi-download',
       download: image ? undefined : att.original_filename,
       target: image ? '_blank' : undefined,
-      deletable: authStore.canDeleteOwnedBy(att.uploaded_by_id),
+      deletable:
+        att.attachment_type === 'disclaimer' || att.attachment_type === 'cancellation'
+          ? authStore.isAdmin
+          : authStore.canDeleteOwnedBy(att.uploaded_by_id),
     }
   })
 )
@@ -113,37 +88,6 @@ async function remove(attachmentId: number) {
   <div>
     <SectionTitle v-if="showTitle" title="Anhänge" icon="mdi-paperclip" />
 
-    <!-- Generated PDFs (read-only) -->
-    <v-card class="mb-3">
-      <v-list lines="one" class="py-0">
-        <template v-for="(doc, index) in documents" :key="doc.key">
-          <v-divider v-if="index > 0" />
-          <v-list-item
-            prepend-icon="mdi-file-pdf-box"
-            :href="doc.url"
-            target="_blank"
-            :disabled="!doc.exists"
-            :subtitle="doc.exists ? 'PDF herunterladen' : 'Nicht vorhanden'"
-          >
-            <v-list-item-title>{{ doc.title }}</v-list-item-title>
-            <template #append>
-              <v-btn
-                v-if="doc.exists"
-                icon="mdi-download"
-                variant="text"
-                size="small"
-                :href="doc.url"
-                :download="doc.filename"
-                @click.stop
-              ></v-btn>
-              <v-icon v-else size="small" class="text-medium-emphasis">mdi-minus</v-icon>
-            </template>
-          </v-list-item>
-        </template>
-      </v-list>
-    </v-card>
-
-    <!-- Uploaded files -->
     <v-file-upload-list v-if="files.length > 0" show-size class="mb-3">
       <v-file-upload-item
         v-for="file in files"

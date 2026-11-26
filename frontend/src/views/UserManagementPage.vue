@@ -46,16 +46,17 @@ v-model="filterActive" :items="activeFilterOptions" label="Status" density="comp
 
                 <!-- Actions -->
                 <template #item.actions="{ item }">
-                    <v-btn
-icon="mdi-pencil" size="small" variant="text" density="compact"
-                        @click.stop="openEditDialog(item)" />
-                    <v-btn
-v-if="item.is_active" icon="mdi-account-off" size="small" variant="text" density="compact"
-                        color="error" :disabled="item.id === authStore.currentUser?.id" title="Benutzer deaktivieren"
-                        @click.stop="confirmDeactivate(item)" />
-                    <v-btn
-v-else icon="mdi-account-check" size="small" variant="text" density="compact" color="success"
-                        title="Benutzer reaktivieren" @click.stop="reactivate(item)" />
+                    <TableRowActions primary-label="Bearbeiten" @primary="openEditDialog(item)">
+                        <template #secondary>
+                            <v-list-item
+v-if="item.is_active" prepend-icon="mdi-account-off" title="Benutzer deaktivieren"
+                                base-color="warning" :disabled="item.id === authStore.currentUser?.id"
+                                @click="confirmDeactivate(item)" />
+                            <v-list-item
+v-else prepend-icon="mdi-account-check" title="Benutzer reaktivieren"
+                                base-color="success" @click="reactivate(item)" />
+                        </template>
+                    </TableRowActions>
                 </template>
             </v-data-table>
         </v-card>
@@ -140,6 +141,7 @@ v-model="form.is_admin" label="Administrator" hide-details
 <script setup lang="ts">
 import PageHeader from "@/components/ui/PageHeader.vue";
 import StatusChip from "@/components/ui/StatusChip.vue";
+import TableRowActions from "@/components/ui/TableRowActions.vue";
 import { personName } from "@/utils/person";
 import { computed, onMounted, ref } from "vue";
 import type { VForm } from "vuetify/components";

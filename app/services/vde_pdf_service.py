@@ -7,7 +7,7 @@ Returns raw PDF bytes — no template file required.
 import io
 from datetime import datetime, timezone
 
-import fitz  # PyMuPDF
+import pymupdf
 
 # DejaVu Sans – free font, ships with Debian; full Unicode (✓ ✕ ≤ ≥ Umlauts…)
 _FONT_DIR = "/usr/share/fonts/truetype/dejavu"
@@ -59,7 +59,7 @@ def _text(page, point, text, fontsize=9, color=COL_DARK, fontname=F_REGULAR, ali
 
 
 def _section_header(page, y, title, left=40, right=555):
-    rect = fitz.Rect(left, y, right, y + 16)
+    rect = pymupdf.Rect(left, y, right, y + 16)
     _filled_rect(page, rect, COL_SECTION_BG)
     page.insert_text(
         (left + 6, y + 12), title, fontsize=9, color=COL_SECTION_TEXT, fontname=F_BOLD
@@ -86,7 +86,7 @@ def _check_symbol(page, x, y, state, label, box_size=10):
            False → red cross (n.i.O. / nicht bestanden)
            None  → grey dash (not checked / n.a.)
     """
-    rect = fitz.Rect(x, y + 1, x + box_size, y + 1 + box_size)
+    rect = pymupdf.Rect(x, y + 1, x + box_size, y + 1 + box_size)
     if state is True:
         _filled_rect(page, rect, COL_IO, COL_IO)
         page.insert_text(
@@ -125,7 +125,7 @@ def generate_vde_pdf(vde_test, repair) -> bytes:
     repair   : Repair model instance (for Laufzettel-Nr and device info)
     """
 
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page(width=595, height=842)  # A4
 
     # Register fonts once so all insert_text calls on this page can use them
@@ -304,7 +304,7 @@ def generate_vde_pdf(vde_test, repair) -> bytes:
     result_text = "BESTANDEN" if bestanden else "NICHT BESTANDEN"
     result_icon = "\u2713" if bestanden else "\u2715"
 
-    result_rect = fitz.Rect(LEFT, y, RIGHT, y + 30)
+    result_rect = pymupdf.Rect(LEFT, y, RIGHT, y + 30)
     _filled_rect(page, result_rect, result_color)
     page.insert_text(
         (LEFT + 16, y + 21),

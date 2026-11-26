@@ -21,3 +21,25 @@
   max-width: 1400px;
   margin-inline: auto;
 }
+
+/* Shared responsive patterns. Component-specific positioning stays in the SFC. */
+.app-action-bar {
+  position: sticky;
+  bottom: var(--v-layout-bottom, 0px);
+  z-index: 2;
+  background: rgb(var(--v-theme-surface));
+  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.app-mobile-row {
+  cursor: pointer;
+}
+
+.app-mobile-row__body {
+  min-width: 0;
+}
+
+.app-media-preview {
+  display: block;
+  width: 100%;
+}

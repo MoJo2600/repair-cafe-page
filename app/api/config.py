@@ -7,7 +7,7 @@ import io
 import json
 from pathlib import Path
 
-import fitz
+import pymupdf
 from flask import Blueprint, Response, current_app, request, send_file
 from PIL import Image, UnidentifiedImageError
 
@@ -161,7 +161,7 @@ def _handle_pdf_template_upload(store_path: Path, pdf_service, label: str) -> Re
 
     # Validate required AcroForm fields
     try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
         page = doc.load_page(0)
         field_names = {w.field_name for w in (page.widgets() or [])}
         doc.close()

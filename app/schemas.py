@@ -227,8 +227,6 @@ class RepairBase(BaseModel):
     defekt_besch: Optional[str] = Field(
         None, max_length=400, description="Defect description"
     )
-    unterschrift: Optional[str] = Field(None, description="Signature image as base64")
-
     model_config = ConfigDict(from_attributes=True)
 
     @field_validator("datum", mode="before")
@@ -246,6 +244,16 @@ class RepairCreate(RepairBase):
     telefon: Optional[str] = Field(None, max_length=40, description="Phone number")
     email: Optional[EmailStr] = Field(None, max_length=100, description="Email address")
     customer_id: Optional[int] = Field(None, description="Link to existing customer")
+    unterschrift: Optional[str] = Field(
+        None,
+        max_length=1_400_000,
+        description="Transient signature PNG/JPEG data URL",
+    )
+    disclaimer_template_version_id: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Pinned disclaimer version; active system version is used when omitted",
+    )
 
     @field_validator("email", mode="before")
     @classmethod
@@ -267,7 +275,6 @@ class RepairUpdate(BaseModel):
     unterschrift_haft: Optional[bool] = Field(
         None, description="Liability disclaimer signed"
     )
-    unterschrift: Optional[str] = Field(None, description="Signature image as base64")
     din_pruef: Optional[bool] = Field(None, description="DIN test performed")
     status_detail: Optional[str] = Field(
         None, max_length=100, description="Additional detail for repair status"
@@ -424,6 +431,17 @@ class RepairCreateResponse(APIResponse):
     data: Optional[RepairResponse] = Field(None, description="Created repair data")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RepairCancellationCreate(BaseModel):
+    """Signature and explicitly pin-able version for cancellation generation."""
+
+    signature: str = Field(..., min_length=1, description="Transient PNG/JPEG data URL")
+    template_version_id: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Pinned cancellation version; active system version is used when omitted",
+    )
 
 
 class RepairLogBase(BaseModel):
@@ -719,10 +737,99 @@ class PinDashboardSummaryResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Versioned document template schemas
+# ---------------------------------------------------------------------------
+
+
+class DocumentTemplateVersionCreate(BaseModel):
+    html: str = Field(..., min_length=1, max_length=250_000)
+
+
+class DocumentTemplateUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+class DocumentRenderContext(BaseModel):
+    datum: date
+    vorname: str = Field(..., min_length=1, max_length=100)
+    nachname: str = Field(..., min_length=1, max_length=100)
+    telefon: Optional[str] = Field(None, max_length=40)
+    email: Optional[EmailStr] = Field(None, max_length=100)
+    repair_number: Optional[str] = Field(None, max_length=100)
+    repair_type: Optional[str] = Field(None, max_length=200)
+    geraet_art: str = Field(..., min_length=1, max_length=100)
+    defekt_besch: Optional[str] = Field(None, max_length=400)
+
+
+class DocumentRenderRequest(BaseModel):
+    version_id: int = Field(..., gt=0)
+    repair_id: Optional[int] = Field(None, gt=0)
+    context: Optional[DocumentRenderContext] = None
+    signature: Optional[str] = Field(
+        None, max_length=1_400_000, description="Transient PNG/JPEG data URL"
+    )
+
+    @model_validator(mode="after")
+    def validate_source(self):
+        if self.repair_id is not None and self.context is not None:
+            raise ValueError("repair_id and context are mutually exclusive")
+        return self
+
+
+class DocumentBlankPrintRequest(BaseModel):
+    version_id: int = Field(..., gt=0)
+
+
+class DocumentTemplateVersionResponse(BaseModel):
+    id: int
+    template_id: int
+    version_number: int
+    html: str
+    published_at: Optional[UtcDatetime] = None
+    created_at: UtcDatetime
+    created_by_id: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentTemplateResponse(BaseModel):
+    id: int
+    title: str
+    role: Literal["disclaimer", "cancellation"]
+    active_version_id: Optional[int] = None
+    active_version: Optional[DocumentTemplateVersionResponse] = None
+    versions: list[DocumentTemplateVersionResponse] = Field(default_factory=list)
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentTemplateListResponse(BaseModel):
+    reply: str
+    data: list[DocumentTemplateResponse] = Field(default_factory=list)
+    count: int
+
+
+class DocumentTemplateSingleResponse(APIResponse):
+    data: DocumentTemplateResponse
+
+
+class DocumentTemplateVersionSingleResponse(APIResponse):
+    data: DocumentTemplateVersionResponse
+
+
+# ---------------------------------------------------------------------------
 # Unified repair attachment schemas
 # ---------------------------------------------------------------------------
 
-ATTACHMENT_TYPES = ("log_entry", "device_photo", "disclaimer", "misc")
+ATTACHMENT_TYPES = (
+    "log_entry",
+    "device_photo",
+    "disclaimer",
+    "cancellation",
+    "misc",
+)
 
 
 class RepairAttachmentResponse(BaseModel):
@@ -732,7 +839,8 @@ class RepairAttachmentResponse(BaseModel):
     repair_id: int
     log_id: Optional[int] = None
     attachment_type: str = Field(
-        ..., description="One of: log_entry, device_photo, disclaimer, misc"
+        ...,
+        description="One of: log_entry, device_photo, disclaimer, cancellation, misc",
     )
     original_filename: str
     stored_filename: str
@@ -740,6 +848,7 @@ class RepairAttachmentResponse(BaseModel):
     size: int = Field(..., description="File size in bytes")
     uploaded_at: UtcDatetime
     uploaded_by_id: Optional[int] = None
+    template_version_id: Optional[int] = None
     uploaded_by: Optional["UserResponse"] = Field(
         None, description="User who uploaded the file"
     )

@@ -32,10 +32,10 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
                 hover @click:row="(_e: MouseEvent, { item }: { item: any }) => openEditDialog(item)">
                 <!-- Small screens: one compact entry per customer -->
                 <template v-if="smAndDown" #item="{ item }">
-                    <tr class="mobile-row" @click="openEditDialog(item)">
+                    <tr class="app-mobile-row" @click="openEditDialog(item)">
                         <td :colspan="headers.length" class="py-3">
                             <div class="d-flex align-start ga-2">
-                                <div class="flex-grow-1 mobile-row__body d-flex flex-column ga-1">
+                                <div class="flex-grow-1 app-mobile-row__body d-flex flex-column ga-1">
                                     <PersonLabel :person="item" role="customer" class="text-title-medium" />
                                     <a v-if="item.telefon" :href="`tel:${item.telefon}`" class="text-body-medium" @click.stop>
                                         <v-icon icon="mdi-phone" size="small" class="mr-1" />{{ item.telefon }}
@@ -108,12 +108,15 @@ v-model="search" prepend-inner-icon="mdi-magnify" label="Suchen…" density="com
                 </template>
 
                 <template #item.actions="{ item }">
-                    <v-btn
-icon="mdi-pencil" size="small" variant="text" density="compact"
-                        @click.stop="openEditDialog(item)" />
-                    <v-btn
-v-if="authStore.isAdmin" icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-                        @click.stop="openDeleteDialog(item.id)" />
+                    <TableRowActions
+primary-label="Bearbeiten" :has-secondary="authStore.isAdmin"
+                        @primary="openEditDialog(item)">
+                        <template v-if="authStore.isAdmin" #secondary>
+                            <v-list-item
+prepend-icon="mdi-delete" title="Löschen" base-color="error"
+                                @click="openDeleteDialog(item.id)" />
+                        </template>
+                    </TableRowActions>
                 </template>
 
                 <template #loading>
@@ -195,6 +198,7 @@ color="primary" variant="elevated" :loading="saving" :disabled="!editFormValid"
 import { useDisplay } from 'vuetify'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
+import TableRowActions from '@/components/ui/TableRowActions.vue'
 import { personName } from '@/utils/person'
 import { api } from '@/api/client'
 import type { CustomerWithRepairCountResponse as CustomerResponse } from '@/api/types'
@@ -331,13 +335,3 @@ async function confirmDelete() {
 
 onMounted(loadCustomers)
 </script>
-
-<style scoped>
-.mobile-row {
-  cursor: pointer;
-}
-
-.mobile-row__body {
-  min-width: 0;
-}
-</style>

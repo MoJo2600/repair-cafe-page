@@ -12,7 +12,7 @@ import base64
 import io
 from pathlib import Path
 
-import fitz
+import pymupdf
 from PIL import Image, ImageDraw
 
 from app.extensions import db
@@ -112,7 +112,7 @@ def test_repair_cancellation_pdf_sign_and_download(helper_client):
     resp_pdf = helper_client.get(f"/api/repairs/{repair_id}/cancellation")
     assert resp_pdf.status_code == 200
     assert resp_pdf.mimetype == "application/pdf"
-    doc = fitz.open(stream=resp_pdf.data, filetype="pdf")
+    doc = pymupdf.open(stream=resp_pdf.data, filetype="pdf")
     page = doc.load_page(0)
     text = page.get_text()
     images = page.get_images(full=True)

@@ -8,7 +8,7 @@ import io
 import pytest
 
 from app.extensions import db
-from app.models import Customer
+from app.models import Customer, RepairAttachment
 from app.tests.conftest import _make_user, login_as
 from app.tests.test_repairs_and_cancellation import _create_sample_repair
 
@@ -80,3 +80,30 @@ def test_helper_deletes_only_own_attachments(helper_client, admin_user):
     assert helper.delete(f"{url}/{own}").status_code == 200
     admin = login_as(helper_client, "testadmin")
     assert admin.delete(f"{url}/{from_admin}").status_code == 200
+
+
+@pytest.mark.parametrize("attachment_type", ["disclaimer", "cancellation"])
+def test_only_admin_can_delete_customer_documents(
+    helper_client, helper_user, admin_user, attachment_type
+):
+    repair_id = _create_sample_repair(helper_client)
+    response = helper_client.post(
+        f"/api/repairs/{repair_id}/attachments",
+        data={
+            "attachment_type": attachment_type,
+            "files": (
+                io.BytesIO(b"%PDF-1.4\ncustomer document\n%%EOF"),
+                f"{attachment_type}.pdf",
+                "application/pdf",
+            ),
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 201
+    attachment_id = response.get_json()["data"][0]["id"]
+    attachment = db.session.get(RepairAttachment, attachment_id)
+    assert attachment.uploaded_by_id == helper_user.id
+
+    url = f"/api/repairs/{repair_id}/attachments/{attachment_id}"
+    assert helper_client.delete(url).status_code == 403
+    assert login_as(helper_client, "testadmin").delete(url).status_code == 200

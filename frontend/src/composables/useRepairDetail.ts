@@ -1,6 +1,6 @@
 import { api } from '@/api/client'
 import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
-import { attachmentUrl, documentExists } from '@/api/documents'
+import { attachmentUrl } from '@/api/documents'
 import type {
   Repair,
   RepairAttachmentResponse as RepairAttachment,
@@ -32,8 +32,6 @@ export function useRepairDetail(
   const logs = ref<RepairLog[]>([])
   const vdeTests = ref<VdeTestResponse[]>([])
   const attachments = ref<RepairAttachment[]>([])
-  const disclaimerExists = shallowRef(false)
-  const cancellationExists = shallowRef(false)
 
   /** Still showing the repair with this id? (it may have changed while awaiting) */
   const isCurrent = (repairId: number) => repair.value?.id === repairId
@@ -86,18 +84,6 @@ export function useRepairDetail(
     }
   }
 
-  async function reloadDocuments() {
-    const repairId = repair.value?.id
-    if (!repairId) return
-    const [disclaimer, cancellation] = await Promise.all([
-      documentExists(repairId, 'disclaimer'),
-      documentExists(repairId, 'cancellation'),
-    ])
-    if (!isCurrent(repairId)) return
-    disclaimerExists.value = disclaimer
-    cancellationExists.value = cancellation
-  }
-
   let loadToken = 0
 
   async function load(token: string | undefined) {
@@ -107,8 +93,6 @@ export function useRepairDetail(
     logs.value = []
     vdeTests.value = []
     attachments.value = []
-    disclaimerExists.value = false
-    cancellationExists.value = false
     error.value = ''
     loading.value = true
 
@@ -129,7 +113,7 @@ export function useRepairDetail(
       repair.value = response.data as Repair
       options.onLoaded?.(repair.value)
 
-      await Promise.all([reloadLogs(), reloadVdeTests(), reloadAttachments(), reloadDocuments()])
+      await Promise.all([reloadLogs(), reloadVdeTests(), reloadAttachments()])
       if (stillLoading()) loading.value = false
     } catch (err) {
       if (!stillLoading()) return
@@ -174,8 +158,6 @@ export function useRepairDetail(
     logs,
     vdeTests,
     attachments,
-    disclaimerExists,
-    cancellationExists,
     latestVdeTests,
     lastVdeTestPassed,
     threadEntries,

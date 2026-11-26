@@ -12,10 +12,7 @@ import DevicePhoto from '@/components/ui/DevicePhoto.vue'
  */
 const photo = defineModel<File | null>({ required: true })
 
-const {
-  active = true,
-  category = null,
-} = defineProps<{
+const { active = true, category = null } = defineProps<{
   /** False while the surrounding step/dialog is hidden; stops the camera. */
   active?: boolean
   /** For the placeholder while there is no photo. */
@@ -70,14 +67,25 @@ function onFileChosen(event: Event) {
 <template>
   <div class="device-photo-capture">
     <div v-if="camera.active.value" class="mb-3">
-      <video ref="videoElement" class="camera-preview" autoplay playsinline></video>
+      <video
+        ref="videoElement"
+        class="app-media-preview camera-preview bg-media-background rounded"
+        autoplay
+        playsinline
+      ></video>
       <canvas ref="photoCanvas" class="d-none"></canvas>
     </div>
     <DevicePhoto v-else :src="previewUrl" :category="category" :height="200" class="mb-3" />
 
     <div class="d-flex flex-wrap ga-2">
       <template v-if="camera.active.value">
-        <v-btn color="primary" variant="flat" size="large" prepend-icon="mdi-camera" @click="capture">
+        <v-btn
+          color="primary"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-camera"
+          @click="capture"
+        >
           Aufnehmen
         </v-btn>
         <v-btn variant="text" size="large" @click="camera.stop()">Abbrechen</v-btn>
@@ -130,9 +138,6 @@ function onFileChosen(event: Event) {
 }
 
 .camera-preview {
-  width: 100%;
   max-height: 360px;
-  background: #000;
-  border-radius: 4px;
 }
 </style>

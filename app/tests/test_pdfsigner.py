@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import pymupdf
 from PIL import Image, ImageDraw
 
 # Make sure the app package is importable when running from project root
@@ -41,32 +41,32 @@ CANCELLATION_TEMPLATE_PATH: Path | None = (
 
 def _make_minimal_pdf(directory: Path, with_fields: bool = True) -> Path:
     """Create a minimal PDF with optional AcroForm text fields."""
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page(width=595, height=842)  # A4
 
     if with_fields:
         # date: plain text field
-        date_rect = fitz.Rect(100, 700, 300, 730)
-        date_widget = fitz.Widget()
-        date_widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+        date_rect = pymupdf.Rect(100, 700, 300, 730)
+        date_widget = pymupdf.Widget()
+        date_widget.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
         date_widget.field_name = FIELD_DATE
         date_widget.rect = date_rect
         date_widget.field_value = ""
         page.add_widget(date_widget)
 
         # name: plain text field
-        name_rect = fitz.Rect(100, 750, 400, 780)
-        name_widget = fitz.Widget()
-        name_widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+        name_rect = pymupdf.Rect(100, 750, 400, 780)
+        name_widget = pymupdf.Widget()
+        name_widget.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
         name_widget.field_name = FIELD_NAME
         name_widget.rect = name_rect
         name_widget.field_value = ""
         page.add_widget(name_widget)
 
         # signature: push-button used as image placeholder
-        sig_rect = fitz.Rect(100, 580, 400, 680)
-        sig_widget = fitz.Widget()
-        sig_widget.field_type = fitz.PDF_WIDGET_TYPE_BUTTON
+        sig_rect = pymupdf.Rect(100, 580, 400, 680)
+        sig_widget = pymupdf.Widget()
+        sig_widget.field_type = pymupdf.PDF_WIDGET_TYPE_BUTTON
         sig_widget.field_name = FIELD_SIGNATURE
         sig_widget.rect = sig_rect
         page.add_widget(sig_widget)
@@ -120,7 +120,7 @@ class TestPDFSignerWithFields(unittest.TestCase):
         result = self.signer.get_signed_pdf(
             self.signature, self.test_date, name="Max Mustermann"
         )
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         text = doc.load_page(0).get_text()
         doc.close()
         self.assertIn("Max Mustermann", text, f"Name not found in PDF text:\n{text}")
@@ -155,7 +155,7 @@ class TestPDFSignerWithFields(unittest.TestCase):
     def test_date_text_appears(self):
         """The date string '14.05.2026' must appear in the rendered page text."""
         result = self.signer.get_signed_pdf(self.signature, self.test_date)
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         text = doc.load_page(0).get_text()
         doc.close()
         self.assertIn(
@@ -165,7 +165,7 @@ class TestPDFSignerWithFields(unittest.TestCase):
     def test_date_string_input(self):
         """Accept date as ISO string '2026-05-14'."""
         result = self.signer.get_signed_pdf(self.signature, "2026-05-14")
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         text = doc.load_page(0).get_text()
         doc.close()
         self.assertIn("14.05.2026", text)
@@ -175,7 +175,7 @@ class TestPDFSignerWithFields(unittest.TestCase):
         result = self.signer.get_signed_pdf(
             self.signature, datetime.datetime(2026, 5, 14, 10, 30)
         )
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         text = doc.load_page(0).get_text()
         doc.close()
         self.assertIn("14.05.2026", text)
@@ -183,7 +183,7 @@ class TestPDFSignerWithFields(unittest.TestCase):
     def test_signature_image_embedded(self):
         """The output PDF must contain at least one embedded image."""
         result = self.signer.get_signed_pdf(self.signature, self.test_date)
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         images = doc.load_page(0).get_images(full=True)
         doc.close()
         self.assertGreater(len(images), 0, "No images found in signed PDF")
@@ -267,14 +267,14 @@ class TestRealTemplate(unittest.TestCase):
     def test_signed_pdf_date_rendered(self):
         result = self.signer.get_signed_pdf(self.signature, self.test_date)
         self.assertIsNotNone(result, "get_signed_pdf returned None")
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         text = doc.load_page(0).get_text()
         doc.close()
         self.assertIn("14.05.2026", text, f"Date not in PDF. Text found:\n{text}")
 
     def test_signed_pdf_has_image(self):
         result = self.signer.get_signed_pdf(self.signature, self.test_date)
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         images = doc.load_page(0).get_images(full=True)
         doc.close()
         self.assertGreater(len(images), 0, "No signature image in signed PDF")
@@ -303,7 +303,7 @@ class TestRealCancellationTemplate(unittest.TestCase):
             self.signature, self.test_date, name="Max Mustermann"
         )
         self.assertIsNotNone(result)
-        doc = fitz.open(stream=result.read(), filetype="pdf")
+        doc = pymupdf.open(stream=result.read(), filetype="pdf")
         page = doc.load_page(0)
         text = page.get_text()
         images = page.get_images(full=True)

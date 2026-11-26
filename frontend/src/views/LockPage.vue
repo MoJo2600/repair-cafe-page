@@ -41,7 +41,12 @@ async function logout() {
         <v-card-item>
           <template #prepend>
             <v-avatar size="48" rounded="lg" color="primary" variant="tonal">
-              <v-img v-if="!logoFailed" src="/api/config/logo" alt="Repair Café" @error="logoFailed = true" />
+              <v-img
+                v-if="!logoFailed"
+                src="/api/config/logo"
+                alt="Repair Café"
+                @error="logoFailed = true"
+              />
               <v-icon v-else icon="mdi-tools" />
             </v-avatar>
           </template>
@@ -82,7 +87,13 @@ async function logout() {
             </div>
           </template>
         </v-card-item>
-        <v-alert v-if="logoutError" type="error" variant="tonal" density="compact" class="ma-4 mt-0">
+        <v-alert
+          v-if="logoutError"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="ma-4 mt-0"
+        >
           {{ logoutError }}
         </v-alert>
       </v-card>
@@ -97,7 +108,6 @@ async function logout() {
 <style scoped>
 .lock-page {
   min-height: 100dvh;
-  background-color: rgb(var(--v-theme-background));
 }
 
 .lock-content {

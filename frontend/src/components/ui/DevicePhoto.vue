@@ -38,7 +38,7 @@ const iconSize = computed(() => {
     :src="src ?? undefined"
     :height="height"
     cover
-    class="device-photo"
+    rounded
     :alt="category ? `Foto des Geräts (${category})` : 'Foto des Geräts'"
     @error="failed = true"
   />
@@ -46,7 +46,8 @@ const iconSize = computed(() => {
     v-else
     :height="height"
     color="surface-light"
-    class="device-photo d-flex flex-column align-center justify-center ga-1"
+    class="d-flex flex-column align-center justify-center ga-1"
+    rounded
     role="img"
     :aria-label="category ? `Kein Foto, Kategorie ${category}` : 'Kein Foto'"
   >
@@ -54,9 +55,3 @@ const iconSize = computed(() => {
     <span v-if="category" class="text-body-small text-medium-emphasis">{{ category }}</span>
   </v-sheet>
 </template>
-
-<style scoped>
-.device-photo {
-  border-radius: 4px;
-}
-</style>
