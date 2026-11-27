@@ -4,7 +4,9 @@ import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useToast } from '@/composables/useToast'
 import { useRepairStore } from '@/stores/repairStore'
-import { normalizeRepairStatus } from '@/domain/repairStatus'
+import { isRepairReadyForPickup, normalizeRepairStatus } from '@/domain/repairStatus'
+import { api } from '@/api/client'
+import { errorMessage } from '@/utils/errors'
 import type { RepairListItem } from '@/api/types'
 import RepairCard from '@/components/RepairCard.vue'
 import QrScannerDialog from '@/components/QrScannerDialog.vue'
@@ -21,16 +23,18 @@ const toast = useToast()
 // Side by side from md up; tabs on phones and tablets in portrait
 const { mdAndUp } = useDisplay()
 
-type SectionKey = 'in_progress' | 'open'
+type SectionKey = 'in_progress' | 'open' | 'pickup'
+const repairHandoverEnabled = shallowRef(false)
+const readyForPickupRepairs = computed(() =>
+  repairHandoverEnabled.value
+    ? repairStore.repairs
+      .filter(isRepairReadyForPickup)
+      .sort((a, b) => (a.closed_at ?? '').localeCompare(b.closed_at ?? ''))
+    : []
+)
 
 const sections = computed(() => [
-  {
-    key: 'in_progress' as SectionKey,
-    title: 'In Bearbeitung',
-    icon: 'mdi-wrench-clock',
-    emptyText: 'Keine Reparaturen in Bearbeitung',
-    repairs: repairStore.inProgressRepairs,
-  },
+
   {
     key: 'open' as SectionKey,
     title: 'Offen',
@@ -38,6 +42,24 @@ const sections = computed(() => [
     emptyText: 'Keine offenen Reparaturen',
     repairs: repairStore.openRepairs,
   },
+  {
+    key: 'in_progress' as SectionKey,
+    title: 'In Bearbeitung',
+    icon: 'mdi-wrench-clock',
+    emptyText: 'Keine Reparaturen in Bearbeitung',
+    repairs: repairStore.inProgressRepairs,
+  },
+  ...(repairHandoverEnabled.value
+    ? [
+      {
+        key: 'pickup' as SectionKey,
+        title: 'Zur Abholung bereit',
+        icon: 'mdi-package-variant',
+        emptyText: 'Keine Geräte warten auf Abholung',
+        repairs: readyForPickupRepairs.value,
+      },
+    ]
+    : []),
 ])
 const activeTab = shallowRef<SectionKey>('in_progress')
 const visibleSections = computed(() =>
@@ -48,7 +70,14 @@ const initialLoading = computed(() => repairStore.loading && repairStore.repairs
 
 const nextRepair = computed(() => repairStore.nextRepair)
 onMounted(async () => {
-  await repairStore.fetchRepairs()
+  const [, features] = await Promise.all([
+    repairStore.fetchRepairs(),
+    api.getFeatures().catch((err) => {
+      toast.error(errorMessage(err, 'Funktionen konnten nicht geladen werden'))
+      return null
+    }),
+  ])
+  repairHandoverEnabled.value = features?.repair_handover ?? false
   repairStore.startAutoRefresh()
 })
 
@@ -99,11 +128,7 @@ async function confirmStartRepair(userId: number) {
     <v-card color="primary" class="mb-6">
       <v-card-item prepend-icon="mdi-tools" title="Nächste Reparatur" />
       <v-card-text>
-        <v-skeleton-loader
-          v-if="initialLoading"
-          type="list-item-avatar-two-line"
-          color="transparent"
-        />
+        <v-skeleton-loader v-if="initialLoading" type="list-item-avatar-two-line" color="transparent" />
         <v-list-item v-else-if="nextRepair" class="px-0" :title="nextRepair.geraet_art">
           <template #prepend>
             <RepairNumber :id="nextRepair.id" :status="nextRepair.status" class="mr-4" />
@@ -117,14 +142,8 @@ async function confirmStartRepair(userId: number) {
         <div v-else class="text-title-medium">Keine offenen Reparaturen vorhanden</div>
       </v-card-text>
       <v-card-actions v-if="nextRepair" class="pa-4 pt-0">
-        <v-btn
-          color="surface"
-          variant="flat"
-          size="large"
-          prepend-icon="mdi-play-circle"
-          :block="!mdAndUp"
-          @click="openStartRepairDialog(nextRepair)"
-        >
+        <v-btn color="surface" variant="flat" size="large" prepend-icon="mdi-play-circle" :block="!mdAndUp"
+          @click="openStartRepairDialog(nextRepair)">
           Zuweisen und starten
         </v-btn>
       </v-card-actions>
@@ -140,12 +159,7 @@ async function confirmStartRepair(userId: number) {
 
     <v-row>
       <v-col v-for="section in visibleSections" :key="section.key" cols="12" md="6">
-        <SectionTitle
-          v-if="mdAndUp"
-          :title="section.title"
-          :icon="section.icon"
-          :count="section.repairs.length"
-        />
+        <SectionTitle v-if="mdAndUp" :title="section.title" :icon="section.icon" :count="section.repairs.length" />
 
         <v-row v-if="initialLoading" density="compact">
           <v-col v-for="n in 2" :key="n" cols="12">
@@ -153,21 +167,11 @@ async function confirmStartRepair(userId: number) {
           </v-col>
         </v-row>
 
-        <v-empty-state
-          v-else-if="section.repairs.length === 0"
-          :icon="section.icon"
-          :title="section.emptyText"
-          size="64"
-        />
+        <v-empty-state v-else-if="section.repairs.length === 0" :icon="section.icon" :title="section.emptyText"
+          size="64" />
 
         <v-row v-else>
-          <v-col
-            v-for="repair in section.repairs"
-            :key="repair.id"
-            cols="12"
-            :sm="mdAndUp ? 12 : 6"
-            xl="6"
-          >
+          <v-col v-for="repair in section.repairs" :key="repair.id" cols="12" :sm="mdAndUp ? 12 : 6" xl="6">
             <RepairCard :repair="repair" @start="openStartRepairDialog" />
           </v-col>
         </v-row>
@@ -175,39 +179,16 @@ async function confirmStartRepair(userId: number) {
     </v-row>
 
     <!-- On large screens the app bar's "+" is enough -->
-    <v-fab
-      v-if="!mdAndUp"
-      icon="mdi-plus"
-      color="success"
-      size="large"
-      location="bottom end"
-      app
-      aria-label="Neue Reparatur"
-      @click="router.push('/create-repair')"
-    />
-    <v-fab
-      v-if="!mdAndUp"
-      class="scanner-fab"
-      icon="mdi-qrcode-scan"
-      color="primary"
-      size="large"
-      location="bottom end"
-      app
-      aria-label="QR-Code scannen"
-      @click="scannerOpen = true"
-    />
+    <v-fab v-if="!mdAndUp" icon="mdi-plus" color="success" size="large" location="bottom end" app
+      aria-label="Neue Reparatur" @click="router.push('/create-repair')" />
+    <v-fab v-if="!mdAndUp" class="scanner-fab" icon="mdi-qrcode-scan" color="primary" size="large" location="bottom end"
+      app aria-label="QR-Code scannen" @click="scannerOpen = true" />
 
     <QrScannerDialog v-model="scannerOpen" />
 
-    <ReparateurRequiredDialog
-      v-model="startRepairDialog"
-      v-model:user-id="startRepairUserId"
-      title="Reparatur starten"
+    <ReparateurRequiredDialog v-model="startRepairDialog" v-model:user-id="startRepairUserId" title="Reparatur starten"
       message="Für den Wechsel von 'Offen' zu 'In Bearbeitung' muss ein Reparateur angegeben werden."
-      confirm-text="Reparatur starten"
-      :loading="startingRepair"
-      @confirm="confirmStartRepair"
-    >
+      confirm-text="Reparatur starten" :loading="startingRepair" @confirm="confirmStartRepair">
       <template #context>
         <v-alert v-if="selectedRepair" type="info" variant="tonal" class="mb-4">
           <div><strong>Reparatur ID:</strong> {{ selectedRepair.id }}</div>
@@ -227,4 +208,3 @@ async function confirmStartRepair(userId: number) {
   margin-inline-end: 84px;
 }
 </style>
-

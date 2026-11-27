@@ -686,6 +686,20 @@
         "open_repairs": {
           "type": "integer"
         },
+        "ready_for_pickup_count": {
+          "default": 0,
+          "type": "integer"
+        },
+        "ready_for_pickup_items": {
+          "items": {
+            "$ref": "#/definitions/PinDashboardRepairItem"
+          },
+          "type": "array"
+        },
+        "repair_handover_enabled": {
+          "default": false,
+          "type": "boolean"
+        },
         "repaired_repairs": {
           "type": "integer"
         },

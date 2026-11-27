@@ -752,6 +752,9 @@ class PinDashboardSummaryResponse(BaseModel):
     next_repair_category: Optional[str] = None
     in_progress_repairs: int
     in_progress_items: list[PinDashboardRepairItem] = Field(default_factory=list)
+    repair_handover_enabled: bool = False
+    ready_for_pickup_count: int = 0
+    ready_for_pickup_items: list[PinDashboardRepairItem] = Field(default_factory=list)
     repaired_repairs: int
     not_repaired_repairs: int
     success_rate: Optional[int] = None

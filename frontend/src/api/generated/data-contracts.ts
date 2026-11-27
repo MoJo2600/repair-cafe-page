@@ -359,6 +359,11 @@ export interface PinDashboardSummaryResponse {
   next_repair_id?: number | null;
   not_repaired_repairs: number;
   open_repairs: number;
+  /** @default 0 */
+  ready_for_pickup_count?: number;
+  ready_for_pickup_items?: PinDashboardRepairItem[];
+  /** @default false */
+  repair_handover_enabled?: boolean;
   repaired_repairs: number;
   /** @default null */
   success_rate?: number | null;

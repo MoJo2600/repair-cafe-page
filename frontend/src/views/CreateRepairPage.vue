@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import type { Directive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import type { VForm } from 'vuetify/components'
@@ -58,6 +59,14 @@ const formData = ref(initialForm())
 const devicePhoto = ref<File | null>(null)
 const repairTypes = ref<Array<{ id: number; name: string }>>([])
 const labelPrinterEnabled = shallowRef(false)
+const vPasswordManagerIgnore: Directive<HTMLElement> = {
+  mounted(root) {
+    const input = root.matches('input') ? root : root.querySelector('input')
+    input?.setAttribute('data-bwignore', 'true')
+    input?.setAttribute('data-lpignore', 'true')
+    input?.setAttribute('data-1p-ignore', 'true')
+  },
+}
 
 const customerForm = ref<InstanceType<typeof VForm> | null>(null)
 const deviceForm = ref<InstanceType<typeof VForm> | null>(null)
@@ -84,24 +93,60 @@ function onRepairTypeChange(id: number | null) {
 const customerSearchQuery = shallowRef('')
 const customerSearchResults = ref<CustomerResponse[]>([])
 const customerSearchLoading = shallowRef(false)
+const customerMenuOpen = shallowRef(false)
 const selectedCustomerId = ref<number | null>(null)
 let customerSearchTimer: ReturnType<typeof setTimeout> | null = null
+let customerSearchRequest = 0
+
+async function loadAllCustomers() {
+  if (customerSearchQuery.value.length >= 2) return
+  if (customerSearchResults.value.length > 0) {
+    customerMenuOpen.value = true
+    return
+  }
+  const requestId = ++customerSearchRequest
+  customerSearchLoading.value = true
+  try {
+    const response = await api.listCustomers()
+    if (requestId === customerSearchRequest) {
+      customerSearchResults.value = response.data ?? []
+    }
+  } catch (err) {
+    if (requestId === customerSearchRequest) {
+      customerSearchResults.value = []
+      toast.error(errorMessage(err, 'Kunden konnten nicht geladen werden'))
+    }
+  } finally {
+    if (requestId === customerSearchRequest) customerSearchLoading.value = false
+  }
+  if (requestId === customerSearchRequest && customerSearchResults.value.length > 0) {
+    await nextTick()
+    customerMenuOpen.value = true
+  }
+}
 
 function onCustomerSearchInput(query: string) {
   customerSearchQuery.value = query
   if (customerSearchTimer) clearTimeout(customerSearchTimer)
+  const requestId = ++customerSearchRequest
+  customerSearchLoading.value = false
   if (!query || query.length < 2) {
-    customerSearchResults.value = []
+    if (!query) void loadAllCustomers()
+    else customerSearchResults.value = []
     return
   }
   customerSearchTimer = setTimeout(async () => {
     customerSearchLoading.value = true
     try {
-      customerSearchResults.value = (await api.searchCustomers({ q: query })).data
-    } catch {
-      customerSearchResults.value = []
+      const response = await api.searchCustomers({ q: query })
+      if (requestId === customerSearchRequest) customerSearchResults.value = response.data
+    } catch (err) {
+      if (requestId === customerSearchRequest) {
+        customerSearchResults.value = []
+        toast.error(errorMessage(err, 'Kunden konnten nicht gesucht werden'))
+      }
     } finally {
-      customerSearchLoading.value = false
+      if (requestId === customerSearchRequest) customerSearchLoading.value = false
     }
   }, 300)
 }
@@ -387,23 +432,37 @@ function createAnother() {
     <div v-if="smAndDown" class="text-title-medium mb-2">
       Schritt {{ step }} von {{ STEPS.length }} · {{ STEPS[step - 1]?.title }}
     </div>
-    <v-stepper v-model="step" :items="STEPS" :mobile="smAndDown" hide-actions flat>
+    <v-stepper
+      v-model="step"
+      :items="STEPS"
+      :mobile="smAndDown"
+      hide-actions
+      flat
+      border
+      class="repair-stepper"
+    >
       <!-- Step 1: customer -->
       <template #[`item.1`]>
         <v-form ref="customerForm">
           <v-autocomplete
             v-model:search="customerSearchQuery"
+            v-model:menu="customerMenuOpen"
+            v-password-manager-ignore
             :items="customerSearchResults"
             :item-props="customerItemProps"
             :loading="customerSearchLoading"
             label="Bestehenden Kunden suchen"
             placeholder="Name, Telefon oder E-Mail"
             prepend-inner-icon="mdi-account-search"
+            name="repair-customer-search"
+            autocomplete="off"
+            spellcheck="false"
             clearable
             no-filter
             return-object
             :hide-no-data="customerSearchQuery.length < 2"
             no-data-text="Kein Kunde gefunden"
+            @click="loadAllCustomers"
             @update:search="onCustomerSearchInput"
             @update:model-value="selectCustomer"
           />
@@ -660,8 +719,19 @@ function createAnother() {
 </template>
 
 <style scoped>
-/* Step content flush with the stepper header and the action bar */
+.repair-stepper {
+  border-radius: 12px;
+}
+
 :deep(.v-stepper-window) {
+  padding: 24px;
   margin-inline: 0;
+  overflow: visible;
+}
+
+@media (max-width: 959px) {
+  :deep(.v-stepper-window) {
+    padding: 20px 16px;
+  }
 }
 </style>

@@ -160,7 +160,8 @@ over. The handover can be reset, and reopening a repair clears it automatically.
 Existing closed records are initialized as handed over by migration `018`.
 The feature is disabled by default and can be enabled by administrators under
 **Einstellungen → Allgemein**. Both the frontend surfaces and handover API endpoints
-honor the setting.
+honor the setting. When enabled, the dashboard and PIN lock screen also show the
+anonymous repair IDs and categories of devices ready for pickup.
 
 The rules exist twice and must stay in sync: `app/schemas.py`
 (`VALID_REPAIR_STATUSES`, `VALID_STATUS_DETAILS`), `app/api/repairs.py`

@@ -516,6 +516,60 @@ def test_locked_dashboard_summary_excludes_private_repair_data(
     assert helper_client.get("/api/list").status_code == 423
 
 
+def test_dashboard_includes_pickup_queue_only_when_feature_is_enabled(
+    helper_client, helper_user
+):
+    from datetime import date, datetime
+
+    from app.models import AppConfig
+
+    category = Setting(category="repair_type", name="Elektro", sort_order=1)
+    customer = Customer(vorname="Private", nachname="Customer")
+    db.session.add_all([category, customer])
+    db.session.flush()
+    waiting = Repair(
+        customer_id=customer.id,
+        repair_type_id=category.id,
+        datum=date.today(),
+        geraet_art="Abholgerät",
+        status="Repariert",
+        closed_at=datetime.now(),
+        qr_token="p" * 32,
+    )
+    handed_over = Repair(
+        customer_id=customer.id,
+        repair_type_id=category.id,
+        datum=date.today(),
+        geraet_art="Ausgegebenes Gerät",
+        status="Repariert",
+        closed_at=datetime.now(),
+        handed_over_at=datetime.now(),
+        qr_token="q" * 32,
+    )
+    db.session.add_all([waiting, handed_over])
+    db.session.commit()
+
+    disabled = helper_client.get("/api/auth/pin-session/dashboard").get_json()
+    assert disabled["repair_handover_enabled"] is False
+    assert disabled["ready_for_pickup_count"] == 0
+    assert disabled["ready_for_pickup_items"] == []
+
+    db.session.add(AppConfig(key="repair_handover_enabled", value="true"))
+    db.session.commit()
+
+    enabled = helper_client.get("/api/auth/pin-session/dashboard").get_json()
+    assert enabled["repair_handover_enabled"] is True
+    assert enabled["ready_for_pickup_count"] == 1
+    assert enabled["ready_for_pickup_items"] == [
+        {"id": waiting.id, "category": "Elektro"}
+    ]
+    serialized = helper_client.get(
+        "/api/auth/pin-session/dashboard"
+    ).get_data(as_text=True)
+    assert "Private" not in serialized
+    assert "Abholgerät" not in serialized
+
+
 def test_openapi_registers_pin_contracts(client):
     response = client.get("/apispec_1.json")
     assert response.status_code == 200
@@ -533,6 +587,8 @@ def test_openapi_registers_pin_contracts(client):
     assert "next_repair_id" in dashboard_schema["properties"]
     assert "next_repair_category" in dashboard_schema["properties"]
     assert "in_progress_items" in dashboard_schema["properties"]
+    assert "ready_for_pickup_items" in dashboard_schema["properties"]
+    assert "repair_handover_enabled" in dashboard_schema["properties"]
     assert "top_categories" in dashboard_schema["properties"]
     assert "PinDashboardRepairItem" in spec["definitions"]
     assert "PinDashboardCategoryCount" in spec["definitions"]
