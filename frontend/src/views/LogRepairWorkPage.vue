@@ -90,6 +90,7 @@ watch(selectedRepairStatus, (newStatus) => {
 // ── Data that does not depend on the opened repair ────────────────────────────
 const pruefgeraete = ref<PruefgeraetResponse[]>([])
 const labelPrinterEnabled = shallowRef(false)
+const repairHandoverEnabled = shallowRef(false)
 
 onMounted(() => {
   void Promise.all([
@@ -98,14 +99,19 @@ onMounted(() => {
       .then((devices) => {
         pruefgeraete.value = devices
       })
-      .catch((err) => console.error('Error loading testing devices:', err)),
+      .catch((err) =>
+        toast.error(errorMessage(err, 'Prüfgeräte konnten nicht geladen werden'))
+      ),
     userStore.loaded ? Promise.resolve() : userStore.fetchUsers(),
     api
       .getFeatures()
       .then((f) => {
         labelPrinterEnabled.value = f.label_printer ?? false
+        repairHandoverEnabled.value = f.repair_handover ?? false
       })
-      .catch(() => {}),
+      .catch((err) =>
+        toast.error(errorMessage(err, 'Funktionen konnten nicht geladen werden'))
+      ),
   ])
 })
 
@@ -197,6 +203,34 @@ function onLogsChanged() {
 // ── Actions ───────────────────────────────────────────────────────────────────
 const printingLabel = shallowRef(false)
 const savingVde = shallowRef(false)
+const savingHandover = shallowRef(false)
+const visibleThreadEntries = computed(() =>
+  repairHandoverEnabled.value
+    ? threadEntries.value
+    : threadEntries.value.filter((entry) => entry.type !== 'handover_change')
+)
+
+async function toggleHandover() {
+  if (!repair.value) return
+  savingHandover.value = true
+  const resetting = Boolean(repair.value.handed_over_at)
+  try {
+    const response = resetting
+      ? await api.resetRepairHandover({ id: repair.value.id })
+      : await api.recordRepairHandover({ id: repair.value.id })
+    repair.value = response.data
+    await reloadLogs()
+    toast.success(
+      resetting
+        ? 'Gerät ist wieder zur Abholung bereit'
+        : 'Ausgabe an den Kunden wurde protokolliert'
+    )
+  } catch (err) {
+    toast.error('Fehler beim Speichern der Ausgabe: ' + errorMessage(err, 'Unbekannter Fehler'))
+  } finally {
+    savingHandover.value = false
+  }
+}
 
 async function printLabel() {
   if (!repair.value) return
@@ -228,6 +262,20 @@ const quickActions = computed(() => [
     loading: false,
     run: openVdeDialog,
   },
+  ...(repairHandoverEnabled.value &&
+  ['Repariert', 'Nicht Repariert'].includes(repair.value?.status ?? '')
+    ? [
+        {
+          key: 'handover',
+          title: repair.value?.handed_over_at
+            ? 'Zur Abholung zurücksetzen'
+            : 'An Kunden ausgehändigt',
+          icon: repair.value?.handed_over_at ? 'mdi-package-variant-closed-remove' : 'mdi-package-check',
+          loading: savingHandover.value,
+          run: () => void toggleHandover(),
+        },
+      ]
+    : []),
   ...(labelPrinterEnabled.value
     ? [
         {
@@ -345,6 +393,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
             :vde-tests="latestVdeTests"
             :logged-duration="loggedDuration"
             :photo-url="devicePhotoUrl"
+            :handover-enabled="repairHandoverEnabled"
             @updated="onRepairFieldsUpdated"
             @photo-changed="reloadAttachments"
           />
@@ -362,7 +411,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
 
           <template v-if="mdAndUp">
             <RepairActivityTimeline
-              :entries="threadEntries"
+              :entries="visibleThreadEntries"
               :attachment-counts="attachmentCounts"
               @edit-log="openEditLogDialog"
               @download-vde="downloadVdePdf"
@@ -386,7 +435,7 @@ async function handleVdeSubmit(payload: VdeFormData) {
             <RepairActivityTimeline
               v-if="contentTab === 'activity'"
               :show-title="false"
-              :entries="threadEntries"
+              :entries="visibleThreadEntries"
               :attachment-counts="attachmentCounts"
               @edit-log="openEditLogDialog"
               @download-vde="downloadVdePdf"

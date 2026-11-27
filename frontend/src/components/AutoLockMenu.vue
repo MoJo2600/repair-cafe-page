@@ -16,6 +16,7 @@ async function toggle(enabled: boolean | null) {
   const ok = await setAutoLock(!!enabled)
   saving.value = false
   if (!ok) toast.error('Einstellung konnte nicht gespeichert werden')
+  else toast.success('Automatische Sperre aktualisiert')
 }
 </script>
 

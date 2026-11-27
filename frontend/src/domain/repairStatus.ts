@@ -13,7 +13,7 @@ export const REPAIR_STATUSES = [
 
 export const REPAIR_STATUS_DETAIL_OPTIONS: Record<RepairStatus, string[]> = {
   Offen: [],
-  "In Bearbeitung": ["Ersatzteilbesorgung"],
+  "In Bearbeitung": [],
   Repariert: [],
   "Nicht Repariert": ["Nicht moeglich", "Abbruch", "Wartezeit zu lang"],
 };
@@ -74,6 +74,20 @@ export function isOpenRepairStatus(status?: string): boolean {
 
 export function isClosedRepairStatus(status?: string): boolean {
   return CLOSED_REPAIR_STATUSES.includes(normalizeRepairStatus(status));
+}
+
+export function isRepairReadyForPickup(repair: {
+  status?: string;
+  handed_over_at?: string | null;
+}): boolean {
+  return isClosedRepairStatus(repair.status) && !repair.handed_over_at;
+}
+
+export function isRepairHandedOver(repair: {
+  status?: string;
+  handed_over_at?: string | null;
+}): boolean {
+  return isClosedRepairStatus(repair.status) && Boolean(repair.handed_over_at);
 }
 
 export function requiresCompletionDetailsForTransition(

@@ -4,7 +4,7 @@ update (the frontend used to write these entries itself with a second request).
 """
 
 from app.extensions import db
-from app.models import RepairLog, Setting
+from app.models import AppConfig, RepairLog, Setting
 from app.tests.conftest import _make_user
 
 
@@ -29,6 +29,11 @@ def _create_repair(client) -> int:
 
 def _logs(repair_id: int) -> list[RepairLog]:
     return RepairLog.query.filter_by(repair_id=repair_id).order_by(RepairLog.id).all()
+
+
+def _enable_handover() -> None:
+    db.session.add(AppConfig(key="repair_handover_enabled", value="true"))
+    db.session.commit()
 
 
 def test_status_change_is_logged_for_the_repairer(helper_client, helper_user):
@@ -107,6 +112,129 @@ def test_rejected_transition_writes_no_log(helper_client):
     assert resp.status_code == 422
 
     assert _logs(repair_id) == []
+
+
+def _close_repair(client, repair_id: int, user_id: int) -> None:
+    assert (
+        client.put(
+            f"/api/repairs/{repair_id}",
+            json={"status": "In Bearbeitung", "user_id": user_id},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            f"/api/repairs/{repair_id}",
+            json={
+                "status": "Repariert",
+                "reparatur_besch": "Gerät instand gesetzt",
+            },
+        ).status_code
+        == 200
+    )
+
+
+def test_completed_repair_handover_can_be_recorded_and_reset(helper_client, helper_user):
+    _enable_handover()
+    repair_id = _create_repair(helper_client)
+    _close_repair(helper_client, repair_id, helper_user.id)
+
+    from app.models import Repair
+
+    repair = db.session.get(Repair, repair_id)
+    assert repair.handed_over_at is None
+
+    response = helper_client.post(f"/api/repairs/{repair_id}/handover")
+    assert response.status_code == 200
+    assert response.get_json()["data"]["handed_over_at"] is not None
+    assert response.get_json()["data"]["handed_over_by_id"] == helper_user.id
+
+    # Recording an already recorded handover is idempotent and does not add a log.
+    assert helper_client.post(f"/api/repairs/{repair_id}/handover").status_code == 200
+    assert [log.log_type for log in _logs(repair_id)].count("handover_change") == 1
+
+    response = helper_client.delete(f"/api/repairs/{repair_id}/handover")
+    assert response.status_code == 200
+    assert response.get_json()["data"]["handed_over_at"] is None
+    assert response.get_json()["data"]["handed_over_by_id"] is None
+    assert [log.log_type for log in _logs(repair_id)].count("handover_change") == 2
+
+
+def test_open_repair_cannot_be_handed_over(helper_client):
+    _enable_handover()
+    repair_id = _create_repair(helper_client)
+
+    response = helper_client.post(f"/api/repairs/{repair_id}/handover")
+
+    assert response.status_code == 409
+    assert _logs(repair_id) == []
+
+
+def test_reopening_clears_handover(helper_client, helper_user):
+    _enable_handover()
+    repair_id = _create_repair(helper_client)
+    _close_repair(helper_client, repair_id, helper_user.id)
+    helper_client.post(f"/api/repairs/{repair_id}/handover")
+
+    response = helper_client.put(
+        f"/api/repairs/{repair_id}", json={"status": "In Bearbeitung"}
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    assert data["handed_over_at"] is None
+    assert data["handed_over_by_id"] is None
+
+
+def test_handover_endpoints_are_blocked_when_feature_is_disabled(helper_client):
+    repair_id = _create_repair(helper_client)
+
+    assert helper_client.post(f"/api/repairs/{repair_id}/handover").status_code == 409
+    assert helper_client.delete(f"/api/repairs/{repair_id}/handover").status_code == 409
+    assert _logs(repair_id) == []
+
+
+def test_handover_feature_flag_is_configurable(helper_client):
+    assert helper_client.get("/api/config/features").get_json()["repair_handover"] is False
+
+    _make_user("handover_admin", is_admin=True)
+    login = helper_client.post(
+        "/api/auth/login",
+        json={"username": "handover_admin", "password": "secret"},
+    )
+    assert login.status_code == 200
+
+    response = helper_client.put(
+        "/api/config/app-config",
+        json={"repair_handover_enabled": True},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["repair_handover_enabled"] is True
+    assert helper_client.get("/api/config/features").get_json()["repair_handover"] is True
+
+
+def test_status_change_clears_incompatible_status_detail(helper_client, helper_user):
+    repair_id = _create_repair(helper_client)
+    helper_client.put(
+        f"/api/repairs/{repair_id}",
+        json={"status": "In Bearbeitung", "user_id": helper_user.id},
+    )
+    response = helper_client.put(
+        f"/api/repairs/{repair_id}",
+        json={
+            "status": "Nicht Repariert",
+            "status_detail": "Nicht moeglich",
+            "reparatur_besch": "Ersatzteil nicht erhältlich",
+        },
+    )
+    assert response.status_code == 200
+
+    response = helper_client.put(
+        f"/api/repairs/{repair_id}", json={"status": "In Bearbeitung"}
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["status_detail"] is None
 
 
 def test_list_includes_latest_log(helper_client, helper_user):

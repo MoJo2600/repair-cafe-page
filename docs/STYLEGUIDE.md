@@ -134,6 +134,17 @@ Desktop table rows use `TableRowActions`: one labeled primary action plus an ove
 menu for secondary or destructive actions. Mobile table rows keep their compact,
 card-like action layout.
 
+## Action feedback
+
+- Use `useToast()` for the result of every completed user action: success, warning
+  and recoverable API failure.
+- Do not show green success banners after saves. Toasts are transient and keep the
+  page layout stable.
+- Keep an inline `v-alert` only for content the user must resolve before continuing,
+  such as a validation/server error inside an open dialog or a persistent load state
+  with a retry action.
+- Avoid reporting the same result both inline and as a toast.
+
 ## Wording
 
 German throughout; no English UI text (today e.g. the QR scanner still says "Scan QR

@@ -36,7 +36,7 @@ VALID_REPAIR_STATUSES = {
 
 VALID_STATUS_DETAILS = {
     "Offen": set(),
-    "In Bearbeitung": {"Ersatzteilbesorgung"},
+    "In Bearbeitung": set(),
     "Repariert": set(),
     "Nicht Repariert": {"Nicht moeglich", "Abbruch", "Wartezeit zu lang"},
 }
@@ -383,6 +383,15 @@ class RepairResponse(RepairBase):
     closed_at: Optional[datetime] = Field(
         None, description="Timestamp when the repair was closed"
     )
+    handed_over_at: Optional[datetime] = Field(
+        None, description="Timestamp when the device was handed back to the customer"
+    )
+    handed_over_by_id: Optional[int] = Field(
+        None, description="User who recorded the handover"
+    )
+    handed_over_by: Optional["UserResponse"] = Field(
+        None, description="User who recorded the handover"
+    )
     qr_token: str = Field(..., max_length=32, description="QR code token")
 
     model_config = ConfigDict(from_attributes=True)
@@ -453,7 +462,10 @@ class RepairLogBase(BaseModel):
     log_type: str = Field(
         "work",
         max_length=20,
-        description="Entry type: 'work' for work sessions, 'status_change' for status transitions",
+        description=(
+            "Entry type: 'work' for work sessions, 'status_change' for status "
+            "transitions, or 'handover_change' for device handovers"
+        ),
     )
     status_from: Optional[str] = Field(
         None, max_length=20, description="Status before the transition"
@@ -659,7 +671,7 @@ class SettingResponse(BaseModel):
 
 
 class AppConfigResponse(BaseModel):
-    """Schema for application-level configuration (org name, website)."""
+    """Schema for application-level configuration."""
 
     org_name: str = Field("Repair Café", description="Organisation display name")
     org_website: str = Field(
@@ -667,6 +679,10 @@ class AppConfigResponse(BaseModel):
     )
     app_url: str = Field(
         "", description="Application base URL used for QR code links on labels"
+    )
+    repair_handover_enabled: bool = Field(
+        False,
+        description="Whether completed devices can be tracked until customer pickup",
     )
 
 
@@ -676,6 +692,10 @@ class AppConfigUpdate(BaseModel):
     org_name: Optional[str] = Field(None, max_length=200)
     org_website: Optional[str] = Field(None, max_length=200)
     app_url: Optional[str] = Field(None, max_length=200)
+    repair_handover_enabled: Optional[bool] = Field(
+        None,
+        description="Enable tracking of completed devices until customer pickup",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -684,10 +704,13 @@ class AppConfigUpdate(BaseModel):
 
 
 class FeaturesResponse(BaseModel):
-    """Schema for feature flags derived from server-side environment variables."""
+    """Schema for server-side feature flags."""
 
     label_printer: bool = Field(
         False, description="Whether the label printer is enabled"
+    )
+    repair_handover: bool = Field(
+        False, description="Whether customer handover tracking is enabled"
     )
 
 

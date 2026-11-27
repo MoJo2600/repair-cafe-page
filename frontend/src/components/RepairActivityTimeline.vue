@@ -35,6 +35,8 @@ function entryStyle(entry: RepairThreadEntry): { color: string; icon: string } {
       return { color: getRepairStatusColor('Offen'), icon: 'mdi-clipboard-plus-outline' }
     case 'assignee_change':
       return { color: 'surface-variant', icon: 'mdi-account-arrow-right' }
+    case 'handover_change':
+      return { color: 'success', icon: 'mdi-package-check' }
     case 'vde':
       // The test result is feedback, so it uses the feedback colors
       return entry.vdePassed
@@ -113,7 +115,10 @@ function onEntryClick(entry: RepairThreadEntry) {
           </div>
 
           <div
-            v-else-if="item.entry.type === 'assignee_change'"
+            v-else-if="
+              item.entry.type === 'assignee_change' ||
+              item.entry.type === 'handover_change'
+            "
             class="d-flex align-center ga-1 flex-wrap"
           >
             <span class="text-body-medium">{{ item.entry.description }}</span>

@@ -45,32 +45,9 @@
                 />
               </v-col>
             </v-row>
-            <v-alert v-if="orgError" type="error" variant="tonal" density="compact" class="mt-4">
-              {{ orgError }}
-            </v-alert>
-            <v-alert
-              v-if="orgSuccess"
-              type="success"
-              variant="tonal"
-              density="compact"
-              class="mt-4"
-            >
-              Organisation gespeichert.
-            </v-alert>
-          </v-card-text>
-          <v-card-actions class="px-4 pb-4">
-            <v-spacer />
-            <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">
-              Speichern
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-
-        <!-- Logo / Icon -->
-        <v-card class="mb-6">
-          <v-card-title>Logo / Icon</v-card-title>
-          <v-card-text>
-            <p class="mb-4">
+            <v-divider class="my-6" />
+            <div class="text-title-small mb-1">Logo / Icon</div>
+            <p class="mb-4 text-body-medium text-medium-emphasis">
               Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon
               aktiv.
             </p>
@@ -91,7 +68,6 @@
                   label="Neues Logo hochladen"
                   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                   prepend-icon="mdi-image"
-                  :error-messages="logoError"
                   hide-details="auto"
                   @update:model-value="onLogoFileChange"
                 />
@@ -108,22 +84,28 @@
                 </v-btn>
               </v-col>
             </v-row>
-            <v-alert
-              v-if="logoSuccess"
-              type="success"
-              variant="tonal"
-              density="compact"
-              class="mt-4"
-            >
-              Logo erfolgreich aktualisiert.
-            </v-alert>
           </v-card-text>
+          <v-card-actions class="px-4 pb-4">
+            <v-spacer />
+            <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">
+              Speichern
+            </v-btn>
+          </v-card-actions>
         </v-card>
 
-        <!-- Jubelton -->
+        <!-- Optionale Funktionen -->
         <v-card class="mb-6">
-          <v-card-title>Jubelton</v-card-title>
+          <v-card-title>Optionale Funktionen</v-card-title>
           <v-card-text>
+            <v-switch
+              v-model="orgForm.repair_handover_enabled"
+              label="Kundengeräte bis zur Abholung verwalten"
+              color="primary"
+              hint="Zeigt nach dem Reparaturabschluss den Status „Zur Abholung bereit“ und protokolliert die Ausgabe."
+              persistent-hint
+            />
+            <v-divider class="my-6" />
+            <div class="text-title-small mb-1">Jubelton</div>
             <p class="mb-4">
               Wird auf dem Dashboard abgespielt, wenn ein Gerät repariert wurde. Laden Sie eine
               MP3-Datei hoch (max. 2 MB). Geöffnete Dashboards übernehmen den neuen Ton nach dem
@@ -136,9 +118,7 @@
                   label="Neuen Jubelton hochladen"
                   accept="audio/mpeg,.mp3"
                   prepend-icon="mdi-music-note"
-                  :error-messages="soundError"
                   hide-details="auto"
-                  @update:model-value="onSoundFileChange"
                 />
               </v-col>
               <v-col cols="12" sm="auto" class="d-flex flex-wrap ga-2">
@@ -155,16 +135,31 @@
                 <v-btn variant="text" :loading="soundResetting" @click="resetSound">Standard</v-btn>
               </v-col>
             </v-row>
-            <v-alert
-              v-if="soundSuccess"
-              type="success"
-              variant="tonal"
-              density="compact"
-              class="mt-4"
-            >
-              {{ soundSuccess }}
-            </v-alert>
           </v-card-text>
+          <v-card-actions class="px-4 pb-4">
+            <v-spacer />
+            <v-btn
+              color="primary"
+              variant="flat"
+              :loading="featuresSaving"
+              @click="saveFeatures"
+            >
+              Speichern
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+
+        <v-card>
+          <v-card-title>Sonstiges</v-card-title>
+          <v-list bg-color="transparent">
+            <v-list-item
+              to="/styleguide"
+              prepend-icon="mdi-palette-outline"
+              title="Styleguide"
+              subtitle="Gestaltungsrichtlinien und UI-Komponenten anzeigen"
+              append-icon="mdi-chevron-right"
+            />
+          </v-list>
         </v-card>
     </section>
 
@@ -435,10 +430,14 @@ function byCategory(category: string): SettingResponse[] {
 
 // ── Organisation config ───────────────────────────────────────────────────
 
-const orgForm = ref({ org_name: '', org_website: '', app_url: '' })
+const orgForm = ref({
+  org_name: '',
+  org_website: '',
+  app_url: '',
+  repair_handover_enabled: false,
+})
 const orgSaving = ref(false)
-const orgError = ref('')
-const orgSuccess = ref(false)
+const featuresSaving = ref(false)
 
 async function loadOrgConfig() {
   try {
@@ -447,16 +446,15 @@ async function loadOrgConfig() {
       org_name: cfg.org_name ?? '',
       org_website: cfg.org_website ?? '',
       app_url: cfg.app_url ?? '',
+      repair_handover_enabled: cfg.repair_handover_enabled ?? false,
     }
-  } catch {
-    // non-fatal — form keeps its defaults
+  } catch (err) {
+    toast.error(errorMessage(err, 'Konfiguration konnte nicht geladen werden'))
   }
 }
 
 async function saveOrg() {
   orgSaving.value = true
-  orgError.value = ''
-  orgSuccess.value = false
   try {
     const cfg = await api.updateAppConfig({
       org_name: orgForm.value.org_name,
@@ -467,12 +465,28 @@ async function saveOrg() {
       org_name: cfg.org_name ?? '',
       org_website: cfg.org_website ?? '',
       app_url: cfg.app_url ?? '',
+      repair_handover_enabled: cfg.repair_handover_enabled ?? false,
     }
-    orgSuccess.value = true
-  } catch {
-    orgError.value = 'Fehler beim Speichern der Organisation'
+    toast.success('Organisation gespeichert')
+  } catch (err) {
+    toast.error(errorMessage(err, 'Fehler beim Speichern der Organisation'))
   } finally {
     orgSaving.value = false
+  }
+}
+
+async function saveFeatures() {
+  featuresSaving.value = true
+  try {
+    const cfg = await api.updateAppConfig({
+      repair_handover_enabled: orgForm.value.repair_handover_enabled,
+    })
+    orgForm.value.repair_handover_enabled = cfg.repair_handover_enabled ?? false
+    toast.success('Optionale Funktionen gespeichert')
+  } catch (err) {
+    toast.error(errorMessage(err, 'Fehler beim Speichern der optionalen Funktionen'))
+  } finally {
+    featuresSaving.value = false
   }
 }
 
@@ -587,13 +601,9 @@ onMounted(loadOrgConfig)
 
 const logoFile = ref<File | null>(null)
 const logoUploading = ref(false)
-const logoError = ref('')
-const logoSuccess = ref(false)
 const logoPreview = ref<string | null>(null)
 
 function onLogoFileChange(file: File | File[] | null) {
-  logoError.value = ''
-  logoSuccess.value = false
   const f = Array.isArray(file) ? file[0] : file
   if (f) {
     logoPreview.value = URL.createObjectURL(f)
@@ -605,11 +615,9 @@ function onLogoFileChange(file: File | File[] | null) {
 async function uploadLogo() {
   if (!logoFile.value) return
   logoUploading.value = true
-  logoError.value = ''
-  logoSuccess.value = false
   try {
     await api.uploadLogo({ file: logoFile.value })
-    logoSuccess.value = true
+    toast.success('Logo erfolgreich aktualisiert')
     logoFile.value = null
     // Update all favicon links in the document head
     const bust = `?t=${Date.now()}`
@@ -619,7 +627,7 @@ async function uploadLogo() {
         el.href = `/api/config/logo${bust}`
       })
   } catch (err) {
-    logoError.value = errorMessage(err, 'Fehler beim Hochladen')
+    toast.error(errorMessage(err, 'Fehler beim Hochladen des Logos'))
   } finally {
     logoUploading.value = false
   }
@@ -630,35 +638,26 @@ async function uploadLogo() {
 const soundFile = ref<File | null>(null)
 const soundUploading = ref(false)
 const soundResetting = ref(false)
-const soundError = ref('')
-const soundSuccess = ref('')
 let soundPreview: HTMLAudioElement | null = null
-
-function onSoundFileChange() {
-  soundError.value = ''
-  soundSuccess.value = ''
-}
 
 /** Plays the active sound (fresh from the server, so right after an upload too). */
 function previewSound() {
   soundPreview?.pause()
   soundPreview = new Audio(`${CELEBRATION_SOUND_URL}?t=${Date.now()}`)
   soundPreview.play().catch((err) => {
-    soundError.value = errorMessage(err, 'Ton konnte nicht abgespielt werden')
+    toast.error(errorMessage(err, 'Ton konnte nicht abgespielt werden'))
   })
 }
 
 async function uploadSound() {
   if (!soundFile.value) return
   soundUploading.value = true
-  soundError.value = ''
-  soundSuccess.value = ''
   try {
     await api.uploadCelebrationSound({ file: soundFile.value })
-    soundSuccess.value = 'Jubelton erfolgreich aktualisiert.'
+    toast.success('Jubelton erfolgreich aktualisiert')
     soundFile.value = null
   } catch (err) {
-    soundError.value = errorMessage(err, 'Fehler beim Hochladen')
+    toast.error(errorMessage(err, 'Fehler beim Hochladen des Jubeltons'))
   } finally {
     soundUploading.value = false
   }
@@ -666,13 +665,11 @@ async function uploadSound() {
 
 async function resetSound() {
   soundResetting.value = true
-  soundError.value = ''
-  soundSuccess.value = ''
   try {
     await api.resetCelebrationSound()
-    soundSuccess.value = 'Standard-Jubelton ist wieder aktiv.'
+    toast.success('Standard-Jubelton ist wieder aktiv')
   } catch (err) {
-    soundError.value = errorMessage(err, 'Zurücksetzen fehlgeschlagen')
+    toast.error(errorMessage(err, 'Zurücksetzen fehlgeschlagen'))
   } finally {
     soundResetting.value = false
   }

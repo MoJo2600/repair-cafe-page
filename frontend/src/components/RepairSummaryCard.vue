@@ -88,6 +88,23 @@
         class="mt-3"
       />
 
+      <v-alert
+        v-if="isClosed && handoverEnabled"
+        :type="repairData.handed_over_at ? 'success' : 'warning'"
+        variant="tonal"
+        :icon="repairData.handed_over_at ? 'mdi-package-check' : 'mdi-package-variant'"
+        :title="repairData.handed_over_at ? 'An Kunden ausgehändigt' : 'Zur Abholung bereit'"
+        class="mt-3"
+      >
+        <template v-if="repairData.handed_over_at">
+          {{ formatDateTime(repairData.handed_over_at) }}
+          <template v-if="repairData.handed_over_by">
+            · {{ personName(repairData.handed_over_by) }}
+          </template>
+        </template>
+        <template v-else>Das Gerät befindet sich noch in der Werkstatt.</template>
+      </v-alert>
+
       <template v-if="vdeTests && vdeTests.length > 0">
         <div class="text-title-small text-medium-emphasis mt-4 mb-2">Letzter VDE-Test</div>
         <v-alert
@@ -194,6 +211,7 @@ interface Props {
   repairData: RepairDraft
   vdeTests?: VdeTestResponse[]
   loggedDuration?: number
+  handoverEnabled?: boolean
   /** Device photo; without one the category placeholder is shown. */
   photoUrl?: string | null
 }
@@ -292,6 +310,7 @@ async function saveEdit() {
       ...editForm.value,
       repair_type_id: editForm.value.repair_type_id ?? undefined,
     })
+    toast.success('Reparaturdetails gespeichert')
     editDialog.value = false
   } catch (err) {
     toast.error('Fehler beim Speichern: ' + errorMessage(err, 'Unbekannter Fehler'))
