@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-if [[ $# -gt 1 || (${1:-} != "" && ${1:-} != "--database-only" && ${1:-} != "--setup") ]]; then
-    echo "Usage: bash dev-start.sh [--database-only|--setup]" >&2
+if [[ $# -gt 1 || (${1:-} != "" && ${1:-} != "--database-only" && ${1:-} != "--setup" && ${1:-} != "--reset") ]]; then
+    echo "Usage: bash dev-start.sh [--database-only|--setup|--reset]" >&2
     exit 1
 fi
 
@@ -31,6 +31,15 @@ export FLASK_SECRET_KEY="${FLASK_SECRET_KEY:-repaircafe-local-development-only}"
 export LABEL_PRINTER_ENABLED="${LABEL_PRINTER_ENABLED:-true}"
 export LABEL_PRINTER_NAME="${LABEL_PRINTER_NAME:-SLP650}"
 
+if [[ ! "$MYSQL_DATABASE" =~ ^[a-zA-Z0-9_]+$ ]]; then
+    echo "Development database names must contain only letters, numbers, and underscores." >&2
+    exit 1
+fi
+if [[ ${1:-} == "--reset" && "$MYSQL_DATABASE" != *_dev ]]; then
+    echo "Refusing to reset '$MYSQL_DATABASE': reset requires a database name ending in _dev." >&2
+    exit 1
+fi
+
 echo "Starting development database (Compose project: $COMPOSE_PROJECT)..."
 DATABASE_ID="$(docker ps -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" --filter 'label=com.docker.compose.service=db')"
 if [[ -n "$DATABASE_ID" ]]; then
@@ -50,13 +59,15 @@ until docker exec "$DATABASE_ID" healthcheck.sh --connect --innodb_initialized >
     sleep 1
 done
 
-if [[ ! "$MYSQL_DATABASE" =~ ^[a-zA-Z0-9_]+$ ]]; then
-    echo "Development database names must contain only letters, numbers, and underscores." >&2
-    exit 1
+if [[ ${1:-} == "--reset" ]]; then
+    echo "Resetting development database: $MYSQL_DATABASE"
+    docker exec -e "DEV_DATABASE=$MYSQL_DATABASE" "$DATABASE_ID" sh -c \
+        'exec mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS \`$DEV_DATABASE\`; CREATE DATABASE \`$DEV_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"'
+else
+    echo "Ensuring development database exists: $MYSQL_DATABASE"
+    docker exec -e "DEV_DATABASE=$MYSQL_DATABASE" "$DATABASE_ID" sh -c \
+        'exec mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`$DEV_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"'
 fi
-echo "Ensuring development database exists: $MYSQL_DATABASE"
-docker exec -e "DEV_DATABASE=$MYSQL_DATABASE" "$DATABASE_ID" sh -c \
-    'exec mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`$DEV_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"'
 
 if [[ ${1:-} == "--database-only" ]]; then
     echo "Development database is ready."
@@ -69,15 +80,20 @@ if ! python "$ROOT_DIR/app/run_migrations.py"; then
     exit 1
 fi
 
-if ! python "$ROOT_DIR/app/migrate_legacy_documents.py"; then
-    echo "Legacy document migration failed; development servers were not started." >&2
-    exit 1
+if [[ ${1:-} != "--reset" ]]; then
+    if ! python "$ROOT_DIR/app/migrate_legacy_documents.py"; then
+        echo "Legacy document migration failed; development servers were not started." >&2
+        exit 1
+    fi
 fi
 
-if [[ ${1:-} == "--setup" ]]; then
+if [[ ${1:-} == "--setup" || ${1:-} == "--reset" ]]; then
     python "$ROOT_DIR/app/seed_dev.py"
-    echo "Development database migrated and seeded: $MYSQL_DATABASE"
-    exit 0
+    if [[ ${1:-} == "--setup" ]]; then
+        echo "Development database migrated and seeded: $MYSQL_DATABASE"
+        exit 0
+    fi
+    echo "Development database reset, migrated and seeded: $MYSQL_DATABASE"
 fi
 
 for dependency in pnpm setsid; do

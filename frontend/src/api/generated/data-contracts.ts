@@ -41,6 +41,11 @@ export interface AppConfigResponse {
    * @default ""
    */
   org_website?: string;
+  /**
+   * Whether completed devices can be tracked until customer pickup
+   * @default false
+   */
+  repair_handover_enabled?: boolean;
 }
 
 export interface AuthConfigResponse {
@@ -291,6 +296,11 @@ export interface FeaturesResponse {
    * @default false
    */
   label_printer?: boolean;
+  /**
+   * Whether customer handover tracking is enabled
+   * @default false
+   */
+  repair_handover?: boolean;
 }
 
 export interface IdResponse {
@@ -349,6 +359,11 @@ export interface PinDashboardSummaryResponse {
   next_repair_id?: number | null;
   not_repaired_repairs: number;
   open_repairs: number;
+  /** @default 0 */
+  ready_for_pickup_count?: number;
+  ready_for_pickup_items?: PinDashboardRepairItem[];
+  /** @default false */
+  repair_handover_enabled?: boolean;
   repaired_repairs: number;
   /** @default null */
   success_rate?: number | null;
@@ -585,6 +600,18 @@ export interface RepairListItem {
    * @maxLength 100
    */
   geraet_art: string;
+  /**
+   * Timestamp when the device was handed back to the customer
+   * @format date-time
+   * @default null
+   */
+  handed_over_at?: string | null;
+  handed_over_by?: UserResponse | null;
+  /**
+   * User who recorded the handover
+   * @default null
+   */
+  handed_over_by_id?: number | null;
   /** Repair ID */
   id: number;
   latest_log?: RepairLogResponse | null;
@@ -646,7 +673,7 @@ export interface RepairListResponse {
 
 export interface RepairLogCreate {
   /**
-   * Entry type: 'work' for work sessions, 'status_change' for status transitions
+   * Entry type: 'work' for work sessions, 'status_change' for status transitions, or 'handover_change' for device handovers
    * @maxLength 20
    * @default "work"
    */
@@ -719,7 +746,7 @@ export interface RepairLogResponse {
   /** Repair log ID */
   id: number;
   /**
-   * Entry type: 'work' for work sessions, 'status_change' for status transitions
+   * Entry type: 'work' for work sessions, 'status_change' for status transitions, or 'handover_change' for device handovers
    * @maxLength 20
    * @default "work"
    */
@@ -834,6 +861,18 @@ export interface RepairResponse {
    * @maxLength 100
    */
   geraet_art: string;
+  /**
+   * Timestamp when the device was handed back to the customer
+   * @format date-time
+   * @default null
+   */
+  handed_over_at?: string | null;
+  handed_over_by?: UserResponse | null;
+  /**
+   * User who recorded the handover
+   * @default null
+   */
+  handed_over_by_id?: number | null;
   /** Repair ID */
   id: number;
   /**
@@ -1417,6 +1456,8 @@ export interface UpdateAppConfigPayload {
   app_url?: string;
   org_name?: string;
   org_website?: string;
+  /** Track completed devices until customer pickup */
+  repair_handover_enabled?: boolean;
 }
 
 export interface UploadCancellationTemplatePayload {
@@ -1542,6 +1583,14 @@ export interface UploadRepairDisclaimerPayload {
 
 export interface UploadRepairDisclaimerParams {
   /** Repair ID */
+  id: number;
+}
+
+export interface ResetRepairHandoverParams {
+  id: number;
+}
+
+export interface RecordRepairHandoverParams {
   id: number;
 }
 

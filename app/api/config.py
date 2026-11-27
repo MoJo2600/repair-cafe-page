@@ -531,15 +531,19 @@ def reset_celebration_sound():
 
 
 def _get_app_config() -> AppConfigResponse:
-    """Read org_name, org_website and app_url from the DB, falling back to defaults."""
+    """Read application config from the DB, falling back to schema defaults."""
     defaults = AppConfigResponse()
     org_name_row = db.session.get(AppConfig, "org_name")
     org_website_row = db.session.get(AppConfig, "org_website")
     app_url_row = db.session.get(AppConfig, "app_url")
+    handover_row = db.session.get(AppConfig, "repair_handover_enabled")
     return AppConfigResponse(
         org_name=org_name_row.value if org_name_row else defaults.org_name,
         org_website=org_website_row.value if org_website_row else defaults.org_website,
         app_url=app_url_row.value if app_url_row else defaults.app_url,
+        repair_handover_enabled=(
+            handover_row.value if handover_row else defaults.repair_handover_enabled
+        ),
     )
 
 
@@ -586,6 +590,9 @@ def update_app_config():
             app_url:
               type: string
               description: Application base URL for QR code links on printed labels
+            repair_handover_enabled:
+              type: boolean
+              description: Track completed devices until customer pickup
     responses:
       200:
         description: Updated configuration
@@ -633,6 +640,21 @@ def update_app_config():
                 AppConfig(key="app_url", value=body.app_url, updated_at=now)
             )
 
+    if body.repair_handover_enabled is not None:
+        value = "true" if body.repair_handover_enabled else "false"
+        row = db.session.get(AppConfig, "repair_handover_enabled")
+        if row:
+            row.value = value
+            row.updated_at = now
+        else:
+            db.session.add(
+                AppConfig(
+                    key="repair_handover_enabled",
+                    value=value,
+                    updated_at=now,
+                )
+            )
+
     db.session.commit()
 
     return Response(
@@ -661,7 +683,8 @@ def get_features():
             FeaturesResponse(
                 label_printer=bool(
                     current_app.config.get("LABEL_PRINTER_ENABLED", False)
-                )
+                ),
+                repair_handover=_get_app_config().repair_handover_enabled,
             ).model_dump()
         ),
         status=200,

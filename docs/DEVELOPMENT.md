@@ -19,6 +19,18 @@ This creates the database `repaircafepage_dev`, runs the migrations and loads te
 data. It never drops or resets anything; seeding is skipped if the test users exist.
 VS Code task: **Database: Migrate and Seed**.
 
+To discard the complete development database and start with freshly migrated seed
+data, run:
+
+```bash
+bash dev-start.sh --reset
+```
+
+This drops and recreates the configured database, runs migrations and seeds, then
+starts the frontend and backend. For safety, reset is refused unless
+`MYSQL_DATABASE` ends in `_dev`. It resets the database only; files below
+`DATA_DIR/attachments` are retained.
+
 Without the Dev Container you need Docker, Python 3.12 with
 `pip install -r app/requirements.txt`, and Node with pnpm. The script then starts
 MariaDB from `.devcontainer/docker-compose.yml` and connects to `127.0.0.1:3306`.
@@ -44,6 +56,8 @@ database if needed, applies pending migrations, and starts:
 
 Vite proxies `/api` to Flask. `Ctrl+C` stops both servers; the database keeps running
 with its data. `bash dev-start.sh --database-only` starts only the database.
+`bash dev-start.sh --reset` recreates the database, seeds it, and starts both
+development servers.
 
 Log in with the seed users:
 

@@ -12,7 +12,7 @@ from werkzeug.security import check_password_hash
 from app.auth.decorators import login_required_api, public_endpoint
 from app.auth.oidc import oidc_enabled
 from app.extensions import db, login_manager
-from app.models import Repair, Setting
+from app.models import AppConfig, Repair, Setting
 from app.models import User as DBUser
 from app.schemas import (
     AuthResponse,
@@ -469,6 +469,28 @@ def api_pin_dashboard_summary():
         for repair_id, category_name in in_progress_rows
     ]
 
+    handover_config = db.session.get(AppConfig, "repair_handover_enabled")
+    repair_handover_enabled = bool(
+        handover_config
+        and handover_config.value.strip().lower() in {"1", "true", "yes", "on"}
+    )
+    ready_for_pickup_rows = []
+    if repair_handover_enabled:
+        ready_for_pickup_rows = (
+            db.session.query(Repair.id, Setting.name)
+            .outerjoin(Setting, Repair.repair_type_id == Setting.id)
+            .filter(
+                Repair.status.in_(["Repariert", "Nicht Repariert"]),
+                Repair.handed_over_at.is_(None),
+            )
+            .order_by(Repair.closed_at.asc(), Repair.id.asc())
+            .all()
+        )
+    ready_for_pickup_items = [
+        PinDashboardRepairItem(id=repair_id, category=category_name)
+        for repair_id, category_name in ready_for_pickup_rows
+    ]
+
     top_category_rows = (
         db.session.query(Setting.name, func.count(Repair.id))
         .join(Repair, Repair.repair_type_id == Setting.id)
@@ -513,6 +535,9 @@ def api_pin_dashboard_summary():
         next_repair_category=next_repair_category,
         in_progress_repairs=counts.get("In Bearbeitung", 0),
         in_progress_items=in_progress_items,
+        repair_handover_enabled=repair_handover_enabled,
+        ready_for_pickup_count=len(ready_for_pickup_items),
+        ready_for_pickup_items=ready_for_pickup_items,
         repaired_repairs=repaired,
         not_repaired_repairs=not_repaired,
         success_rate=round(repaired / denominator * 100) if denominator else None,

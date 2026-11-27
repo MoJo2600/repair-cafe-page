@@ -130,8 +130,11 @@ import { api } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PinStatusResponse } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
+import { errorMessage as getErrorMessage } from '@/utils/errors'
 
 const authStore = useAuthStore()
+const toast = useToast()
 const fullName = computed(() => personName(authStore.currentUser))
 const status = ref<PinStatusResponse | null>(null)
 const loading = ref(true)
@@ -178,10 +181,16 @@ async function generate(replace: boolean) {
     if (!active || !authStore.isAuthenticated) return
     newPin.value = result.pin_code
     status.value = { mode: 'local', has_pin: true, can_generate: true }
-  } catch {
+    toast.success(replace ? 'PIN ersetzt' : 'PIN erstellt')
+  } catch (err) {
     if (active) {
       await loadStatus()
-      error.value = 'PIN konnte nicht erstellt werden. Bitte Status pruefen und erneut versuchen.'
+      toast.error(
+        getErrorMessage(
+          err,
+          'PIN konnte nicht erstellt werden. Bitte Status prüfen und erneut versuchen.'
+        )
+      )
     }
   } finally {
     if (active) {

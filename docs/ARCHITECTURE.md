@@ -92,8 +92,8 @@ pin_state (one row: active PIN mode)   pin_unlock_failures   app_config (key/val
 |---|---|
 | `users` | local and SSO accounts: username, name, e-mail, password hash, `is_admin`, `is_active`, `oidc_sub`, `pin_code_hash` |
 | `customers` | first and last name, phone, e-mail; reused across repairs |
-| `repairs` | intake date, device (`geraet_art`), category (`repair_type_id` → settings), defect, disclaimer-signed flag (the raw signature is transient), VDE flag (`din_pruef`), `status` / `status_detail`, assignee, repair description, `closed_at`, `qr_token` |
-| `repair_logs` | timeline of a repair: `log_type` `work` (description, duration), `status_change` (`status_from` → `status_to`) or `assignee_change` |
+| `repairs` | intake date, device (`geraet_art`), category (`repair_type_id` → settings), defect, disclaimer-signed flag (the raw signature is transient), VDE flag (`din_pruef`), `status` / `status_detail`, assignee, repair description, `closed_at`, handover timestamp/user, `qr_token` |
+| `repair_logs` | timeline of a repair: `log_type` `work` (description, duration), `status_change` (`status_from` → `status_to`), `assignee_change` or `handover_change` |
 | `vde_tests` | DIN VDE 0701/0702 results: visual check, protective conductor, insulation, leakage current, overall result, tester, device |
 | `document_templates` | the two fixed editable document roles `disclaimer` and `cancellation` |
 | `document_template_versions` | immutable sanitized HTML revisions; a published version is active per template |
@@ -130,7 +130,7 @@ Each repair has a **status** and an optional **status detail**.
 | Status | Meaning | Allowed details |
 |---|---|---|
 | Offen | waiting, nobody working on it | — |
-| In Bearbeitung | being repaired | Ersatzteilbesorgung |
+| In Bearbeitung | being repaired | — |
 | Repariert | finished successfully | — |
 | Nicht Repariert | finished without success | **required**: Nicht moeglich, Abbruch, Wartezeit zu lang |
 
@@ -153,6 +153,15 @@ Rules enforced by `PUT /api/repairs/<id>`:
 In the UI, "Nicht Repariert / Abbruch" asks the customer to sign the cancellation
 form, and closing as Repariert offers a VDE test — it is mandatory when the last VDE
 test of the repair failed.
+
+Closing a repair does not imply customer pickup. A closed repair without
+`handed_over_at` is "Zur Abholung bereit"; recording the timestamp marks it as handed
+over. The handover can be reset, and reopening a repair clears it automatically.
+Existing closed records are initialized as handed over by migration `018`.
+The feature is disabled by default and can be enabled by administrators under
+**Einstellungen → Allgemein**. Both the frontend surfaces and handover API endpoints
+honor the setting. When enabled, the dashboard and PIN lock screen also show the
+anonymous repair IDs and categories of devices ready for pickup.
 
 The rules exist twice and must stay in sync: `app/schemas.py`
 (`VALID_REPAIR_STATUSES`, `VALID_STATUS_DETAILS`), `app/api/repairs.py`

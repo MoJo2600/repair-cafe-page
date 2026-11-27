@@ -183,6 +183,10 @@ class Repair(db.Model):
     )
     status: Mapped[str] = mapped_column(db.String(20), nullable=False, default="Offen")
     closed_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime, nullable=True)
+    handed_over_at: Mapped[Optional[datetime]] = mapped_column(db.DateTime, nullable=True)
+    handed_over_by_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     qr_token: Mapped[str] = mapped_column(db.String(32), unique=True, nullable=False)
     created_by_id: Mapped[Optional[int]] = mapped_column(
         db.Integer, db.ForeignKey("users.id", ondelete="SET NULL")
@@ -216,6 +220,9 @@ class Repair(db.Model):
     # Relationship to user who created the repair record
     created_by = db.relationship("User", foreign_keys=[created_by_id])
 
+    # User who recorded that the device was handed back to the customer
+    handed_over_by = db.relationship("User", foreign_keys=[handed_over_by_id])
+
     # Relationship to attachments
     attachments = db.relationship(
         "RepairAttachment",
@@ -245,6 +252,11 @@ class Repair(db.Model):
             "user_id": self.user_id,
             "reparatur_dauer": self.reparatur_dauer,
             "status": self.status,
+            "closed_at": self.closed_at.isoformat() if self.closed_at else None,
+            "handed_over_at": (
+                self.handed_over_at.isoformat() if self.handed_over_at else None
+            ),
+            "handed_over_by_id": self.handed_over_by_id,
             "qr_token": self.qr_token,
         }
         if self.customer:

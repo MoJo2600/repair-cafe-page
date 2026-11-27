@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 from app.api.attachments import cleanup_repair_attachments
 from app.auth.decorators import admin_required
 from app.extensions import db
-from app.models import Customer, Repair, RepairAttachment, RepairLog, Setting, User
+from app.models import AppConfig, Customer, Repair, RepairAttachment, RepairLog, Setting, User
 from app.schemas import (
     RepairCancellationCreate,
     RepairCreate,
@@ -23,6 +23,7 @@ from app.schemas import (
     RepairListItem,
     RepairLogResponse,
     RepairResponse,
+    RepairSingleResponse,
     RepairUpdate,
     RepairsTimelinePoint,
     RepairsTimelineResponse,
@@ -40,6 +41,11 @@ from app.utils import pydantic_to_swagger
 from app.validation import parse_request, validate_request
 
 repairs_bp = Blueprint("repairs", __name__)
+
+
+def _repair_handover_enabled() -> bool:
+    row = db.session.get(AppConfig, "repair_handover_enabled")
+    return row is not None and row.value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _latest_logs_by_repair(repair_ids: list[int]) -> dict[int, RepairLogResponse]:
@@ -140,6 +146,7 @@ def api_list_repairs():
             joinedload(Repair.repair_type),
             joinedload(Repair.user),
             joinedload(Repair.created_by),
+            joinedload(Repair.handed_over_by),
         )
         if customer_id is not None:
             query = query.filter(Repair.customer_id == customer_id)
@@ -299,6 +306,9 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
                 continue
             setattr(repair, field, value)
 
+        if new_status and new_status != old_status and "status_detail" not in update_data:
+            repair.status_detail = None
+
         # 3. Business rule validation on the post-update state
         if new_status and new_status != old_status:
             if new_status == "In Bearbeitung" and not repair.user_id:
@@ -326,6 +336,8 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
             else:
                 # Reopening (→ Offen or → In Bearbeitung from closed) clears closed_at
                 repair.closed_at = None
+                repair.handed_over_at = None
+                repair.handed_over_by_id = None
                 if new_status == "Offen":
                     repair.user_id = None
 
@@ -344,6 +356,156 @@ def api_update_repair(validated_data: RepairUpdate, id: int):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating repair {id}: {e}", exc_info=True)
+        return Response(
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
+            status=500,
+            mimetype="application/json",
+        )
+
+
+@repairs_bp.route("/repairs/<int:id>/handover", methods=["POST"])
+def api_record_repair_handover(id: int):
+    """
+    Record that a completed repair was handed back to its customer
+    ---
+    operationId: recordRepairHandover
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Handover recorded
+        schema:
+          $ref: '#/definitions/RepairSingleResponse'
+      409:
+        description: Repair is not completed
+      404:
+        description: Repair not found
+    """
+    try:
+        if not _repair_handover_enabled():
+            return Response(
+                json.dumps(
+                    {"reply": "error", "error": "Übergabeverfolgung ist deaktiviert"}
+                ),
+                status=409,
+                mimetype="application/json",
+            )
+        repair = Repair.query.get_or_404(id)
+        if repair.status not in {"Repariert", "Nicht Repariert"}:
+            return Response(
+                json.dumps(
+                    {"reply": "error", "error": "Nur abgeschlossene Reparaturen können ausgehändigt werden"}
+                ),
+                status=409,
+                mimetype="application/json",
+            )
+
+        if repair.handed_over_at is None:
+            repair.handed_over_at = datetime.now(timezone.utc)
+            repair.handed_over_by_id = (
+                flask_login.current_user.id
+                if flask_login.current_user.is_authenticated
+                else None
+            )
+            db.session.add(
+                RepairLog(
+                    repair_id=repair.id,
+                    user_id=repair.handed_over_by_id,
+                    reparatur_dauer=0,
+                    reparatur_besch="Gerät an den Kunden ausgehändigt",
+                    log_type="handover_change",
+                )
+            )
+            db.session.commit()
+
+        return Response(
+            RepairSingleResponse(
+                reply="done",
+                data=RepairResponse.model_validate(repair),
+            ).model_dump_json(),
+            status=200,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(
+            f"Error recording handover for repair {id}: {e}", exc_info=True
+        )
+        return Response(
+            json.dumps({"reply": "error", "error": "Internal Server Error"}),
+            status=500,
+            mimetype="application/json",
+        )
+
+
+@repairs_bp.route("/repairs/<int:id>/handover", methods=["DELETE"])
+def api_reset_repair_handover(id: int):
+    """
+    Reset a repair handover so the device is ready for pickup again
+    ---
+    operationId: resetRepairHandover
+    tags:
+      - Repairs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Handover reset
+        schema:
+          $ref: '#/definitions/RepairSingleResponse'
+      404:
+        description: Repair not found
+    """
+    try:
+        if not _repair_handover_enabled():
+            return Response(
+                json.dumps(
+                    {"reply": "error", "error": "Übergabeverfolgung ist deaktiviert"}
+                ),
+                status=409,
+                mimetype="application/json",
+            )
+        repair = Repair.query.get_or_404(id)
+        if repair.handed_over_at is not None:
+            repair.handed_over_at = None
+            repair.handed_over_by_id = None
+            actor_id = (
+                flask_login.current_user.id
+                if flask_login.current_user.is_authenticated
+                else None
+            )
+            db.session.add(
+                RepairLog(
+                    repair_id=repair.id,
+                    user_id=actor_id,
+                    reparatur_dauer=0,
+                    reparatur_besch="Ausgabe zurückgesetzt; Gerät zur Abholung bereit",
+                    log_type="handover_change",
+                )
+            )
+            db.session.commit()
+
+        return Response(
+            RepairSingleResponse(
+                reply="done",
+                data=RepairResponse.model_validate(repair),
+            ).model_dump_json(),
+            status=200,
+            mimetype="application/json",
+        )
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(
+            f"Error resetting handover for repair {id}: {e}", exc_info=True
+        )
         return Response(
             json.dumps({"reply": "error", "error": "Internal Server Error"}),
             status=500,

@@ -51,18 +51,34 @@ def seed(reset=False):
     from werkzeug.security import generate_password_hash
 
     from app.extensions import db
-    from app.models import Customer, Repair, RepairLog, Setting, User, VdeTest
+    from app.api.attachments import cleanup_repair_attachments
+    from app.models import (
+        Customer,
+        Repair,
+        RepairAttachment,
+        RepairLog,
+        Setting,
+        User,
+        VdeTest,
+    )
     from app.services.pin_service import hash_pin_code
 
     with app.app_context():
         if reset:
             print("Resetting seeded data …")
+            repair_ids = [
+                repair_id
+                for (repair_id,) in db.session.query(Repair.id).all()
+            ]
             VdeTest.query.delete()
+            RepairAttachment.query.delete()
             RepairLog.query.delete()
             Repair.query.delete()
             Customer.query.delete()
             User.query.delete()
             db.session.commit()
+            for repair_id in repair_ids:
+                cleanup_repair_attachments(repair_id)
             print("  done.")
 
         # Guard: skip if hans.mueller already present

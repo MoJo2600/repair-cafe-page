@@ -71,6 +71,7 @@ import {
   PrintRepairLabelPayload,
   PruefgeraetResponse,
   PublishDocumentTemplateVersionParams,
+  RecordRepairHandoverParams,
   RenderDocumentTemplateParams,
   RepairAttachmentListResponse,
   RepairCancellationCreate,
@@ -86,6 +87,7 @@ import {
   RepairSingleResponse,
   RepairUpdate,
   RepairsTimelineResponse,
+  ResetRepairHandoverParams,
   SearchCustomersParams,
   SettingCreate,
   SettingResponse,
@@ -1028,6 +1030,42 @@ export class Api<
       method: "POST",
       body: data,
       type: ContentType.FormData,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name ResetRepairHandover
+   * @summary Reset a repair handover so the device is ready for pickup again
+   * @request DELETE:/api/repairs/{id}/handover
+   */
+  resetRepairHandover = (
+    { id }: ResetRepairHandoverParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<RepairSingleResponse, void>({
+      path: `/api/repairs/${id}/handover`,
+      method: "DELETE",
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags Repairs
+   * @name RecordRepairHandover
+   * @summary Record that a completed repair was handed back to its customer
+   * @request POST:/api/repairs/{id}/handover
+   */
+  recordRepairHandover = (
+    { id }: RecordRepairHandoverParams,
+    params: RequestParams = {},
+  ) =>
+    this.request<RepairSingleResponse, void>({
+      path: `/api/repairs/${id}/handover`,
+      method: "POST",
       format: "json",
       ...params,
     });

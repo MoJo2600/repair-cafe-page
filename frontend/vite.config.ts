@@ -18,6 +18,9 @@ export default defineConfig({
     ],
   },
   resolve: {
+    // Vue/Vuetify/Pinia must share one runtime instance. Otherwise Vuetify
+    // composables can run outside the app's active effect/ref-owner context.
+    dedupe: ["vue", "@vue/runtime-core", "@vue/runtime-dom"],
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },

@@ -37,6 +37,7 @@ let refreshTimer: number | null = null
 
 const initialLoading = computed(() => loading.value && summary.value === null)
 const inProgressItems = computed(() => summary.value?.in_progress_items ?? [])
+const readyForPickupItems = computed(() => summary.value?.ready_for_pickup_items ?? [])
 const topCategories = computed(() => summary.value?.top_categories ?? [])
 const timeline = computed(() => summary.value?.timeline ?? [])
 
@@ -101,6 +102,16 @@ const tiles = computed(() => {
     statusTile('In Bearbeitung', 'In Bearbeitung', s?.in_progress_repairs),
     statusTile('Repariert', 'Repariert', s?.repaired_repairs),
     statusTile('Nicht Repariert', 'Nicht repariert', s?.not_repaired_repairs),
+    ...(s?.repair_handover_enabled
+      ? [
+          {
+            title: 'Abholbereit',
+            value: s.ready_for_pickup_count,
+            icon: 'mdi-package-variant',
+            color: 'warning',
+          },
+        ]
+      : []),
   ]
 })
 
@@ -190,6 +201,38 @@ const chartOptions = {
       </v-col>
     </v-row>
 
+    <v-row v-if="summary?.repair_handover_enabled">
+      <v-col cols="12">
+        <v-card border>
+          <v-card-text>
+            <SectionTitle
+              title="Zur Abholung bereit"
+              icon="mdi-package-variant"
+              :count="summary.ready_for_pickup_count"
+            />
+            <p
+              v-if="!readyForPickupItems.length"
+              class="text-body-large text-medium-emphasis"
+            >
+              Keine Geräte warten auf Abholung
+            </p>
+            <div v-else class="pickup-grid">
+              <v-sheet
+                v-for="item in readyForPickupItems"
+                :key="item.id"
+                border
+                rounded="lg"
+                class="pa-3 d-flex align-center justify-space-between ga-2"
+              >
+                <span class="text-headline-small font-weight-bold">#{{ item.id }}</span>
+                <TagChip v-if="item.category" :label="item.category" />
+              </v-sheet>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <v-row>
       <v-col v-for="tile in tiles" :key="tile.title" cols="6" sm="4" lg="2">
         <v-card border class="h-100">
@@ -256,6 +299,12 @@ const chartOptions = {
 }
 
 .in-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.pickup-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;

@@ -44,6 +44,11 @@
           "default": "",
           "description": "Organisation website URL printed on the label",
           "type": "string"
+        },
+        "repair_handover_enabled": {
+          "default": false,
+          "description": "Whether completed devices can be tracked until customer pickup",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -553,6 +558,11 @@
           "default": false,
           "description": "Whether the label printer is enabled",
           "type": "boolean"
+        },
+        "repair_handover": {
+          "default": false,
+          "description": "Whether customer handover tracking is enabled",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -675,6 +685,20 @@
         },
         "open_repairs": {
           "type": "integer"
+        },
+        "ready_for_pickup_count": {
+          "default": 0,
+          "type": "integer"
+        },
+        "ready_for_pickup_items": {
+          "items": {
+            "$ref": "#/definitions/PinDashboardRepairItem"
+          },
+          "type": "array"
+        },
+        "repair_handover_enabled": {
+          "default": false,
+          "type": "boolean"
         },
         "repaired_repairs": {
           "type": "integer"
@@ -1129,6 +1153,27 @@
           "minLength": 1,
           "type": "string"
         },
+        "handed_over_at": {
+          "default": null,
+          "description": "Timestamp when the device was handed back to the customer",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "handed_over_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "handed_over_by_id": {
+          "default": null,
+          "description": "User who recorded the handover",
+          "type": "integer",
+          "x-nullable": true
+        },
         "id": {
           "description": "Repair ID",
           "type": "integer"
@@ -1244,7 +1289,7 @@
       "properties": {
         "log_type": {
           "default": "work",
-          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions",
+          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions, or 'handover_change' for device handovers",
           "maxLength": 20,
           "type": "string"
         },
@@ -1360,7 +1405,7 @@
         },
         "log_type": {
           "default": "work",
-          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions",
+          "description": "Entry type: 'work' for work sessions, 'status_change' for status transitions, or 'handover_change' for device handovers",
           "maxLength": 20,
           "type": "string"
         },
@@ -1528,6 +1573,27 @@
           "maxLength": 100,
           "minLength": 1,
           "type": "string"
+        },
+        "handed_over_at": {
+          "default": null,
+          "description": "Timestamp when the device was handed back to the customer",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "handed_over_by": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/UserResponse"
+            }
+          ],
+          "x-nullable": true
+        },
+        "handed_over_by_id": {
+          "default": null,
+          "description": "User who recorded the handover",
+          "type": "integer",
+          "x-nullable": true
         },
         "id": {
           "description": "Repair ID",
@@ -2835,6 +2901,10 @@
                 },
                 "org_website": {
                   "type": "string"
+                },
+                "repair_handover_enabled": {
+                  "description": "Track completed devices until customer pickup",
+                  "type": "boolean"
                 }
               },
               "type": "object"
@@ -3926,6 +3996,63 @@
           }
         },
         "summary": "Upload a pre-signed disclaimer PDF for a repair.",
+        "tags": [
+          "Repairs"
+        ]
+      }
+    },
+    "/api/repairs/{id}/handover": {
+      "delete": {
+        "operationId": "resetRepairHandover",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Handover reset",
+            "schema": {
+              "$ref": "#/definitions/RepairSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          }
+        },
+        "summary": "Reset a repair handover so the device is ready for pickup again",
+        "tags": [
+          "Repairs"
+        ]
+      },
+      "post": {
+        "operationId": "recordRepairHandover",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Handover recorded",
+            "schema": {
+              "$ref": "#/definitions/RepairSingleResponse"
+            }
+          },
+          "404": {
+            "description": "Repair not found"
+          },
+          "409": {
+            "description": "Repair is not completed"
+          }
+        },
+        "summary": "Record that a completed repair was handed back to its customer",
         "tags": [
           "Repairs"
         ]

@@ -70,6 +70,16 @@
                 <div class="flex-grow-1 app-mobile-row__body">
                   <div class="text-title-medium">{{ item.geraet_art }}</div>
                   <RepairMeta :status="item.status" :category="item.repair_type?.name" class="my-1" />
+                  <div
+                    v-if="repairHandoverEnabled && isClosedRepairStatus(item.status)"
+                    class="text-body-small mt-1"
+                  >
+                    {{
+                      item.handed_over_at
+                        ? `Ausgehändigt am ${formatDate(item.handed_over_at)}`
+                        : 'Zur Abholung bereit'
+                    }}
+                  </div>
                   <div class="d-flex flex-column ga-1 text-body-medium">
                     <PersonLabel :person="item.customer" role="customer" />
                     <PersonLabel v-if="item.user" :person="item.user" role="repairer" />
@@ -131,6 +141,20 @@
 
         <template #item.status_detail="{ item }">
           {{ item.status_detail || '–' }}
+        </template>
+
+        <template v-if="repairHandoverEnabled" #item.handover="{ item }">
+          <template v-if="isRepairReadyForPickup(item)">
+            <StatusChip label="Abholbereit" color="warning" icon="mdi-package-variant" />
+          </template>
+          <template v-else-if="isRepairHandedOver(item)">
+            <StatusChip
+              :label="formatDate(item.handed_over_at)"
+              color="success"
+              icon="mdi-package-check"
+            />
+          </template>
+          <span v-else class="text-medium-emphasis">—</span>
         </template>
 
         <template #item.reparatur_dauer="{ item }">
@@ -333,9 +357,12 @@ import {
   REPAIR_STATUS_DETAIL_OPTIONS,
   isOpenRepairStatus,
   isClosedRepairStatus,
+  isRepairReadyForPickup,
+  isRepairHandedOver,
   type RepairStatus,
 } from '@/domain/repairStatus'
 import { useToast } from '@/composables/useToast'
+import { errorMessage } from '@/utils/errors'
 
 const toast = useToast()
 
@@ -355,28 +382,39 @@ const loading = ref(false)
 const totalCount = ref(0)
 
 const labelPrinterEnabled = ref(false)
+const repairHandoverEnabled = ref(false)
 const printingLabelId = ref<number | null>(null)
 
 
-const filterStatus = ref<'open' | 'closed' | 'all'>('open')
+const filterStatus = ref<'open' | 'pickup' | 'handed_over' | 'closed' | 'all'>('open')
 const search = ref('')
 const customerFilter = ref<{ id: number; name: string } | null>(null)
 
-const statusFilterOptions = [
+const statusFilterOptions = computed(() => [
   { title: 'Offen', value: 'open' },
+  ...(repairHandoverEnabled.value
+    ? [
+        { title: 'Zur Abholung bereit', value: 'pickup' },
+        { title: 'Ausgehändigt', value: 'handed_over' },
+      ]
+    : []),
   { title: 'Geschlossen', value: 'closed' },
   { title: 'Alle', value: 'all' },
-]
+])
 
 // Computed property to filter repairs based on status
 const filteredRepairs = computed(() => {
-  if (filterStatus.value === 'all') {
-    return repairs.value
-  } else if (filterStatus.value === 'open') {
+  if (filterStatus.value === 'all') return repairs.value
+  if (filterStatus.value === 'open') {
     return repairs.value.filter((repair) => isOpenRepairStatus(repair.status))
-  } else {
-    return repairs.value.filter((repair) => isClosedRepairStatus(repair.status))
   }
+  if (filterStatus.value === 'pickup') {
+    return repairHandoverEnabled.value ? repairs.value.filter(isRepairReadyForPickup) : []
+  }
+  if (filterStatus.value === 'handed_over') {
+    return repairHandoverEnabled.value ? repairs.value.filter(isRepairHandedOver) : []
+  }
+  return repairs.value.filter((repair) => isClosedRepairStatus(repair.status))
 })
 
 // Edit dialog state
@@ -417,7 +455,7 @@ async function loadDropdownOptions() {
       repairTypes.value = config.repair_type
     }
   } catch (err) {
-    console.error('Error loading dropdown options:', err)
+    toast.error(errorMessage(err, 'Reparaturarten konnten nicht geladen werden'))
   }
 }
 
@@ -432,7 +470,7 @@ function customerNameFilter(value: unknown, query: string, item?: { raw: Repair 
   return String(value).toLowerCase().includes(q)
 }
 
-const headers = [
+const headers = computed(() => [
   { title: 'Nr.', key: 'id', sortable: true },
   { title: 'Status', key: 'status', sortable: true },
   { title: 'Gerät', key: 'geraet_art', sortable: true },
@@ -440,12 +478,15 @@ const headers = [
   { title: 'Reparateur', key: 'user', sortable: false },
   { title: 'Kategorie', key: 'repair_type', sortable: false },
   { title: 'Abschlussgrund', key: 'status_detail', sortable: true },
+  ...(repairHandoverEnabled.value
+    ? [{ title: 'Übergabe', key: 'handover', sortable: false }]
+    : []),
   { title: 'Dauer', key: 'reparatur_dauer', sortable: true },
   { title: 'Angenommen', key: 'datum', sortable: true },
   { title: 'Abgeschlossen', key: 'closed_at', sortable: true },
   { title: 'DIN', key: 'din_pruef', sortable: true },
   { title: '', key: 'actions', sortable: false },
-]
+])
 
 const loadRepairs = async (customerId?: number) => {
   loading.value = true
@@ -580,6 +621,8 @@ onMounted(() => {
   if (
     route.query.status === 'all' ||
     route.query.status === 'open' ||
+    route.query.status === 'pickup' ||
+    route.query.status === 'handed_over' ||
     route.query.status === 'closed'
   ) {
     filterStatus.value = route.query.status
@@ -590,7 +633,16 @@ onMounted(() => {
   api.getFeatures()
     .then((f) => {
       labelPrinterEnabled.value = f.label_printer ?? false
+      repairHandoverEnabled.value = f.repair_handover ?? false
+      if (
+        !repairHandoverEnabled.value &&
+        (filterStatus.value === 'pickup' || filterStatus.value === 'handed_over')
+      ) {
+        filterStatus.value = 'closed'
+      }
     })
-    .catch(() => { })
+    .catch((err) => {
+      toast.error(errorMessage(err, 'Funktionen konnten nicht geladen werden'))
+    })
 })
 </script>
