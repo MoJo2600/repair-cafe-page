@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.7.0...v1.8.0) (2026-11-27)
+
+
+### Features
+
+* new document templates, cleanup ([#41](https://github.com/MoJo2600/repair-cafe-page/issues/41)) ([275f17f](https://github.com/MoJo2600/repair-cafe-page/commit/275f17fcb20ecde8ef32f8f6bb42940848e4495c))
+
 ## [1.7.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.6.1...v1.7.0) (2026-11-04)
 
 
