@@ -84,20 +84,6 @@ class BaseConfig:
     def IMPORT_EXCEL_PATH(self) -> str:
         return str(self.CONFIG_DIR / "import.xlsx")
 
-    @property
-    def SIGNED_PDF_STORAGE_PATH(self) -> str:
-        return os.environ.get(
-            "SIGNED_PDF_STORAGE_PATH",
-            str(self.DATA_DIR / "signed_disclaimers"),
-        )
-
-    @property
-    def SIGNED_CANCELLATION_STORAGE_PATH(self) -> str:
-        return os.environ.get(
-            "SIGNED_CANCELLATION_STORAGE_PATH",
-            str(self.DATA_DIR / "signed_cancellations"),
-        )
-
     # Public base URL as seen by the browser, e.g. https://reparaturen.repaircafe-hemau.de
     # (behind the TLS-terminating proxy the request scheme is not reliable).
     PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")

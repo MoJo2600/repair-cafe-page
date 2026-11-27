@@ -146,18 +146,14 @@ def create_app(config_name=None):
     app.pdf_service = PDFService(  # type: ignore
         data_dir=app.config.get("DATA_DIR"),
         config_dir=app.config.get("CONFIG_DIR"),
-        storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH"),
         active_filename="disclaimer.pdf",
         sample_filename="Disclaimer_sample.pdf",
-        storage_subdir="signed_disclaimers",
     )
     app.cancellation_pdf_service = PDFService(  # type: ignore
         data_dir=app.config.get("DATA_DIR"),
         config_dir=app.config.get("CONFIG_DIR"),
-        storage_dir=app.config.get("SIGNED_CANCELLATION_STORAGE_PATH"),
         active_filename="cancellation.pdf",
         sample_filename="Cancellation_sample.pdf",
-        storage_subdir="signed_cancellations",
     )
 
     # Initialize Label service and attach to app
@@ -196,19 +192,9 @@ def create_app(config_name=None):
     # Safe to run repeatedly — is a no-op when an admin already exists.
     with app.app_context():
         ensure_admin_user(app)
-        from app.services.document_service import (
-            ensure_system_document_templates,
-            import_all_legacy_documents,
-        )
+        from app.services.document_service import ensure_system_document_templates
 
         ensure_system_document_templates()
-        imported_documents, document_import_failures = import_all_legacy_documents()
-        if imported_documents or document_import_failures:
-            app.logger.info(
-                "Legacy document import complete: %s imported, %s failed",
-                imported_documents,
-                document_import_failures,
-            )
         from app.services.pin_service import reconcile_pin_mode
 
         reconcile_pin_mode()

@@ -31,7 +31,6 @@ from app.services.document_service import (
     DocumentValidationError,
     attachment_path,
     cleanup_replaced_document_files,
-    import_legacy_document,
     latest_document_attachment,
     pinned_version_for_role,
     render_document_pdf,
@@ -381,12 +380,8 @@ def api_delete_repair(id: int):
         db.session.delete(repair)
         db.session.commit()
 
-        # Clean up stored files on disk (attachments, signed disclaimer, signed cancellation)
+        # Clean up unified stored files on disk.
         cleanup_repair_attachments(id)
-        if hasattr(current_app, "pdf_service"):
-            current_app.pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
-        if hasattr(current_app, "cancellation_pdf_service"):
-            current_app.cancellation_pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
 
         return Response(
             json.dumps({"reply": "done", "id": id}),
@@ -688,21 +683,6 @@ def api_get_disclaimer(id: int):
                 download_name=f"disclaimer_{id}.pdf",
             )
 
-        pdf_service = current_app.pdf_service  # type: ignore
-        pdf_path = pdf_service.get_stored_pdf_path(id)
-        if pdf_path is not None:
-            imported = import_legacy_document(
-                id, "disclaimer", pdf_path, flask_login.current_user.id
-            )
-            if imported:
-                pdf_path = attachment_path(id, imported)
-            return send_file(
-                str(pdf_path),
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=f"disclaimer_{id}.pdf",
-            )
-
         return Response(
             json.dumps(
                 {"reply": "error", "error": "No disclaimer available for this repair"}
@@ -872,21 +852,6 @@ def api_get_cancellation(id: int):
         attachment = latest_document_attachment(id, "cancellation")
         pdf_path = attachment_path(id, attachment) if attachment else None
         if pdf_path and pdf_path.exists():
-            return send_file(
-                str(pdf_path),
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=f"cancellation_{id}.pdf",
-            )
-
-        cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
-        pdf_path = cancellation_service.get_stored_pdf_path(id)
-        if pdf_path is not None:
-            imported = import_legacy_document(
-                id, "cancellation", pdf_path, flask_login.current_user.id
-            )
-            if imported:
-                pdf_path = attachment_path(id, imported)
             return send_file(
                 str(pdf_path),
                 mimetype="application/pdf",

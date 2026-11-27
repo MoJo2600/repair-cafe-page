@@ -12,7 +12,7 @@ How RepairCafePage is put together. For running it see
                               ├─ /            Vue SPA (static build)
                               └─ /api/  ──►  backend (Gunicorn + Flask :5000)
                                                ├─ MariaDB (db)
-                                               ├─ /data   signed PDFs, attachments, uploads
+                                               ├─ /data   attachments, uploaded templates and files
                                                ├─ /config sample PDF templates (read-only)
                                                └─ /run/cups/cups.sock ──► host CUPS ──► label printer
 ```
@@ -66,7 +66,7 @@ browser, whether it is locked, its last activity and failed PIN attempts. Detail
 | Module | Does |
 |---|---|
 | `services/document_service.py` | sanitizes versioned HTML, renders escaped placeholders, and produces WeasyPrint PDFs |
-| `services/pdf_service.py` + `imports/pdfsigner.py` | compatibility support for legacy uploaded PDF templates and old `signed_*` files |
+| `services/pdf_service.py` + `imports/pdfsigner.py` | compatibility support for uploaded AcroForm PDF templates |
 | `services/vde_pdf_service.py` | renders the VDE Prüfprotokoll PDF |
 | `services/label_service.py` | renders the label PNG and prints it with `lp` |
 | `services/export_service.py`, `web/routes.py` | XLSX export, CSV for the e-mail export |
@@ -111,17 +111,17 @@ Everything that is not in the database lives under `DATA_DIR` (`/data`):
 
 | Path | Contents |
 |---|---|
-| `signed_disclaimers/<id>.pdf` | signed or uploaded liability waivers |
-| `signed_cancellations/<id>.pdf` | signed cancellation forms |
 | `attachments/<repair_id>/` | device photos, log photos, generated/uploaded customer PDFs, other files |
 | `disclaimer.pdf`, `cancellation.pdf` | uploaded templates (otherwise the samples from `CONFIG_DIR` are used) |
 | `logo.png` | uploaded logo (otherwise `app/static/logo.jpg`) |
 | `celebration.mp3` | uploaded celebration sound (otherwise `app/static/fanfare.mp3`) |
 
-New customer PDFs are stored as `RepairAttachment` rows below
-`attachments/<repair_id>/`. The legacy GET endpoints prefer those rows and
-idempotently import old `signed_disclaimers` or `signed_cancellations` files when
-encountered. Deleting a repair removes the unified and remaining legacy files.
+Customer PDFs are stored as `RepairAttachment` rows below
+`attachments/<repair_id>/`. On backend startup, the legacy migration command
+non-destructively copies any remaining `signed_disclaimers/<id>.pdf` and
+`signed_cancellations/<id>.pdf` files into that store and creates or repairs the
+database rows. The source files are retained; they are not read by the running
+application. Deleting a repair removes only its unified attachment directory.
 
 ## Repair status model
 

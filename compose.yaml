@@ -20,6 +20,8 @@ services:
       FLASK_ENV: production
       DATA_DIR: ${DATA_DIR:-/data}
       CONFIG_DIR: ${CONFIG_DIR:-/config}
+      SIGNED_PDF_STORAGE_PATH: ${SIGNED_PDF_STORAGE_PATH:-}
+      SIGNED_CANCELLATION_STORAGE_PATH: ${SIGNED_CANCELLATION_STORAGE_PATH:-}
       MYSQL_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-repaircafepage}
       MYSQL_USER: ${MYSQL_USER:-repaircafe}

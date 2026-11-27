@@ -36,11 +36,24 @@ The `MYSQL_*` values create the database and user on the first start of an empty
 | `FLASK_ENV` | `prod` (compose: `production`) | `development`/`dev` enables debug mode and a random secret key if none is set |
 | `PUBLIC_URL` | empty | URL as seen by the browser, without trailing slash. Required for SSO |
 | `SESSION_COOKIE_SECURE` | `true` in production, `false` in development | `true` for HTTPS. Over plain HTTP set `false` (compose default), or the session cookie is never sent back |
-| `DATA_DIR` | `<repo>/data` (container: `/data`) | persistent files: signed PDFs, attachments, uploads |
+| `DATA_DIR` | `<repo>/data` (container: `/data`) | persistent attachments, uploaded templates and other files |
 | `CONFIG_DIR` | `<repo>/config` (container: `/config`) | bundled sample PDF templates |
 | `CORS_ORIGINS` | empty | comma-separated exact origins for a separately hosted frontend. Not needed with the nginx / Vite proxy; not forwarded by `compose.yaml` |
 | `START_SCHEDULER` | unset | `1` starts the background scheduler (monthly e-mail export) |
 | `CREATE_TABLES_ON_STARTUP` | unset | `1` runs `db.create_all()` on start. Not needed; migrations create the schema |
+
+### Legacy signed-document migration
+
+Before Gunicorn starts, `app/migrate_legacy_documents.py` copies existing PDFs
+from `DATA_DIR/signed_disclaimers` and `DATA_DIR/signed_cancellations` into the
+unified attachment store and creates or repairs the corresponding database rows.
+The operation is idempotent, byte-verified and leaves the source PDFs untouched.
+
+For this one-time migration, `SIGNED_PDF_STORAGE_PATH` and
+`SIGNED_CANCELLATION_STORAGE_PATH` can override the default legacy source
+directories. They are not Flask runtime configuration and are not used for new
+documents. After verifying the migration and backing up the retained originals,
+the old directories can be archived or removed.
 
 ## Login (OIDC / SSO)
 

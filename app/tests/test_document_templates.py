@@ -357,25 +357,29 @@ def test_cancellation_uses_pinned_version_and_unified_attachment(helper_client):
     assert Path(helper_client.application.config["DATA_DIR"], "attachments", str(repair["id"]), attachment.stored_filename).exists()
 
 
-def test_legacy_pdf_files_are_imported_idempotently(helper_client, app):
+def test_legacy_pdf_directories_are_not_runtime_storage(helper_client, app):
     repair_type = _repair_type()
     repair_id = helper_client.post(
         "/api/repairs", json=_repair_payload(repair_type.id)
     ).get_json()["id"]
-    legacy_dir = Path(app.config["SIGNED_PDF_STORAGE_PATH"])
-    legacy_dir.mkdir(parents=True, exist_ok=True)
-    legacy_pdf = legacy_dir / f"{repair_id}.pdf"
-    legacy_pdf.write_bytes(b"%PDF-1.4\nlegacy\n%%EOF")
-    legacy_bytes = legacy_pdf.read_bytes()
+    assert "SIGNED_PDF_STORAGE_PATH" not in app.config
+    assert "SIGNED_CANCELLATION_STORAGE_PATH" not in app.config
+    legacy_paths = []
+    for directory in ("signed_disclaimers", "signed_cancellations"):
+        legacy_dir = Path(app.config["DATA_DIR"]) / directory
+        legacy_dir.mkdir(parents=True, exist_ok=True)
+        legacy_pdf = legacy_dir / f"{repair_id}.pdf"
+        legacy_pdf.write_bytes(b"%PDF-1.4\nlegacy\n%%EOF")
+        legacy_paths.append(legacy_pdf)
 
-    first = helper_client.get(f"/api/repairs/{repair_id}/disclaimer")
-    second = helper_client.get(f"/api/repairs/{repair_id}/disclaimer")
-    assert first.status_code == second.status_code == 200
-    assert first.data == second.data == legacy_bytes
-    assert not legacy_pdf.exists()
-    assert RepairAttachment.query.filter_by(
-        repair_id=repair_id, attachment_type="disclaimer"
-    ).count() == 1
+    assert helper_client.get(
+        f"/api/repairs/{repair_id}/disclaimer"
+    ).status_code == 404
+    assert helper_client.get(
+        f"/api/repairs/{repair_id}/cancellation"
+    ).status_code == 404
+    assert all(path.exists() for path in legacy_paths)
+    assert RepairAttachment.query.filter_by(repair_id=repair_id).count() == 0
 
 
 def test_legacy_pdf_upload_endpoints_store_unified_attachments(helper_client):
