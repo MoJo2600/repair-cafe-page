@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.8.0...v1.9.0) (2026-11-27)
+
+
+### Features
+
+* customer returns can now be tracked ([#44](https://github.com/MoJo2600/repair-cafe-page/issues/44)) ([36a45dd](https://github.com/MoJo2600/repair-cafe-page/commit/36a45dd177c868c17a3ad6454b5cf0906fb80ab0))
+
 ## [1.8.0](https://github.com/MoJo2600/repair-cafe-page/compare/v1.7.0...v1.8.0) (2026-11-27)
 
 
