@@ -5,11 +5,13 @@ import { useDisplay } from 'vuetify'
 import type { VForm } from 'vuetify/components'
 import { api, asFormData } from '@/api/client'
 import { documentUrl } from '@/api/documents'
-import type { CustomerResponse, RepairCreate } from '@/api/types'
+import { sessionFetch } from '@/api/session'
+import type { CustomerResponse, DocumentTemplateResponse, RepairCreate } from '@/api/types'
 import { useToast } from '@/composables/useToast'
 import { errorMessage } from '@/utils/errors'
 import { personName } from '@/utils/person'
 import DevicePhotoCapture from '@/components/DevicePhotoCapture.vue'
+import DocumentPreview from '@/components/DocumentPreview.vue'
 import RepairSummaryCard from '@/components/RepairSummaryCard.vue'
 import SignaturePad from '@/components/SignaturePad.vue'
 import DateField from '@/components/ui/DateField.vue'
@@ -71,6 +73,7 @@ onMounted(async () => {
   labelPrinterEnabled.value =
     features.status === 'fulfilled' ? (features.value.label_printer ?? false) : false
   repairTypes.value = dropdowns.status === 'fulfilled' ? dropdowns.value.repair_type : []
+  await loadActiveDisclaimer()
 })
 
 function onRepairTypeChange(id: number | null) {
@@ -138,6 +141,80 @@ const signatureError = shallowRef('')
 const uploadedPdfFile = ref<File | null>(null)
 const uploadedPdfError = shallowRef('')
 const pdfFileInput = ref<{ $el: HTMLElement } | null>(null)
+const disclaimerTemplate = ref<DocumentTemplateResponse | null>(null)
+const disclaimerPreviewVersionId = shallowRef<number | null>(null)
+const disclaimerPreviewHtml = shallowRef('')
+const disclaimerPreviewLoading = shallowRef(false)
+const disclaimerPreviewError = shallowRef('')
+let disclaimerPreviewRequest = 0
+
+async function loadActiveDisclaimer() {
+  try {
+    disclaimerTemplate.value = (await api.getActiveDocumentTemplate({ role: 'disclaimer' })).data
+    disclaimerPreviewVersionId.value = disclaimerTemplate.value.active_version_id ?? null
+  } catch (err) {
+    disclaimerPreviewVersionId.value = null
+    disclaimerPreviewError.value =
+      'Der Haftungsausschluss konnte nicht geladen werden: ' +
+      errorMessage(err, 'Unbekannter Fehler')
+  }
+}
+
+async function loadDisclaimerPreview() {
+  const versionId = disclaimerPreviewVersionId.value
+  if (step.value !== 3 || !disclaimerTemplate.value || !versionId) return
+  const requestId = ++disclaimerPreviewRequest
+  disclaimerPreviewLoading.value = true
+  disclaimerPreviewError.value = ''
+  try {
+    const response = await sessionFetch(
+      `/api/document-templates/${disclaimerTemplate.value.id}/preview`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          version_id: versionId,
+          context: {
+            datum: formData.value.datum,
+            vorname: formData.value.customer.vorname,
+            nachname: formData.value.customer.nachname,
+            telefon: formData.value.customer.telefon || null,
+            email: formData.value.customer.email || null,
+            repair_type: formData.value.repair_type?.name || null,
+            geraet_art: formData.value.geraet_art,
+            defekt_besch: formData.value.defekt_besch || null,
+          },
+        }),
+      }
+    )
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const html = await response.text()
+    if (requestId === disclaimerPreviewRequest) disclaimerPreviewHtml.value = html
+  } catch (err) {
+    if (requestId === disclaimerPreviewRequest) {
+      disclaimerPreviewError.value =
+        'Vorschau konnte nicht geladen werden: ' + errorMessage(err, 'Unbekannter Fehler')
+    }
+  } finally {
+    if (requestId === disclaimerPreviewRequest) disclaimerPreviewLoading.value = false
+  }
+}
+
+watch(
+  () => [
+    step.value,
+    disclaimerPreviewVersionId.value,
+    formData.value.datum,
+    formData.value.customer.vorname,
+    formData.value.customer.nachname,
+    formData.value.customer.telefon,
+    formData.value.customer.email,
+    formData.value.repair_type?.name,
+    formData.value.geraet_art,
+    formData.value.defekt_besch,
+  ],
+  loadDisclaimerPreview
+)
 
 watch(signatureData, (value) => {
   if (value) signatureError.value = ''
@@ -152,6 +229,10 @@ function openPdfDialog() {
 /** The customer has either signed or a signed PDF is attached. */
 function disclaimerComplete(): boolean {
   if (disclaimerMode.value === 'sign') {
+    if (!disclaimerPreviewVersionId.value || disclaimerPreviewError.value) {
+      signatureError.value = 'Der Haftungsausschluss ist noch nicht verfügbar'
+      return false
+    }
     if (!signatureData.value) signatureError.value = 'Bitte unterschreiben Sie, um fortzufahren'
     return !!signatureData.value
   }
@@ -234,6 +315,8 @@ async function submit() {
       defekt_besch: formData.value.defekt_besch,
       customer_id: selectedCustomerId.value,
       unterschrift: disclaimerMode.value === 'sign' ? signatureData.value : null,
+      disclaimer_template_version_id:
+        disclaimerMode.value === 'sign' ? disclaimerPreviewVersionId.value : null,
     }
     const response = await api.createRepair(payload)
     if (response.reply !== 'done' || !response.id) {
@@ -242,6 +325,7 @@ async function submit() {
     }
     createdRepairId.value = response.id
     createdRepairQrToken.value = response.data?.qr_token ?? null
+    signatureData.value = null
     await uploadExtras(response.id)
     toast.success('Reparatur erstellt')
     step.value = 5
@@ -282,6 +366,7 @@ function createAnother() {
   signatureData.value = null
   signatureError.value = ''
   disclaimerMode.value = 'sign'
+  disclaimerPreviewHtml.value = ''
   uploadedPdfFile.value = null
   uploadedPdfError.value = ''
   selectedCustomerId.value = null
@@ -289,6 +374,7 @@ function createAnother() {
   customerSearchResults.value = []
   createdRepairId.value = null
   createdRepairQrToken.value = null
+  void loadActiveDisclaimer()
   step.value = 1
 }
 </script>
@@ -401,8 +487,8 @@ function createAnother() {
 
         <div class="text-title-small text-medium-emphasis mb-1">Foto des Geräts (optional)</div>
         <p class="text-body-small text-medium-emphasis mb-3">
-          Ein Foto zeigt den Zustand bei der Annahme. Weitere Fotos kannst du später in
-          Logeinträgen hinzufügen.
+          Ein Foto zeigt den Zustand bei der Annahme. Weitere Fotos kannst du später in Logeinträgen
+          hinzufügen.
         </p>
         <DevicePhotoCapture
           v-model="devicePhoto"
@@ -416,19 +502,46 @@ function createAnother() {
         <p class="text-body-medium mb-3">
           Bitte lesen Sie die Bedingungen und bestätigen Sie diese mit Ihrer Unterschrift.
         </p>
-        <iframe src="/api/config/disclaimer" class="disclaimer-frame mb-4" title="Haftungsbedingungen" />
+        <v-alert v-if="disclaimerPreviewError" type="error" variant="tonal" class="mb-4">
+          {{ disclaimerPreviewError }}
+        </v-alert>
+        <DocumentPreview
+          v-else
+          :html="disclaimerPreviewHtml"
+          :loading="disclaimerPreviewLoading"
+          class="mb-2"
+        />
+        <p
+          v-if="disclaimerTemplate?.active_version"
+          class="text-body-small text-medium-emphasis text-right mb-4"
+        >
+          Dokumentversion {{ disclaimerTemplate.active_version.version_number }}
+        </p>
 
-        <v-btn-toggle v-model="disclaimerMode" mandatory color="primary" variant="outlined" class="mb-4">
+        <v-btn-toggle
+          v-model="disclaimerMode"
+          mandatory
+          color="primary"
+          variant="outlined"
+          class="mb-4"
+        >
           <v-btn value="sign" prepend-icon="mdi-draw">Unterschreiben</v-btn>
-          <v-btn value="upload" prepend-icon="mdi-upload" @click="openPdfDialog">PDF hochladen</v-btn>
+          <v-btn value="upload" prepend-icon="mdi-upload" @click="openPdfDialog"
+            >PDF hochladen</v-btn
+          >
         </v-btn-toggle>
 
         <template v-if="disclaimerMode === 'sign'">
           <p class="text-body-medium mb-2">
-            Mit meiner Unterschrift bestätige ich die Bedingungen und habe die
-            Datenschutzerklärung gelesen und verstanden.
+            Mit meiner Unterschrift bestätige ich die Bedingungen und habe die Datenschutzerklärung
+            gelesen und verstanden.
           </p>
-          <SignaturePad v-model="signatureData" :width="900" :height="260" :error="signatureError" />
+          <SignaturePad
+            v-model="signatureData"
+            :width="900"
+            :height="260"
+            :error="signatureError"
+          />
         </template>
         <v-file-input
           v-else
@@ -448,7 +561,10 @@ function createAnother() {
         <RepairSummaryCard :repair-data="formData" :photo-url="reviewPhotoUrl" />
         <div class="d-flex flex-wrap ga-4 text-body-medium text-medium-emphasis">
           <span>
-            <v-icon :icon="disclaimerMode === 'sign' ? 'mdi-draw' : 'mdi-file-pdf-box'" size="small" />
+            <v-icon
+              :icon="disclaimerMode === 'sign' ? 'mdi-draw' : 'mdi-file-pdf-box'"
+              size="small"
+            />
             {{ disclaimerMode === 'sign' ? 'Unterschrieben' : 'Unterschriebene PDF' }}
           </span>
         </div>
@@ -458,7 +574,12 @@ function createAnother() {
       <template #[`item.5`]>
         <v-empty-state icon="mdi-check-circle" color="success" title="Reparatur erstellt">
           <template #media>
-            <RepairNumber :id="createdRepairId ?? undefined" status="Offen" :size="72" class="mb-4" />
+            <RepairNumber
+              :id="createdRepairId ?? undefined"
+              status="Offen"
+              :size="72"
+              class="mb-4"
+            />
           </template>
           <template #text>
             Klebe das Etikett auf das Gerät und gib es zur Reparatur weiter.
@@ -486,7 +607,12 @@ function createAnother() {
               >
                 Haftungsausschluss
               </v-btn>
-              <v-btn variant="tonal" size="large" prepend-icon="mdi-clipboard-edit" @click="openCreatedRepair">
+              <v-btn
+                variant="tonal"
+                size="large"
+                prepend-icon="mdi-clipboard-edit"
+                @click="openCreatedRepair"
+              >
                 Reparatur öffnen
               </v-btn>
             </div>
@@ -496,12 +622,14 @@ function createAnother() {
     </v-stepper>
 
     <!-- Actions within thumb reach -->
-    <div class="action-bar d-flex align-center ga-2 py-3">
+    <div class="app-action-bar d-flex align-center ga-2 py-3">
       <template v-if="step < 5">
         <v-btn variant="text" size="large" @click="cancel">Abbrechen</v-btn>
         <v-spacer />
         <v-btn v-if="step > 1" variant="tonal" size="large" @click="step--">Zurück</v-btn>
-        <v-btn v-if="step < 4" color="primary" variant="flat" size="large" @click="next">Weiter</v-btn>
+        <v-btn v-if="step < 4" color="primary" variant="flat" size="large" @click="next"
+          >Weiter</v-btn
+        >
         <v-btn
           v-else
           color="primary"
@@ -517,7 +645,13 @@ function createAnother() {
       <template v-else>
         <v-btn variant="text" size="large" to="/">Zur Übersicht</v-btn>
         <v-spacer />
-        <v-btn color="primary" variant="flat" size="large" prepend-icon="mdi-plus" @click="createAnother">
+        <v-btn
+          color="primary"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-plus"
+          @click="createAnother"
+        >
           Weitere Reparatur
         </v-btn>
       </template>
@@ -529,20 +663,5 @@ function createAnother() {
 /* Step content flush with the stepper header and the action bar */
 :deep(.v-stepper-window) {
   margin-inline: 0;
-}
-
-.disclaimer-frame {
-  width: 100%;
-  height: min(60vh, 600px);
-  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 4px;
-}
-
-.action-bar {
-  position: sticky;
-  bottom: var(--v-layout-bottom, 0px);
-  z-index: 2;
-  background: rgb(var(--v-theme-surface));
-  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>

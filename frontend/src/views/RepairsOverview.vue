@@ -7,6 +7,7 @@ import { useRepairStore } from '@/stores/repairStore'
 import { normalizeRepairStatus } from '@/domain/repairStatus'
 import type { RepairListItem } from '@/api/types'
 import RepairCard from '@/components/RepairCard.vue'
+import QrScannerDialog from '@/components/QrScannerDialog.vue'
 import CountBadge from '@/components/ui/CountBadge.vue'
 import PersonLabel from '@/components/ui/PersonLabel.vue'
 import RepairNumber from '@/components/ui/RepairNumber.vue'
@@ -57,6 +58,7 @@ onUnmounted(() => {
 
 // ── Start repair (assign repairer, Offen -> In Bearbeitung) ──────────────────
 const startRepairDialog = shallowRef(false)
+const scannerOpen = shallowRef(false)
 const selectedRepair = ref<RepairListItem | null>(null)
 const startingRepair = shallowRef(false)
 const startRepairUserId = ref<number | null>(null)
@@ -106,6 +108,7 @@ async function confirmStartRepair(userId: number) {
           <template #prepend>
             <RepairNumber :id="nextRepair.id" :status="nextRepair.status" class="mr-4" />
           </template>
+
           <div class="d-flex flex-column ga-2 mt-2">
             <RepairMeta :category="nextRepair.repair_type?.name" />
             <PersonLabel :person="nextRepair.customer" role="customer" />
@@ -182,6 +185,19 @@ async function confirmStartRepair(userId: number) {
       aria-label="Neue Reparatur"
       @click="router.push('/create-repair')"
     />
+    <v-fab
+      v-if="!mdAndUp"
+      class="scanner-fab"
+      icon="mdi-qrcode-scan"
+      color="primary"
+      size="large"
+      location="bottom end"
+      app
+      aria-label="QR-Code scannen"
+      @click="scannerOpen = true"
+    />
+
+    <QrScannerDialog v-model="scannerOpen" />
 
     <ReparateurRequiredDialog
       v-model="startRepairDialog"
@@ -205,4 +221,10 @@ async function confirmStartRepair(userId: number) {
     </ReparateurRequiredDialog>
   </v-container>
 </template>
+
+<style scoped>
+.scanner-fab :deep(.v-fab__container) {
+  margin-inline-end: 84px;
+}
+</style>
 

@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const pinUnlockAvailable = ref(true)
   const sessionChecked = ref(false)
   /** Idle auto-lock for this browser session (server-side switch, see usePinSession). */
-  const autoLockEnabled = ref(true)
+  const autoLockEnabled = ref(false)
   const idleTimeoutSeconds = ref(60)
 
   const isAuthenticated = computed(() => currentUser.value !== null)
@@ -38,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
       pinSessionEligible.value = data.eligible
       isLocked.value = data.locked
       pinUnlockAvailable.value = data.pin_unlock_available ?? true
-      autoLockEnabled.value = data.auto_lock_enabled ?? true
+      autoLockEnabled.value = data.auto_lock_enabled ?? false
       idleTimeoutSeconds.value = data.idle_timeout_seconds ?? 60
       currentUser.value = data.locked ? null : (data.user ?? null)
       sessionChecked.value = true

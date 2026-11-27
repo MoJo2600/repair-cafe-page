@@ -69,7 +69,7 @@ onUnmounted(() => {
 })
 
 // Celebrate for everyone watching when a repair succeeds (not on the first load)
-const { soundEnabled, soundUnlocked, celebrate, setSoundEnabled, testSound } = useCelebration()
+const { celebrate } = useCelebration()
 let previousRepaired: number | null = null
 watch(
   () => summary.value?.repaired_repairs,
@@ -136,28 +136,6 @@ const chartOptions = {
 
 <template>
   <div>
-    <!-- Sound for the celebration; browsers need one interaction before playing audio -->
-    <div class="d-flex justify-end mb-2">
-      <v-btn
-        v-if="soundEnabled && !soundUnlocked"
-        color="primary"
-        variant="tonal"
-        prepend-icon="mdi-volume-high"
-        @click="testSound"
-      >
-        Ton aktivieren
-      </v-btn>
-      <v-btn
-        v-else
-        variant="text"
-        :prepend-icon="soundEnabled ? 'mdi-volume-high' : 'mdi-volume-off'"
-        :aria-label="soundEnabled ? 'Jubelton ausschalten' : 'Jubelton einschalten'"
-        @click="setSoundEnabled(!soundEnabled)"
-      >
-        {{ soundEnabled ? 'Ton an' : 'Ton aus' }}
-      </v-btn>
-    </div>
-
     <v-alert v-if="failed" type="warning" variant="tonal" class="mb-4">
       <div class="d-flex align-center justify-space-between ga-4">
         <span>Übersicht derzeit nicht verfügbar</span>

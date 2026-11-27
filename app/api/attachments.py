@@ -108,7 +108,7 @@ def api_list_repair_attachments(repair_id):
         required: false
         schema:
           type: string
-          enum: [log_entry, device_photo, disclaimer, misc]
+          enum: [log_entry, device_photo, disclaimer, cancellation, misc]
       - name: log_id
         in: query
         required: false
@@ -200,7 +200,7 @@ def api_upload_repair_attachments(repair_id):
         in: formData
         type: string
         required: false
-        description: "Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo."
+        description: "Attachment type: log_entry, device_photo, disclaimer, cancellation, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo."
       - name: log_id
         in: formData
         type: integer
@@ -484,7 +484,10 @@ def api_delete_repair_attachment(repair_id, attachment_id):
                 status=404,
                 mimetype="application/json",
             )
-        if not may_delete(attachment.uploaded_by_id):
+        if attachment.attachment_type in {"disclaimer", "cancellation"}:
+            if not flask_login.current_user.is_admin:
+                return forbidden("Only admins can delete customer documents")
+        elif not may_delete(attachment.uploaded_by_id):
             return forbidden("Only admins can delete other users' attachments")
 
         file_path = _attachment_dir(repair_id) / attachment.stored_filename

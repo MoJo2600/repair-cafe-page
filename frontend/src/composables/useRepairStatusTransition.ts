@@ -47,7 +47,11 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
   })
   const notRepairableData = ref({ description: '', statusDetail: '', duration: 0 })
   const abbruchSignatureDialog = ref(false)
-  const pendingAbbruchPayload = ref<{ description: string; statusDetail: string; duration: number } | null>(null)
+  const pendingAbbruchPayload = ref<{
+    description: string
+    statusDetail: string
+    duration: number
+  } | null>(null)
 
   // ── Status helpers ────────────────────────────────────────────────────
 
@@ -124,7 +128,11 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     }
 
     if (requiresFailureDetailsForTransition(fromStatus, toStatus)) {
-      notRepairableData.value = { description: '', statusDetail: '', duration: options.suggestedRepairDuration.value }
+      notRepairableData.value = {
+        description: '',
+        statusDetail: '',
+        duration: options.suggestedRepairDuration.value,
+      }
       notRepairableDialog.value = true
       return
     }
@@ -235,7 +243,11 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
 
   // ── Not-repairable flow ───────────────────────────────────────────────
 
-  async function confirmNotRepairable(payload: { description: string; statusDetail: string; duration: number }) {
+  async function confirmNotRepairable(payload: {
+    description: string
+    statusDetail: string
+    duration: number
+  }) {
     notRepairableData.value = payload
     notRepairableDialog.value = false
 
@@ -248,16 +260,23 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     await saveNotRepairable(payload)
   }
 
-  async function confirmAbbruchSignature(signaturePayload: { signature: string }) {
+  async function confirmAbbruchSignature(signaturePayload: {
+    signature: string
+    templateVersionId: number
+  }) {
     abbruchSignatureDialog.value = false
     if (!pendingAbbruchPayload.value || !options.repairRecord.value?.id) return
     const payload = pendingAbbruchPayload.value
     pendingAbbruchPayload.value = null
 
     try {
-      await api.createOrUploadRepairCancellation({ id: options.repairRecord.value.id }, {
-        signature: signaturePayload.signature,
-      })
+      await api.createOrUploadRepairCancellation(
+        { id: options.repairRecord.value.id },
+        {
+          signature: signaturePayload.signature,
+          template_version_id: signaturePayload.templateVersionId,
+        }
+      )
       await options.onCancellationSigned?.()
     } catch (err) {
       console.error('Error saving cancellation PDF:', err)
@@ -268,7 +287,11 @@ export function useRepairStatusTransition(options: UseRepairStatusTransitionOpti
     await saveNotRepairable(payload)
   }
 
-  async function saveNotRepairable(payload: { description: string; statusDetail: string; duration: number }) {
+  async function saveNotRepairable(payload: {
+    description: string
+    statusDetail: string
+    duration: number
+  }) {
     if (!options.repairRecord.value) return
     savingStatus.value = true
     try {

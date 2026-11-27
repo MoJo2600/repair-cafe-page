@@ -12,21 +12,23 @@ const ACTIVITY_BROADCAST_INTERVAL_MS = 1_000
 
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll'] as const
 
-/** Remembered per device: personal devices in the workshop network can switch it off. */
+/** Remember the explicit auto-lock choice for this device. */
 const AUTO_LOCK_PREF_KEY = 'repaircafe.autoLock'
 
-function deviceWantsAutoLockOff(): boolean {
+function deviceAutoLockPreference(): boolean | null {
   try {
-    return localStorage.getItem(AUTO_LOCK_PREF_KEY) === 'off'
+    const preference = localStorage.getItem(AUTO_LOCK_PREF_KEY)
+    if (preference === 'on') return true
+    if (preference === 'off') return false
+    return null
   } catch {
-    return false
+    return null
   }
 }
 
 function rememberAutoLockForDevice(enabled: boolean) {
   try {
-    if (enabled) localStorage.removeItem(AUTO_LOCK_PREF_KEY)
-    else localStorage.setItem(AUTO_LOCK_PREF_KEY, 'off')
+    localStorage.setItem(AUTO_LOCK_PREF_KEY, enabled ? 'on' : 'off')
   } catch {
     // Storage unavailable (private mode): the switch then lasts for this login only
   }
@@ -98,12 +100,18 @@ export function usePinSession() {
     return ok
   }
 
-  // A fresh login starts with the auto-lock on; apply this device's choice again
+  // A fresh login starts with auto-lock off; restore an explicit device preference.
   watch(
     canUseApp,
     (active) => {
-      if (active && authStore.pinUnlockAvailable && authStore.autoLockEnabled && deviceWantsAutoLockOff()) {
-        void authStore.setAutoLock(false)
+      const preference = deviceAutoLockPreference()
+      if (
+        active &&
+        authStore.pinUnlockAvailable &&
+        preference !== null &&
+        authStore.autoLockEnabled !== preference
+      ) {
+        void authStore.setAutoLock(preference)
       }
     },
     { immediate: true }

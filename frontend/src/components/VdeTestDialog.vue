@@ -6,7 +6,7 @@
                 Elektrische Sicherheitspruefung nach VDE-Normen
             </v-card-title>
 
-            <v-card-text style="max-height: 70vh;">
+            <v-card-text class="vde-content">
                 <v-alert :type="requiredForStatus ? 'info' : 'success'" variant="tonal" class="mb-4" density="compact">
                     <template v-if="requiredForStatus">
                         Fuer den Status "{{ selectedRepairStatus }}" ist ein VDE Test erforderlich.
@@ -410,3 +410,9 @@ function onCancel() {
     open.value = false
 }
 </script>
+
+<style scoped>
+.vde-content {
+    max-height: 70vh;
+}
+</style>

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import DashboardSummary from '@/components/dashboard/DashboardSummary.vue'
 import PinUnlockDialog from '@/components/PinUnlockDialog.vue'
 import { redirectTarget } from '@/utils/redirect'
+import { useCelebration } from '@/composables/useCelebration'
 
 /** Shown while the shared PC is locked: public repair figures plus the way back in. */
 const router = useRouter()
@@ -13,6 +14,7 @@ const ssoUrl = computed(
   () => `/api/auth/oidc/login?next=${encodeURIComponent(redirectTarget(route.query))}`
 )
 const authStore = useAuthStore()
+const { soundEnabled, setSoundEnabled } = useCelebration()
 
 const unlockOpen = shallowRef(false)
 const logoFailed = shallowRef(false)
@@ -32,6 +34,10 @@ async function logout() {
     loggingOut.value = false
   }
 }
+
+function toggleSound(enabled: boolean | null) {
+  void setSoundEnabled(!!enabled)
+}
 </script>
 
 <template>
@@ -41,7 +47,12 @@ async function logout() {
         <v-card-item>
           <template #prepend>
             <v-avatar size="48" rounded="lg" color="primary" variant="tonal">
-              <v-img v-if="!logoFailed" src="/api/config/logo" alt="Repair Café" @error="logoFailed = true" />
+              <v-img
+                v-if="!logoFailed"
+                src="/api/config/logo"
+                alt="Repair Café"
+                @error="logoFailed = true"
+              />
               <v-icon v-else icon="mdi-tools" />
             </v-avatar>
           </template>
@@ -52,13 +63,12 @@ async function logout() {
               <v-btn
                 v-if="authStore.pinUnlockAvailable"
                 color="primary"
-                variant="flat"
-                size="large"
-                prepend-icon="mdi-lock-open-outline"
+                icon="mdi-lock-open-outline"
+                variant="tonal"
+                aria-label="Entsperren"
+                title="Entsperren"
                 @click="unlockOpen = true"
-              >
-                Entsperren
-              </v-btn>
+              />
               <template v-else>
                 <span class="text-body-medium text-medium-emphasis">PIN nur im Werkstattnetz</span>
                 <v-btn
@@ -71,18 +81,52 @@ async function logout() {
                   Mit SSO anmelden
                 </v-btn>
               </template>
-              <v-btn
-                icon="mdi-logout"
-                variant="text"
-                aria-label="Vollständig abmelden"
-                title="Vollständig abmelden"
-                :loading="loggingOut"
-                @click="logout"
-              />
+              <v-menu location="bottom end" :close-on-content-click="false">
+                <template #activator="{ props: menuProps }">
+                  <v-btn
+                    v-bind="menuProps"
+                    icon="mdi-dots-vertical"
+                    variant="text"
+                    aria-label="Weitere Aktionen"
+                  />
+                </template>
+                <v-list min-width="260">
+                  <v-list-item
+                    :prepend-icon="soundEnabled ? 'mdi-volume-high' : 'mdi-volume-off'"
+                    title="Ton"
+                    :subtitle="soundEnabled ? 'An' : 'Aus'"
+                  >
+                    <template #append>
+                      <v-switch
+                        :model-value="soundEnabled"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        :aria-label="soundEnabled ? 'Ton aus' : 'Ton an'"
+                        @update:model-value="toggleSound"
+                      />
+                    </template>
+                  </v-list-item>
+                  <v-divider />
+                  <v-list-item
+                    prepend-icon="mdi-logout"
+                    title="Abmelden"
+                    base-color="error"
+                    :disabled="loggingOut"
+                    @click="logout"
+                  />
+                </v-list>
+              </v-menu>
             </div>
           </template>
         </v-card-item>
-        <v-alert v-if="logoutError" type="error" variant="tonal" density="compact" class="ma-4 mt-0">
+        <v-alert
+          v-if="logoutError"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="ma-4 mt-0"
+        >
           {{ logoutError }}
         </v-alert>
       </v-card>
@@ -97,7 +141,6 @@ async function logout() {
 <style scoped>
 .lock-page {
   min-height: 100dvh;
-  background-color: rgb(var(--v-theme-background));
 }
 
 .lock-content {

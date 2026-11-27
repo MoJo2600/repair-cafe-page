@@ -1,232 +1,310 @@
 <template>
   <v-container fluid class="page-container">
-    <PageHeader title="Einstellungen" />
+    <PageHeader
+      title="Einstellungen"
+      subtitle="Organisation, Dokumente und Werkstattangaben verwalten"
+    />
 
-    <!-- Organisation -->
-    <v-card class="mb-6">
-      <v-card-title>Organisation</v-card-title>
-      <v-card-text>
-        <p class="text-body-medium text-medium-emphasis mb-4">
-          Name und Website der Organisation werden auf gedruckten Etiketten angezeigt.
-        </p>
-        <v-row class="ga-4">
-          <v-col cols="12" sm="6">
-            <v-text-field
-v-model="orgForm.org_name" label="Name der Organisation"
-              hide-details="auto" placeholder="Repair Café" />
-          </v-col>
-          <v-col cols="12" sm="6">
-            <v-text-field
-v-model="orgForm.org_website" label="Website der Organisation"
-              hide-details="auto" placeholder="https://example.org" />
-          </v-col>
-          <v-col cols="12" sm="6">
-            <v-text-field
-v-model="orgForm.app_url" label="App-URL (für QR-Codes)"
-              hide-details="auto" placeholder="https://repaircafe.example.org" />
-          </v-col>
-        </v-row>
-        <v-alert v-if="orgError" type="error" variant="tonal" density="compact" class="mt-4">
-          {{ orgError }}
-        </v-alert>
-        <v-alert v-if="orgSuccess" type="success" variant="tonal" density="compact" class="mt-4">
-          Organisation gespeichert.
-        </v-alert>
-      </v-card-text>
-      <v-card-actions class="px-4 pb-4">
-        <v-spacer />
-        <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">Speichern</v-btn>
-      </v-card-actions>
-    </v-card>
+    <v-tabs v-model="activeSection" class="mb-4" color="primary" grow show-arrows>
+      <v-tab value="general" prepend-icon="mdi-cog">Allgemein</v-tab>
+      <v-tab value="documents" prepend-icon="mdi-file-document-edit">Kundendokumente</v-tab>
+      <v-tab value="workshop" prepend-icon="mdi-tools">Werkstatt</v-tab>
+    </v-tabs>
 
-    <!-- Haftungserklärung / Disclaimer Template -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span>Haftungserklärung (Vorlage)</span>
-      </v-card-title>
-      <v-card-text>
-        <p class="text-body-medium text-medium-emphasis mb-4">
-          Laden Sie eine eigene PDF-Vorlage hoch. Die Datei muss die AcroForm-Felder
-          <strong>date</strong> und <strong>signature</strong> enthalten. Feld
-          <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
-          aktiv.
-        </p>
-        <v-row class="ga-4 align-center">
-          <v-col cols="12" sm="auto">
+    <section v-if="activeSection === 'general'">
+        <!-- Organisation -->
+        <v-card class="mb-6">
+          <v-card-title>Organisation</v-card-title>
+          <v-card-text>
+            <p class="mb-4">
+              Name und Website der Organisation werden auf gedruckten Etiketten angezeigt.
+            </p>
+            <v-row class="ga-4">
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="orgForm.org_name"
+                  label="Name der Organisation"
+                  hide-details="auto"
+                  placeholder="Repair Café"
+                />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="orgForm.org_website"
+                  label="Website der Organisation"
+                  hide-details="auto"
+                  placeholder="https://example.org"
+                />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="orgForm.app_url"
+                  label="App-URL (für QR-Codes)"
+                  hide-details="auto"
+                  placeholder="https://repaircafe.example.org"
+                />
+              </v-col>
+            </v-row>
+            <v-alert v-if="orgError" type="error" variant="tonal" density="compact" class="mt-4">
+              {{ orgError }}
+            </v-alert>
+            <v-alert
+              v-if="orgSuccess"
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+            >
+              Organisation gespeichert.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions class="px-4 pb-4">
+            <v-spacer />
+            <v-btn color="primary" variant="flat" :loading="orgSaving" @click="saveOrg">
+              Speichern
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+
+        <!-- Logo / Icon -->
+        <v-card class="mb-6">
+          <v-card-title>Logo / Icon</v-card-title>
+          <v-card-text>
+            <p class="mb-4">
+              Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon
+              aktiv.
+            </p>
+            <v-row class="ga-4 align-center">
+              <v-col cols="auto">
+                <v-img
+                  :src="logoPreview ?? '/api/config/logo'"
+                  width="64"
+                  height="64"
+                  cover
+                  rounded="lg"
+                  class="border"
+                />
+              </v-col>
+              <v-col cols="12" sm>
+                <v-file-input
+                  v-model="logoFile"
+                  label="Neues Logo hochladen"
+                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                  prepend-icon="mdi-image"
+                  :error-messages="logoError"
+                  hide-details="auto"
+                  @update:model-value="onLogoFileChange"
+                />
+              </v-col>
+              <v-col cols="12" sm="auto">
+                <v-btn
+                  color="primary"
+                  variant="flat"
+                  :loading="logoUploading"
+                  :disabled="!logoFile"
+                  @click="uploadLogo"
+                >
+                  Hochladen
+                </v-btn>
+              </v-col>
+            </v-row>
+            <v-alert
+              v-if="logoSuccess"
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+            >
+              Logo erfolgreich aktualisiert.
+            </v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- Jubelton -->
+        <v-card class="mb-6">
+          <v-card-title>Jubelton</v-card-title>
+          <v-card-text>
+            <p class="mb-4">
+              Wird auf dem Dashboard abgespielt, wenn ein Gerät repariert wurde. Laden Sie eine
+              MP3-Datei hoch (max. 2 MB). Geöffnete Dashboards übernehmen den neuen Ton nach dem
+              Neuladen.
+            </p>
+            <v-row class="ga-4 align-center">
+              <v-col cols="12" sm>
+                <v-file-input
+                  v-model="soundFile"
+                  label="Neuen Jubelton hochladen"
+                  accept="audio/mpeg,.mp3"
+                  prepend-icon="mdi-music-note"
+                  :error-messages="soundError"
+                  hide-details="auto"
+                  @update:model-value="onSoundFileChange"
+                />
+              </v-col>
+              <v-col cols="12" sm="auto" class="d-flex flex-wrap ga-2">
+                <v-btn
+                  color="primary"
+                  variant="flat"
+                  :loading="soundUploading"
+                  :disabled="!soundFile"
+                  @click="uploadSound"
+                >
+                  Hochladen
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-play" @click="previewSound">Anhören</v-btn>
+                <v-btn variant="text" :loading="soundResetting" @click="resetSound">Standard</v-btn>
+              </v-col>
+            </v-row>
+            <v-alert
+              v-if="soundSuccess"
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+            >
+              {{ soundSuccess }}
+            </v-alert>
+          </v-card-text>
+        </v-card>
+    </section>
+
+    <section v-else-if="activeSection === 'documents'">
+      <DocumentTemplatesSettings />
+    </section>
+
+    <section v-else>
+        <!-- Reparaturarten -->
+        <v-card class="mb-6">
+          <v-card-title class="d-flex align-center justify-space-between flex-wrap ga-2">
+            <span>Reparaturarten</span>
             <v-btn
-color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/disclaimer"
-              target="_blank">
-              Aktuelle Vorlage anzeigen
-            </v-btn>
-          </v-col>
-          <v-col cols="12" sm>
-            <v-file-input
-v-model="disclaimerFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
-              prepend-icon="mdi-upload" :error-messages="disclaimerError" hide-details="auto"
-              @update:model-value="disclaimerError = ''" />
-          </v-col>
-          <v-col cols="12" sm="auto">
-            <v-btn color="primary" variant="flat" :loading="disclaimerUploading" :disabled="!disclaimerFile" @click="uploadDisclaimer">
-              Hochladen
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-alert v-if="disclaimerSuccess" type="success" variant="tonal" density="compact" class="mt-4">
-          Vorlage erfolgreich aktualisiert.
-        </v-alert>
-      </v-card-text>
-    </v-card>
+              size="small"
+              color="primary"
+              prepend-icon="mdi-plus"
+              @click="openCreate('repair_type')"
+              >Hinzufügen</v-btn
+            >
+          </v-card-title>
+          <v-data-table
+            v-if="!smAndDown"
+            :headers="headersBasic"
+            :items="byCategory('repair_type')"
+            :loading="loading"
+            item-value="id"
+            hover
+            density="comfortable"
+          >
+            <template #item.is_active="{ item }">
+              <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+              <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
+            </template>
+            <template #item.actions="{ item }">
+              <TableRowActions primary-label="Bearbeiten" @primary="openEdit(item)">
+                <template #secondary>
+                  <v-list-item
+                    prepend-icon="mdi-delete"
+                    title="Löschen"
+                    base-color="error"
+                    @click="confirmDelete(item)"
+                  />
+                </template>
+              </TableRowActions>
+            </template>
+          </v-data-table>
+          <v-list v-else lines="two">
+            <v-list-item
+              v-for="item in byCategory('repair_type')"
+              :key="item.id"
+              :title="item.name"
+              :subtitle="`Reihenfolge ${item.sort_order}`"
+            >
+              <template #prepend>
+                <v-icon
+                  :icon="item.is_active ? 'mdi-check-circle' : 'mdi-cancel'"
+                  :color="item.is_active ? 'success' : undefined"
+                />
+              </template>
+              <template #append>
+                <v-btn icon="mdi-pencil" size="small" variant="text" @click="openEdit(item)" />
+                <v-btn
+                  icon="mdi-delete"
+                  size="small"
+                  variant="text"
+                  color="error"
+                  @click="confirmDelete(item)"
+                />
+              </template>
+            </v-list-item>
+            <v-list-item v-if="byCategory('repair_type').length === 0" title="Keine Einträge" />
+          </v-list>
+        </v-card>
 
-    <!-- Abbruchbestätigung / Cancellation Template -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span>Abbruchbestätigung (Vorlage)</span>
-      </v-card-title>
-      <v-card-text>
-        <p class="text-body-medium text-medium-emphasis mb-4">
-          Laden Sie eine eigene PDF-Vorlage für den Reparaturabbruch hoch. Die Datei muss die
-          AcroForm-Felder <strong>date</strong> und <strong>signature</strong> enthalten. Feld
-          <strong>name</strong> ist optional. Die neue Vorlage wird sofort ohne Neustart des Servers
-          aktiv.
-        </p>
-        <v-row class="ga-4 align-center">
-          <v-col cols="12" sm="auto">
+        <!-- Prüfgeräte -->
+        <v-card class="mb-6">
+          <v-card-title class="d-flex align-center justify-space-between flex-wrap ga-2">
+            <span>Prüfgeräte</span>
             <v-btn
-color="primary" variant="tonal" prepend-icon="mdi-file-pdf-box" href="/api/config/cancellation"
-              target="_blank">
-              Aktuelle Vorlage anzeigen
-            </v-btn>
-          </v-col>
-          <v-col cols="12" sm>
-            <v-file-input
-v-model="cancellationFile" label="Neue PDF-Vorlage hochladen" accept=".pdf,application/pdf"
-              prepend-icon="mdi-upload" :error-messages="cancellationError" hide-details="auto"
-              @update:model-value="cancellationError = ''" />
-          </v-col>
-          <v-col cols="12" sm="auto">
-            <v-btn color="primary" variant="flat" :loading="cancellationUploading" :disabled="!cancellationFile" @click="uploadCancellation">
-              Hochladen
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-alert v-if="cancellationSuccess" type="success" variant="tonal" density="compact" class="mt-4">
-          Vorlage erfolgreich aktualisiert.
-        </v-alert>
-      </v-card-text>
-    </v-card>
-
-    <!-- Logo / Icon -->
-    <v-card class="mb-6">
-      <v-card-title>Logo / Icon</v-card-title>
-      <v-card-text>
-        <p class="text-body-medium text-medium-emphasis mb-4">
-          Laden Sie ein neues Logo hoch (PNG oder JPEG). Es wird sofort als App-Icon und Favicon
-          aktiv.
-        </p>
-        <v-row class="ga-4 align-center">
-          <v-col cols="auto">
-            <v-img :src="logoPreview ?? '/api/config/logo'" width="64" height="64" cover rounded="lg" class="border" />
-          </v-col>
-          <v-col cols="12" sm>
-            <v-file-input
-v-model="logoFile" label="Neues Logo hochladen" accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-              prepend-icon="mdi-image" :error-messages="logoError" hide-details="auto"
-              @update:model-value="onLogoFileChange" />
-          </v-col>
-          <v-col cols="12" sm="auto">
-            <v-btn color="primary" variant="flat" :loading="logoUploading" :disabled="!logoFile" @click="uploadLogo">
-              Hochladen
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-alert v-if="logoSuccess" type="success" variant="tonal" density="compact" class="mt-4">
-          Logo erfolgreich aktualisiert.
-        </v-alert>
-      </v-card-text>
-    </v-card>
-
-    <!-- Jubelton -->
-    <v-card class="mb-6">
-      <v-card-title>Jubelton</v-card-title>
-      <v-card-text>
-        <p class="text-body-medium text-medium-emphasis mb-4">
-          Wird auf dem Dashboard abgespielt, wenn ein Gerät repariert wurde. Laden Sie eine
-          MP3-Datei hoch (max. 2 MB). Geöffnete Dashboards übernehmen den neuen Ton nach dem
-          Neuladen.
-        </p>
-        <v-row class="ga-4 align-center">
-          <v-col cols="12" sm>
-            <v-file-input
-              v-model="soundFile"
-              label="Neuen Jubelton hochladen"
-              accept="audio/mpeg,.mp3"
-              prepend-icon="mdi-music-note"
-              :error-messages="soundError"
-              hide-details="auto"
-              @update:model-value="onSoundFileChange"
-            />
-          </v-col>
-          <v-col cols="12" sm="auto" class="d-flex flex-wrap ga-2">
-            <v-btn color="primary" variant="flat" :loading="soundUploading" :disabled="!soundFile" @click="uploadSound">
-              Hochladen
-            </v-btn>
-            <v-btn variant="tonal" prepend-icon="mdi-play" @click="previewSound">Anhören</v-btn>
-            <v-btn variant="text" :loading="soundResetting" @click="resetSound">Standard</v-btn>
-          </v-col>
-        </v-row>
-        <v-alert v-if="soundSuccess" type="success" variant="tonal" density="compact" class="mt-4">
-          {{ soundSuccess }}
-        </v-alert>
-      </v-card-text>
-    </v-card>
-
-    <!-- Reparaturarten -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span>Reparaturarten</span>
-        <v-btn
-size="small" color="primary" prepend-icon="mdi-plus"
-          @click="openCreate('repair_type')">Hinzufügen</v-btn>
-      </v-card-title>
-      <v-data-table
-:headers="headersBasic" :items="byCategory('repair_type')" :loading="loading" item-value="id" hover
-        density="comfortable">
-        <template #item.is_active="{ item }">
-          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
-          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
-        </template>
-        <template #item.actions="{ item }">
-          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
-          <v-btn
-icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-            @click="confirmDelete(item)" />
-        </template>
-      </v-data-table>
-    </v-card>
-
-    <!-- Prüfgeräte -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span>Prüfgeräte</span>
-        <v-btn
-size="small" color="primary" prepend-icon="mdi-plus"
-          @click="openCreate('test_device')">Hinzufügen</v-btn>
-      </v-card-title>
-      <v-data-table
-:headers="headersDevice" :items="byCategory('test_device')" :loading="loading" item-value="id" hover
-        density="comfortable">
-        <template #item.is_active="{ item }">
-          <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
-          <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
-        </template>
-        <template #item.actions="{ item }">
-          <v-btn icon="mdi-pencil" size="small" variant="text" density="compact" @click="openEdit(item)" />
-          <v-btn
-icon="mdi-delete" size="small" variant="text" density="compact" color="error"
-            @click="confirmDelete(item)" />
-        </template>
-      </v-data-table>
-    </v-card>
+              size="small"
+              color="primary"
+              prepend-icon="mdi-plus"
+              @click="openCreate('test_device')"
+              >Hinzufügen</v-btn
+            >
+          </v-card-title>
+          <v-data-table
+            v-if="!smAndDown"
+            :headers="headersDevice"
+            :items="byCategory('test_device')"
+            :loading="loading"
+            item-value="id"
+            hover
+            density="comfortable"
+          >
+            <template #item.is_active="{ item }">
+              <StatusChip v-if="item.is_active" label="Aktiv" color="success" icon="mdi-check" />
+              <StatusChip v-else label="Inaktiv" icon="mdi-cancel" />
+            </template>
+            <template #item.actions="{ item }">
+              <TableRowActions primary-label="Bearbeiten" @primary="openEdit(item)">
+                <template #secondary>
+                  <v-list-item
+                    prepend-icon="mdi-delete"
+                    title="Löschen"
+                    base-color="error"
+                    @click="confirmDelete(item)"
+                  />
+                </template>
+              </TableRowActions>
+            </template>
+          </v-data-table>
+          <v-list v-else lines="two">
+            <v-list-item
+              v-for="item in byCategory('test_device')"
+              :key="item.id"
+              :title="item.name"
+              :subtitle="item.serial_number || `Reihenfolge ${item.sort_order}`"
+            >
+              <template #prepend>
+                <v-icon
+                  :icon="item.is_active ? 'mdi-check-circle' : 'mdi-cancel'"
+                  :color="item.is_active ? 'success' : undefined"
+                />
+              </template>
+              <template #append>
+                <v-btn icon="mdi-pencil" size="small" variant="text" @click="openEdit(item)" />
+                <v-btn
+                  icon="mdi-delete"
+                  size="small"
+                  variant="text"
+                  color="error"
+                  @click="confirmDelete(item)"
+                />
+              </template>
+            </v-list-item>
+            <v-list-item v-if="byCategory('test_device').length === 0" title="Keine Einträge" />
+          </v-list>
+        </v-card>
+    </section>
 
     <!-- Add / Edit dialog -->
     <v-dialog v-model="formDialog" max-width="480" persistent>
@@ -238,16 +316,31 @@ icon="mdi-delete" size="small" variant="text" density="compact" color="error"
           </v-alert>
           <v-form ref="formRef" @submit.prevent="saveItem">
             <v-text-field
-v-model="form.name" label="Name *"
-              :rules="[required]" autofocus class="mb-2" />
-            <v-text-field v-if="formCategory === 'test_device'" v-model="form.serial_number" label="Seriennummer" />
-            <v-checkbox v-if="editingItem" v-model="form.is_active" label="Aktiv" density="comfortable" />
+              v-model="form.name"
+              label="Name *"
+              :rules="[required]"
+              autofocus
+              class="mb-2"
+            />
+            <v-text-field
+              v-if="formCategory === 'test_device'"
+              v-model="form.serial_number"
+              label="Seriennummer"
+            />
+            <v-checkbox
+              v-if="editingItem"
+              v-model="form.is_active"
+              label="Aktiv"
+              density="comfortable"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="closeDialog">Abbrechen</v-btn>
-          <v-btn color="primary" variant="flat" :loading="saving" @click="saveItem">Speichern</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveItem"
+            >Speichern</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -275,22 +368,26 @@ v-model="form.name" label="Name *"
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
 <script setup lang="ts">
 import PageHeader from '@/components/ui/PageHeader.vue'
+import DocumentTemplatesSettings from '@/components/DocumentTemplatesSettings.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
+import TableRowActions from '@/components/ui/TableRowActions.vue'
 import { api } from '@/api/client'
 import { errorMessage } from '@/utils/errors'
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useDisplay } from 'vuetify'
 import { CELEBRATION_SOUND_URL } from '@/composables/useCelebration'
 import type { VForm } from 'vuetify/components'
 import type { SettingResponse } from '../api/generated/data-contracts'
 import { useToast } from '@/composables/useToast'
 
 const toast = useToast()
+const { smAndDown } = useDisplay()
+const activeSection = ref<'general' | 'documents' | 'workshop'>('general')
 
 // ── Table column definitions ─────────────────────────────────────────────────
 
@@ -429,11 +526,14 @@ async function saveItem() {
 
   try {
     if (editingItem.value) {
-      const res = await api.updateSetting({ settingId: editingItem.value.id }, {
-        name: form.value.name,
-        serial_number: form.value.serial_number || null,
-        is_active: form.value.is_active,
-      })
+      const res = await api.updateSetting(
+        { settingId: editingItem.value.id },
+        {
+          name: form.value.name,
+          serial_number: form.value.serial_number || null,
+          is_active: form.value.is_active,
+        }
+      )
       const idx = settings.value.findIndex((s) => s.id === editingItem.value!.id)
       if (idx !== -1) settings.value[idx] = res.data
       toast.success('Eintrag gespeichert')
@@ -471,9 +571,7 @@ async function doDelete() {
     toast.success('Eintrag gelöscht')
     deleteDialog.value = false
   } catch (err: unknown) {
-    const msg =
-      (err as { body?: { error?: string } })?.body?.error ??
-      'Fehler beim Löschen'
+    const msg = (err as { body?: { error?: string } })?.body?.error ?? 'Fehler beim Löschen'
     toast.error(msg)
   } finally {
     saving.value = false
@@ -581,50 +679,4 @@ async function resetSound() {
 }
 
 onUnmounted(() => soundPreview?.pause())
-
-// ── Disclaimer upload ─────────────────────────────────────────────────────────
-
-const disclaimerFile = ref<File | null>(null)
-const disclaimerUploading = ref(false)
-const disclaimerError = ref('')
-const disclaimerSuccess = ref(false)
-
-async function uploadDisclaimer() {
-  if (!disclaimerFile.value) return
-  disclaimerUploading.value = true
-  disclaimerError.value = ''
-  disclaimerSuccess.value = false
-  try {
-    await api.uploadDisclaimerTemplate({ file: disclaimerFile.value })
-    disclaimerSuccess.value = true
-    disclaimerFile.value = null
-  } catch (err) {
-    disclaimerError.value = errorMessage(err, 'Fehler beim Hochladen')
-  } finally {
-    disclaimerUploading.value = false
-  }
-}
-
-// ── Cancellation upload ───────────────────────────────────────────────────────
-
-const cancellationFile = ref<File | null>(null)
-const cancellationUploading = ref(false)
-const cancellationError = ref('')
-const cancellationSuccess = ref(false)
-
-async function uploadCancellation() {
-  if (!cancellationFile.value) return
-  cancellationUploading.value = true
-  cancellationError.value = ''
-  cancellationSuccess.value = false
-  try {
-    await api.uploadCancellationTemplate({ file: cancellationFile.value })
-    cancellationSuccess.value = true
-    cancellationFile.value = null
-  } catch (err) {
-    cancellationError.value = errorMessage(err, 'Fehler beim Hochladen')
-  } finally {
-    cancellationUploading.value = false
-  }
-}
 </script>

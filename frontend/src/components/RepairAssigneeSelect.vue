@@ -58,14 +58,13 @@ function assignToMe() {
 <template>
   <div>
     <div class="d-flex align-center mb-2">
-      <span class="text-body-large text-grey-darken-1">Zuständig</span>
+      <span class="text-title-medium">Zuständig</span>
       <v-spacer></v-spacer>
       <v-btn
         v-if="canAssignToMe"
         variant="text"
-        size="x-small"
+        size="small"
         prepend-icon="mdi-account-arrow-left"
-        class="px-0"
         @click="assignToMe"
       >
         Mir zuweisen

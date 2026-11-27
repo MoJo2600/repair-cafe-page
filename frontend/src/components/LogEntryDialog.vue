@@ -24,7 +24,6 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const toast = useToast()
 
-
 const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const formValid = shallowRef(false)
 const saving = shallowRef(false)
@@ -69,9 +68,15 @@ async function save() {
 
   saving.value = true
   try {
-    const response = await api.createRepairLog({ repairId: repairId }, { repair_id: repairId, user_id: userId.value ?? undefined,
-      reparatur_dauer: duration.value ?? 0,
-      reparatur_besch: description.value })
+    const response = await api.createRepairLog(
+      { repairId: repairId },
+      {
+        repair_id: repairId,
+        user_id: userId.value ?? undefined,
+        reparatur_dauer: duration.value ?? 0,
+        reparatur_besch: description.value,
+      }
+    )
     if (response.reply !== 'done') {
       toast.error(
         'Fehler beim Hinzufügen des Logeintrags: ' + (response.error || 'Unbekannter Fehler')
@@ -145,7 +150,12 @@ async function save() {
           <div class="text-title-small mb-3">Fotos &amp; Dateien (optional)</div>
 
           <div v-if="camera.active.value" class="mb-3">
-            <video ref="videoElement" class="camera-preview" autoplay playsinline></video>
+            <video
+              ref="videoElement"
+              class="app-media-preview camera-preview bg-media-background rounded"
+              autoplay
+              playsinline
+            ></video>
             <canvas ref="photoCanvas" class="d-none"></canvas>
           </div>
 
@@ -167,12 +177,7 @@ async function save() {
             </v-btn>
           </div>
 
-          <v-alert
-            v-if="camera.permissionDenied.value"
-            type="error"
-            density="compact"
-            class="mb-3"
-          >
+          <v-alert v-if="camera.permissionDenied.value" type="error" density="compact" class="mb-3">
             Kamerazugriff verweigert.
           </v-alert>
 
@@ -202,9 +207,6 @@ async function save() {
 
 <style scoped>
 .camera-preview {
-  width: 100%;
   max-height: 200px;
-  background: #000;
-  border-radius: 4px;
 }
 </style>

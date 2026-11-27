@@ -53,6 +53,15 @@ def init_swagger(app):
         AuthResponse,
         CustomerResponse,
         CustomerWithRepairCountResponse,
+        DocumentBlankPrintRequest,
+        DocumentRenderRequest,
+        DocumentTemplateListResponse,
+        DocumentTemplateResponse,
+        DocumentTemplateSingleResponse,
+        DocumentTemplateUpdate,
+        DocumentTemplateVersionCreate,
+        DocumentTemplateVersionResponse,
+        DocumentTemplateVersionSingleResponse,
         FeaturesResponse,
         LoginRequest,
         PinDashboardCategoryCount,
@@ -70,6 +79,7 @@ def init_swagger(app):
         RepairAttachmentResponse,
         RepairCreate,
         RepairCreateResponse,
+        RepairCancellationCreate,
         SettingSingleResponse,
         SettingCreate,
         SettingUpdate,
@@ -88,6 +98,7 @@ def init_swagger(app):
         RepairLogSingleResponse,
         RepairSingleResponse,
         DropdownConfigResponse,
+        DocumentRenderContext,
         SettingOption,
         VdeTestSingleResponse,
         RepairLogCreate,
@@ -152,6 +163,36 @@ def init_swagger(app):
                 "RepairUpdate": pydantic_to_swagger(RepairUpdate),
                 "RepairResponse": pydantic_to_swagger(RepairResponse),
                 "RepairCreateResponse": pydantic_to_swagger(RepairCreateResponse),
+                "RepairCancellationCreate": pydantic_to_swagger(
+                    RepairCancellationCreate
+                ),
+                "DocumentBlankPrintRequest": pydantic_to_swagger(
+                    DocumentBlankPrintRequest
+                ),
+                "DocumentRenderRequest": pydantic_to_swagger(
+                    DocumentRenderRequest
+                ),
+                "DocumentTemplateUpdate": pydantic_to_swagger(
+                    DocumentTemplateUpdate
+                ),
+                "DocumentTemplateVersionCreate": pydantic_to_swagger(
+                    DocumentTemplateVersionCreate
+                ),
+                "DocumentTemplateResponse": pydantic_to_swagger(
+                    DocumentTemplateResponse
+                ),
+                "DocumentTemplateVersionResponse": pydantic_to_swagger(
+                    DocumentTemplateVersionResponse
+                ),
+                "DocumentTemplateListResponse": pydantic_to_swagger(
+                    DocumentTemplateListResponse
+                ),
+                "DocumentTemplateSingleResponse": pydantic_to_swagger(
+                    DocumentTemplateSingleResponse
+                ),
+                "DocumentTemplateVersionSingleResponse": pydantic_to_swagger(
+                    DocumentTemplateVersionSingleResponse
+                ),
                 "RepairAttachmentResponse": pydantic_to_swagger(
                     RepairAttachmentResponse
                 ),
@@ -189,6 +230,7 @@ def init_swagger(app):
                 "RepairLogCreateResponse": pydantic_to_swagger(RepairLogCreateResponse),
                 "SettingOption": pydantic_to_swagger(SettingOption),
                 "DropdownConfigResponse": pydantic_to_swagger(DropdownConfigResponse),
+                "DocumentRenderContext": pydantic_to_swagger(DocumentRenderContext),
                 # GET /api/settings: {category: [SettingOption, ...]}
                 "SettingsGroupedResponse": {
                     "type": "object",

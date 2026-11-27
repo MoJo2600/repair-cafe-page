@@ -16,14 +16,14 @@ Open Repair Alliance and Repair Café International — useful for funding appli
 
 ## 3. Customer notifications
 E-mail the customer when a repair is finished or waiting for a spare part.
-`app/services/email_service.py` already exists but is barely used.
+`app/services/email_service.py` already exists but is only used for the export.
 
 ## 4. Waiting queue / public display
 Hand out a queue number at check-in and show a "Now being served" screen at the venue.
 Builds on the existing QR codes.
 
 ## 5. Spare parts & follow-up appointments
-New "waiting for part" status, parts list (ordered by whom, cost),
+Builds on the existing status detail "In Bearbeitung / Ersatzteilbesorgung": parts list (ordered by whom, cost),
 reminders for devices that need a second visit.
 
 ## 6. Repair knowledge base
@@ -36,4 +36,4 @@ shortening intake on the day.
 
 ## 8. Proper export
 Real XLSX/CSV downloads from the UI, filterable by event, date range and status.
-(README currently claims XLSX; `ExportService` only produces CSV via the legacy `app/web/routes.py`.)
+(Today: `GET /api/export` returns all repairs as XLSX and `GET /api/mailexport` e-mails a CSV, both admin-only and without filters or a button in the UI.)

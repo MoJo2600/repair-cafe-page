@@ -133,6 +133,154 @@ export interface CustomerWithRepairCountResponse {
   vorname: string;
 }
 
+export interface DocumentBlankPrintRequest {
+  version_id: number;
+}
+
+export interface DocumentRenderContext {
+  /** @format date */
+  datum: string;
+  /**
+   * @maxLength 400
+   * @default null
+   */
+  defekt_besch?: string | null;
+  /**
+   * @format email
+   * @maxLength 100
+   * @default null
+   */
+  email?: string | null;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  geraet_art: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  nachname: string;
+  /**
+   * @maxLength 100
+   * @default null
+   */
+  repair_number?: string | null;
+  /**
+   * @maxLength 200
+   * @default null
+   */
+  repair_type?: string | null;
+  /**
+   * @maxLength 40
+   * @default null
+   */
+  telefon?: string | null;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  vorname: string;
+}
+
+export interface DocumentRenderRequest {
+  context?: DocumentRenderContext | null;
+  /** @default null */
+  repair_id?: number | null;
+  /**
+   * Transient PNG/JPEG data URL
+   * @maxLength 1400000
+   * @default null
+   */
+  signature?: string | null;
+  version_id: number;
+}
+
+export interface DocumentTemplateListResponse {
+  count: number;
+  data?: DocumentTemplateResponse[];
+  reply: string;
+}
+
+export interface DocumentTemplateResponse {
+  active_version?: DocumentTemplateVersionResponse | null;
+  /** @default null */
+  active_version_id?: number | null;
+  /** @format date-time */
+  created_at: string;
+  id: number;
+  role: "disclaimer" | "cancellation";
+  title: string;
+  /** @format date-time */
+  updated_at: string;
+  versions?: DocumentTemplateVersionResponse[];
+}
+
+export interface DocumentTemplateSingleResponse {
+  data: DocumentTemplateResponse;
+  /**
+   * Error message if reply is error
+   * @default null
+   */
+  error?: string | null;
+  /**
+   * Response message
+   * @default null
+   */
+  message?: string | null;
+  /** Response status (done, error) */
+  reply: string;
+}
+
+export interface DocumentTemplateUpdate {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   * @default null
+   */
+  title?: string | null;
+}
+
+export interface DocumentTemplateVersionCreate {
+  /**
+   * @minLength 1
+   * @maxLength 250000
+   */
+  html: string;
+}
+
+export interface DocumentTemplateVersionResponse {
+  /** @format date-time */
+  created_at: string;
+  /** @default null */
+  created_by_id?: number | null;
+  html: string;
+  id: number;
+  /**
+   * @format date-time
+   * @default null
+   */
+  published_at?: string | null;
+  template_id: number;
+  version_number: number;
+}
+
+export interface DocumentTemplateVersionSingleResponse {
+  data: DocumentTemplateVersionResponse;
+  /**
+   * Error message if reply is error
+   * @default null
+   */
+  error?: string | null;
+  /**
+   * Response message
+   * @default null
+   */
+  message?: string | null;
+  /** Response status (done, error) */
+  reply: string;
+}
+
 export interface DropdownConfigResponse {
   repair_type: SettingOption[];
 }
@@ -226,7 +374,7 @@ export interface PinSessionActionResponse {
 export interface PinSessionStatusResponse {
   /**
    * Idle auto-lock active for this session
-   * @default true
+   * @default false
    */
   auto_lock_enabled?: boolean;
   eligible: boolean;
@@ -274,7 +422,7 @@ export interface RepairAttachmentListResponse {
 }
 
 export interface RepairAttachmentResponse {
-  /** One of: log_entry, device_photo, disclaimer, misc */
+  /** One of: log_entry, device_photo, disclaimer, cancellation, misc */
   attachment_type: string;
   content_type: string;
   id: number;
@@ -285,11 +433,26 @@ export interface RepairAttachmentResponse {
   /** File size in bytes */
   size: number;
   stored_filename: string;
+  /** @default null */
+  template_version_id?: number | null;
   /** @format date-time */
   uploaded_at: string;
   uploaded_by?: UserResponse | null;
   /** @default null */
   uploaded_by_id?: number | null;
+}
+
+export interface RepairCancellationCreate {
+  /**
+   * Transient PNG/JPEG data URL
+   * @minLength 1
+   */
+  signature: string;
+  /**
+   * Pinned cancellation version; active system version is used when omitted
+   * @default null
+   */
+  template_version_id?: number | null;
 }
 
 export interface RepairCreate {
@@ -309,6 +472,11 @@ export interface RepairCreate {
    * @default null
    */
   defekt_besch?: string | null;
+  /**
+   * Pinned disclaimer version; active system version is used when omitted
+   * @default null
+   */
+  disclaimer_template_version_id?: number | null;
   /**
    * Email address
    * @format email
@@ -337,7 +505,8 @@ export interface RepairCreate {
    */
   telefon?: string | null;
   /**
-   * Signature image as base64
+   * Transient signature PNG/JPEG data URL
+   * @maxLength 1400000
    * @default null
    */
   unterschrift?: string | null;
@@ -454,11 +623,6 @@ export interface RepairListItem {
    * @default null
    */
   status_detail?: string | null;
-  /**
-   * Signature image as base64
-   * @default null
-   */
-  unterschrift?: string | null;
   /**
    * Liability disclaimer signed
    * @default null
@@ -708,11 +872,6 @@ export interface RepairResponse {
    */
   status_detail?: string | null;
   /**
-   * Signature image as base64
-   * @default null
-   */
-  unterschrift?: string | null;
-  /**
    * Liability disclaimer signed
    * @default null
    */
@@ -795,11 +954,6 @@ export interface RepairUpdate {
    * @default null
    */
   status_detail?: string | null;
-  /**
-   * Signature image as base64
-   * @default null
-   */
-  unterschrift?: string | null;
   /**
    * Liability disclaimer signed
    * @default null
@@ -1317,6 +1471,35 @@ export interface UpdateCustomerParams {
   customerId: number;
 }
 
+export interface GetActiveDocumentTemplateParams {
+  role: "disclaimer" | "cancellation";
+}
+
+export interface GetDocumentTemplateParams {
+  templateId: number;
+}
+
+export interface UpdateDocumentTemplateParams {
+  templateId: number;
+}
+
+export interface PreviewDocumentTemplateParams {
+  templateId: number;
+}
+
+export interface RenderDocumentTemplateParams {
+  templateId: number;
+}
+
+export interface CreateDocumentTemplateVersionParams {
+  templateId: number;
+}
+
+export interface PublishDocumentTemplateVersionParams {
+  templateId: number;
+  versionId: number;
+}
+
 export interface ListRepairsParams {
   /** Filter repairs by customer ID */
   customer_id?: number;
@@ -1340,11 +1523,6 @@ export interface UpdateRepairParams {
 export interface GetRepairCancellationParams {
   /** Repair ID */
   id: number;
-}
-
-/** Signature as PNG data URL (alternatively a multipart "file" with a signed PDF) */
-export interface CreateOrUploadRepairCancellationPayload {
-  signature: string;
 }
 
 export interface CreateOrUploadRepairCancellationParams {
@@ -1375,7 +1553,12 @@ export interface PrintRepairLabelParams {
 }
 
 export interface ListRepairAttachmentsParams {
-  attachment_type?: "log_entry" | "device_photo" | "disclaimer" | "misc";
+  attachment_type?:
+    | "log_entry"
+    | "device_photo"
+    | "disclaimer"
+    | "cancellation"
+    | "misc";
   log_id?: number;
   repairId: number;
 }
@@ -1383,7 +1566,7 @@ export interface ListRepairAttachmentsParams {
 export interface UploadRepairAttachmentsPayload {
   /** One or more files to upload */
   files: File[];
-  /** Attachment type: log_entry, device_photo, disclaimer, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo. */
+  /** Attachment type: log_entry, device_photo, disclaimer, cancellation, misc (default: misc). device_photo takes exactly one image and replaces the previous device photo. */
   attachment_type?: string;
   /** Link to a repair log entry */
   log_id?: number;
@@ -1454,6 +1637,10 @@ export interface GetVdeTestParams {
 export interface GetVdeTestPdfParams {
   repairId: number;
   testId: number;
+}
+
+export interface PrintBlankDocumentTemplateParams {
+  templateId: number;
 }
 
 export interface DeleteSettingParams {

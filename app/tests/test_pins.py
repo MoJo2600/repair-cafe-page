@@ -182,6 +182,10 @@ def test_pin_grant_is_isolated_to_the_primary_login_browser(app, helper_user):
 
 
 def test_locked_pin_session_expires_after_sixty_seconds(helper_client, helper_user):
+    assert (
+        helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True}).status_code
+        == 200
+    )
     helper_client.post("/api/auth/pin-session/lock", json={})
     with helper_client.session_transaction() as browser_session:
         session_id = browser_session["pin_unlock_session_id"]
@@ -308,6 +312,10 @@ def test_status_reports_pin_unlock_availability(helper_client):
 
 
 def test_no_idle_lock_outside_the_workshop(helper_client):
+    assert (
+        helper_client.put("/api/auth/pin-session/auto-lock", json={"enabled": True}).status_code
+        == 200
+    )
     grant = _grant(helper_client)
     grant.last_activity_at = utc_now() - timedelta(minutes=10)
     db.session.commit()
@@ -400,6 +408,48 @@ def test_pin_unlock_failures_migration_round_trips():
             assert "primary_user_id" not in {
                 column["name"] for column in inspector.get_columns("pin_unlock_sessions")
             }
+        finally:
+            monkeypatch.undo()
+    engine.dispose()
+
+
+def test_auto_lock_opt_in_migration_changes_database_default():
+    engine = sa.create_engine("sqlite://")
+    sessions = import_module("app.migrations.versions.013_pin_unlock_sessions")
+    auto_lock = import_module("app.migrations.versions.015_pin_auto_lock")
+    opt_in = import_module("app.migrations.versions.017_auto_lock_opt_in")
+    with engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE users (id INTEGER PRIMARY KEY)"))
+        connection.execute(sa.text("INSERT INTO users (id) VALUES (1)"))
+        monkeypatch = pytest.MonkeyPatch()
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(sessions, "op", operations)
+        monkeypatch.setattr(auto_lock, "op", operations)
+        monkeypatch.setattr(opt_in, "op", operations)
+        try:
+            sessions.upgrade()
+            auto_lock.upgrade()
+            opt_in.upgrade()
+            connection.execute(
+                sa.text(
+                    "INSERT INTO pin_unlock_sessions (session_id, active_user_id) "
+                    "VALUES ('session', 1)"
+                )
+            )
+            enabled = connection.execute(
+                sa.text(
+                    "SELECT auto_lock_enabled FROM pin_unlock_sessions "
+                    "WHERE session_id = 'session'"
+                )
+            ).scalar_one()
+            assert enabled == 0
+
+            opt_in.downgrade()
+            assert any(
+                column["name"] == "auto_lock_enabled"
+                and column["default"] == "1"
+                for column in sa.inspect(connection).get_columns("pin_unlock_sessions")
+            )
         finally:
             monkeypatch.undo()
     engine.dispose()

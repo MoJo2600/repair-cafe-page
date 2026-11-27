@@ -96,7 +96,8 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 | Section title | `text-title-large`, with a leading icon |
 | Card title | `text-title-large` |
 | Field label above a value | `text-title-small text-medium-emphasis` |
-| Body text | `text-body-medium` (`text-body-large` for the main text of a card) |
+| Body text | Vuetify default within `v-card-text`; use `text-body-large` only for deliberately emphasized card text |
+| Navigation and interactive list labels | default Vuetify body sizing; do not use `text-label-*` |
 | Meta (dates, authors) | `text-body-small text-medium-emphasis` |
 
 ## Layout
@@ -106,6 +107,9 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
   content in cards. Only the lock screen (wall display) is wider.
 - Action bars and step content line up with the page content (no extra side padding).
 - Spacing on the 4 px grid; between cards `mb-4`, inside groups `ga-2`.
+- Application-wide colors and component defaults are owned by
+  `frontend/src/plugins/theme.ts`. Components use semantic theme roles instead of raw
+  palette values or repeated component styling.
 - Small screens: one column, tabs instead of side-by-side sections, the main action in
   a bottom bar or `v-fab`; dialogs fullscreen (`ResponsiveDialog`).
 - Tables on small screens: no column header; each row becomes one compact entry in the
@@ -126,6 +130,9 @@ People are shown with `PersonLabel`: role icon + full name, plain text.
 
 Always set `variant` explicitly: Vuetify picks different defaults by context (e.g.
 `text` inside `v-card-actions`), so the same action would look different on every page.
+Desktop table rows use `TableRowActions`: one labeled primary action plus an overflow
+menu for secondary or destructive actions. Mobile table rows keep their compact,
+card-like action layout.
 
 ## Wording
 

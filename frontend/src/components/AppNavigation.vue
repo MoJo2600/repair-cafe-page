@@ -85,7 +85,7 @@ async function logout() {
         <v-list-item v-if="md" :to="item.to" class="rail-item" min-height="64">
           <div class="d-flex flex-column align-center ga-1 py-1">
             <v-icon :icon="item.icon" />
-            <span class="text-label-small text-center">{{ item.title }}</span>
+            <span class="text-body-small text-center">{{ item.title }}</span>
           </div>
         </v-list-item>
         <v-list-item
@@ -106,13 +106,13 @@ async function logout() {
           <v-list-item :to="{ name: 'Profile' }" class="rail-item" min-height="64" aria-label="Mein Profil">
             <div class="d-flex flex-column align-center ga-1 py-1">
               <v-icon icon="mdi-account-circle" />
-              <span class="text-label-small text-center">Profil</span>
+              <span class="text-body-small text-center">Profil</span>
             </div>
           </v-list-item>
           <v-list-item class="rail-item" min-height="64" :disabled="loggingOut" @click="logout">
             <div class="d-flex flex-column align-center ga-1 py-1">
               <v-icon icon="mdi-logout" />
-              <span class="text-label-small text-center">Abmelden</span>
+              <span class="text-body-small text-center">Abmelden</span>
             </div>
           </v-list-item>
         </template>
@@ -151,7 +151,7 @@ async function logout() {
 }
 
 /* German labels are long; wrap with hyphenation instead of clipping */
-.rail-item .text-label-small {
+.rail-item .text-body-small {
   hyphens: auto;
   overflow-wrap: anywhere;
   line-height: 1.2;

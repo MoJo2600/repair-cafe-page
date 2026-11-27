@@ -146,18 +146,14 @@ def create_app(config_name=None):
     app.pdf_service = PDFService(  # type: ignore
         data_dir=app.config.get("DATA_DIR"),
         config_dir=app.config.get("CONFIG_DIR"),
-        storage_dir=app.config.get("SIGNED_PDF_STORAGE_PATH"),
         active_filename="disclaimer.pdf",
         sample_filename="Disclaimer_sample.pdf",
-        storage_subdir="signed_disclaimers",
     )
     app.cancellation_pdf_service = PDFService(  # type: ignore
         data_dir=app.config.get("DATA_DIR"),
         config_dir=app.config.get("CONFIG_DIR"),
-        storage_dir=app.config.get("SIGNED_CANCELLATION_STORAGE_PATH"),
         active_filename="cancellation.pdf",
         sample_filename="Cancellation_sample.pdf",
-        storage_subdir="signed_cancellations",
     )
 
     # Initialize Label service and attach to app
@@ -196,6 +192,9 @@ def create_app(config_name=None):
     # Safe to run repeatedly — is a no-op when an admin already exists.
     with app.app_context():
         ensure_admin_user(app)
+        from app.services.document_service import ensure_system_document_templates
+
+        ensure_system_document_templates()
         from app.services.pin_service import reconcile_pin_mode
 
         reconcile_pin_mode()
@@ -239,6 +238,7 @@ def register_blueprints(app):
     from app.api.attachments import attachments_bp
     from app.api.config import config_bp
     from app.api.customers import customers_bp
+    from app.api.document_templates import document_templates_bp
     from app.api.health import health_bp
     from app.api.repair_logs import repair_logs_bp
     from app.api.repairs import repairs_bp
@@ -259,6 +259,7 @@ def register_blueprints(app):
     app.register_blueprint(vde_tests_bp, url_prefix="/api")
     app.register_blueprint(config_bp, url_prefix="/api")
     app.register_blueprint(customers_bp, url_prefix="/api")
+    app.register_blueprint(document_templates_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(settings_bp, url_prefix="/api")
 

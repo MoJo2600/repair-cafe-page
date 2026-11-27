@@ -69,6 +69,11 @@ if ! python "$ROOT_DIR/app/run_migrations.py"; then
     exit 1
 fi
 
+if ! python "$ROOT_DIR/app/migrate_legacy_documents.py"; then
+    echo "Legacy document migration failed; development servers were not started." >&2
+    exit 1
+fi
+
 if [[ ${1:-} == "--setup" ]]; then
     python "$ROOT_DIR/app/seed_dev.py"
     echo "Development database migrated and seeded: $MYSQL_DATABASE"

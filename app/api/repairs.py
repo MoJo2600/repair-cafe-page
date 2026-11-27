@@ -10,12 +10,14 @@ import flask_login
 from flask import Blueprint, Response, current_app, request, send_file
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
 from app.api.attachments import cleanup_repair_attachments
 from app.auth.decorators import admin_required
 from app.extensions import db
 from app.models import Customer, Repair, RepairAttachment, RepairLog, Setting, User
 from app.schemas import (
+    RepairCancellationCreate,
     RepairCreate,
     RepairCreateResponse,
     RepairListItem,
@@ -25,8 +27,17 @@ from app.schemas import (
     RepairsTimelinePoint,
     RepairsTimelineResponse,
 )
+from app.services.document_service import (
+    DocumentValidationError,
+    attachment_path,
+    cleanup_replaced_document_files,
+    latest_document_attachment,
+    pinned_version_for_role,
+    render_document_pdf,
+    store_document_attachment,
+)
 from app.utils import pydantic_to_swagger
-from app.validation import validate_request
+from app.validation import parse_request, validate_request
 
 repairs_bp = Blueprint("repairs", __name__)
 
@@ -140,7 +151,7 @@ def api_list_repairs():
         repairs_list = [
             RepairListItem.model_validate(
                 {
-                    **RepairResponse.model_validate(repair).model_dump(exclude={"unterschrift"}),
+                    **RepairResponse.model_validate(repair).model_dump(),
                     "latest_log": latest_logs.get(repair.id),
                     "device_photo_id": device_photos.get(repair.id),
                 }
@@ -369,12 +380,8 @@ def api_delete_repair(id: int):
         db.session.delete(repair)
         db.session.commit()
 
-        # Clean up stored files on disk (attachments, signed disclaimer, signed cancellation)
+        # Clean up unified stored files on disk.
         cleanup_repair_attachments(id)
-        if hasattr(current_app, "pdf_service"):
-            current_app.pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
-        if hasattr(current_app, "cancellation_pdf_service"):
-            current_app.cancellation_pdf_service.delete_stored_pdf(id)  # type: ignore[attr-defined]
 
         return Response(
             json.dumps({"reply": "done", "id": id}),
@@ -416,9 +423,12 @@ def api_create_repair(validated_data: RepairCreate):
       500:
         description: Internal server error
     """
+    staged_path = None
     try:
         # Convert Pydantic model to dict
         data = validated_data.model_dump()
+        signature = data.pop("unterschrift", None)
+        disclaimer_version_id = data.pop("disclaimer_template_version_id", None)
 
         # --- Repair type handling ---
         # Validate that repair_type_id exists
@@ -448,8 +458,15 @@ def api_create_repair(validated_data: RepairCreate):
         if customer_id is not None:
             # Link to existing customer
             customer = Customer.query.get(customer_id)
-            if customer:
-                data["customer_id"] = customer.id
+            if not customer:
+                return Response(
+                    json.dumps(
+                        {"reply": "error", "error": "Kunde wurde nicht gefunden"}
+                    ),
+                    status=400,
+                    mimetype="application/json",
+                )
+            data["customer_id"] = customer.id
         else:
             # Auto-create a new customer from the submitted contact data
             customer = Customer(
@@ -462,8 +479,8 @@ def api_create_repair(validated_data: RepairCreate):
             db.session.flush()  # get customer.id without full commit
             data["customer_id"] = customer.id
 
-        # Set unterschrift_haft to True if signature is provided
-        if data.get("unterschrift"):
+        # Raw signature data is deliberately transient and never assigned to Repair.
+        if signature:
             data["unterschrift_haft"] = True
 
         # Generate unique QR token
@@ -476,32 +493,44 @@ def api_create_repair(validated_data: RepairCreate):
         # Create repair record
         repair = Repair.from_dict(data)
         db.session.add(repair)
-        db.session.commit()
-
-        current_app.logger.info(f"Created repair record with ID: {repair.id}")
-
-        # Generate and persist the signed disclaimer PDF if a signature was provided
-        if repair.unterschrift:
+        db.session.flush()
+        replaced_files = []
+        if signature:
             try:
-                pdf_service = current_app.pdf_service  # type: ignore
-                saved_path = pdf_service.save_signed_pdf(
-                    repair_id=repair.id,
-                    signature_data=repair.unterschrift,
-                    date=repair.datum,
-                    name=f"{contact_vorname} {contact_nachname}".strip() or None,
+                version = pinned_version_for_role(
+                    "disclaimer", disclaimer_version_id
                 )
-                if saved_path:
-                    current_app.logger.info(f"Signed disclaimer saved to {saved_path}")
-                else:
-                    current_app.logger.warning(
-                        f"Signed disclaimer could not be generated for repair {repair.id}"
-                    )
-            except Exception as pdf_err:
-                # PDF generation failure must not block the repair from being created
-                current_app.logger.error(
-                    f"Error saving signed PDF for repair {repair.id}: {pdf_err}",
-                    exc_info=True,
+                pdf_bytes = render_document_pdf(
+                    version,
+                    repair=repair,
+                    signature=signature,
+                    document_date=repair.datum,
                 )
+                _, staged_path, replaced_files = store_document_attachment(
+                    repair=repair,
+                    attachment_type="disclaimer",
+                    pdf_bytes=pdf_bytes,
+                    version=version,
+                    uploaded_by_id=(
+                        flask_login.current_user.id
+                        if flask_login.current_user.is_authenticated
+                        else None
+                    ),
+                )
+            except (DocumentValidationError, LookupError) as exc:
+                db.session.rollback()
+                if staged_path:
+                    staged_path.unlink(missing_ok=True)
+                return Response(
+                    json.dumps({"reply": "error", "error": str(exc)}),
+                    status=400,
+                    mimetype="application/json",
+                )
+
+        # Database rows and the generated attachment are one success boundary.
+        db.session.commit()
+        cleanup_replaced_document_files(replaced_files)
+        current_app.logger.info("Created repair record with ID: %s", repair.id)
 
         # Serialize response using Pydantic
         response_data = RepairCreateResponse(
@@ -517,6 +546,8 @@ def api_create_repair(validated_data: RepairCreate):
         )
     except Exception as e:
         db.session.rollback()
+        if staged_path:
+            staged_path.unlink(missing_ok=True)
         current_app.logger.error(f"Error in /api/repairs POST: {e}", exc_info=True)
         # try:
         #     loki.error({"Message": "API create repair error", "Error": str(e)})
@@ -557,8 +588,9 @@ def api_upload_disclaimer(id: int):
       400:
         description: Missing or invalid PDF
     """
+    staged_path = None
     try:
-        Repair.query.get_or_404(id)
+        repair = Repair.query.get_or_404(id)
 
         if "file" not in request.files:
             return Response(
@@ -587,14 +619,26 @@ def api_upload_disclaimer(id: int):
                 mimetype="application/json",
             )
 
-        pdf_service = current_app.pdf_service  # type: ignore
-        saved_path = pdf_service.store_uploaded_pdf(id, pdf_bytes)
-        current_app.logger.info(f"Uploaded disclaimer PDF stored at {saved_path}")
+        _, staged_path, replaced_files = store_document_attachment(
+            repair=repair,
+            attachment_type="disclaimer",
+            pdf_bytes=pdf_bytes,
+            version=None,
+            uploaded_by_id=flask_login.current_user.id,
+            original_filename=secure_filename(uploaded_file.filename),
+        )
+        repair.unterschrift_haft = True
+        db.session.commit()
+        cleanup_replaced_document_files(replaced_files)
+        current_app.logger.info("Uploaded disclaimer PDF stored for repair %s", id)
         return Response(
             json.dumps({"reply": "done"}), status=200, mimetype="application/json"
         )
 
     except Exception as e:
+        db.session.rollback()
+        if staged_path:
+            staged_path.unlink(missing_ok=True)
         current_app.logger.error(
             f"Error uploading disclaimer for repair {id}: {e}", exc_info=True
         )
@@ -628,31 +672,12 @@ def api_get_disclaimer(id: int):
         description: Internal server error
     """
     try:
-        repair = Repair.query.get_or_404(id)
-        pdf_service = current_app.pdf_service  # type: ignore
-        pdf_path = pdf_service.get_stored_pdf_path(id)
-
-        if pdf_path is not None:
+        Repair.query.get_or_404(id)
+        attachment = latest_document_attachment(id, "disclaimer")
+        pdf_path = attachment_path(id, attachment) if attachment else None
+        if pdf_path and pdf_path.exists():
             return send_file(
                 str(pdf_path),
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=f"disclaimer_{id}.pdf",
-            )
-
-        # No stored PDF yet — generate on the fly from the stored signature
-        if repair.unterschrift:
-            pdf_stream = pdf_service.get_signed_pdf(repair.unterschrift, repair.datum)
-            if pdf_stream is None:
-                return Response(
-                    json.dumps(
-                        {"reply": "error", "error": "Could not generate disclaimer PDF"}
-                    ),
-                    status=500,
-                    mimetype="application/json",
-                )
-            return send_file(
-                pdf_stream,
                 mimetype="application/pdf",
                 as_attachment=True,
                 download_name=f"disclaimer_{id}.pdf",
@@ -695,11 +720,7 @@ def api_create_or_upload_cancellation(id: int):
         required: false
         description: Signature as PNG data URL (alternatively a multipart "file" with a signed PDF)
         schema:
-          type: object
-          required: [signature]
-          properties:
-            signature:
-              type: string
+          $ref: '#/definitions/RepairCancellationCreate'
     responses:
       201:
         description: Signed cancellation PDF stored
@@ -712,9 +733,9 @@ def api_create_or_upload_cancellation(id: int):
       500:
         description: Internal server error
     """
+    staged_path = None
     try:
         repair = Repair.query.get_or_404(id)
-        cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
 
         # Case 1: Multipart PDF upload
         if "file" in request.files:
@@ -736,10 +757,17 @@ def api_create_or_upload_cancellation(id: int):
                     status=400,
                     mimetype="application/json",
                 )
-            saved_path = cancellation_service.store_uploaded_pdf(id, pdf_bytes)
-            current_app.logger.info(
-                "Uploaded cancellation PDF stored at %s", saved_path
+            _, staged_path, replaced_files = store_document_attachment(
+                repair=repair,
+                attachment_type="cancellation",
+                pdf_bytes=pdf_bytes,
+                version=None,
+                uploaded_by_id=flask_login.current_user.id,
+                original_filename=secure_filename(uploaded_file.filename),
             )
+            db.session.commit()
+            cleanup_replaced_document_files(replaced_files)
+            current_app.logger.info("Uploaded cancellation PDF stored for repair %s", id)
             return Response(
                 json.dumps({"reply": "done"}),
                 status=201,
@@ -747,49 +775,45 @@ def api_create_or_upload_cancellation(id: int):
             )
 
         # Case 2: JSON payload with base64 signature string
-        payload = request.get_json(silent=True) or {}
-        signature = payload.get("signature")
-        if not signature or not isinstance(signature, str):
+        payload, validation_error = parse_request(RepairCancellationCreate)
+        if validation_error:
+            return validation_error
+        assert payload is not None
+        try:
+            version = pinned_version_for_role(
+                "cancellation", payload.template_version_id
+            )
+            pdf_bytes = render_document_pdf(
+                version,
+                repair=repair,
+                signature=payload.signature,
+                document_date=datetime.now(timezone.utc).date(),
+            )
+        except (DocumentValidationError, LookupError) as exc:
             return Response(
-                json.dumps(
-                    {"reply": "error", "error": "Signature or PDF file is required"}
-                ),
+                json.dumps({"reply": "error", "error": str(exc)}),
                 status=400,
                 mimetype="application/json",
             )
-
-        customer_name = None
-        if repair.customer:
-            customer_name = (
-                f"{repair.customer.vorname or ''} {repair.customer.nachname or ''}".strip()
-                or None
-            )
-
-        saved_path = cancellation_service.save_signed_pdf(
-            repair_id=repair.id,
-            signature_data=signature,
-            date=datetime.now(timezone.utc).date(),
-            name=customer_name,
+        _, staged_path, replaced_files = store_document_attachment(
+            repair=repair,
+            attachment_type="cancellation",
+            pdf_bytes=pdf_bytes,
+            version=version,
+            uploaded_by_id=flask_login.current_user.id,
         )
-        if saved_path is None:
-            return Response(
-                json.dumps(
-                    {
-                        "reply": "error",
-                        "error": "Could not generate signed cancellation PDF",
-                    }
-                ),
-                status=400,
-                mimetype="application/json",
-            )
-
-        current_app.logger.info("Signed cancellation PDF saved to %s", saved_path)
+        db.session.commit()
+        cleanup_replaced_document_files(replaced_files)
+        current_app.logger.info("Signed cancellation PDF stored for repair %s", id)
         return Response(
             json.dumps({"reply": "done"}),
             status=201,
             mimetype="application/json",
         )
     except Exception as e:
+        db.session.rollback()
+        if staged_path:
+            staged_path.unlink(missing_ok=True)
         current_app.logger.error(
             f"Error creating/uploading cancellation PDF for repair {id}: {e}",
             exc_info=True,
@@ -825,10 +849,9 @@ def api_get_cancellation(id: int):
     """
     try:
         Repair.query.get_or_404(id)
-        cancellation_service = current_app.cancellation_pdf_service  # type: ignore[attr-defined]
-        pdf_path = cancellation_service.get_stored_pdf_path(id)
-
-        if pdf_path is not None:
+        attachment = latest_document_attachment(id, "cancellation")
+        pdf_path = attachment_path(id, attachment) if attachment else None
+        if pdf_path and pdf_path.exists():
             return send_file(
                 str(pdf_path),
                 mimetype="application/pdf",

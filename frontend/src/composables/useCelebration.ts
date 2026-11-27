@@ -10,6 +10,7 @@ import { fireConfetti } from '@/utils/confetti'
  * The mute switch is remembered per device.
  */
 const SOUND_PREF_KEY = 'repaircafe.celebrationSound'
+const soundEnabled = shallowRef(readSoundPref())
 
 function readSoundPref(): boolean {
   try {
@@ -39,7 +40,6 @@ const FANFARE: Array<[frequency: number, start: number, duration: number]> = [
 ]
 
 export function useCelebration() {
-  const soundEnabled = shallowRef(readSoundPref())
   /** True once the browser lets this page play audio. */
   const soundUnlocked = shallowRef(false)
 
